@@ -51,6 +51,11 @@ $ catkin_make
 ---
 ###Simulation of a Bi-manual reach with independent CDS for each arm:
 
+#####Simulation and Visualization
+```
+$ roslaunch kuka_lwr_bringup bimanual_simulation.launch
+```
+
 #####Control/Motion Planning
 Cartesian-to-Joint/Joint-to-Cart Estimation
 ```
@@ -71,9 +76,16 @@ then follow the instructions on the terminal of this node.
 ---
 ###Real-Time Control of a Bi-manual reach with independent CDS for each arm:
 
-
 #####Robot State Communication
 Bringup ```kuka_fri_bridge``` (a custom KUKA control bridge using FRI library) check instructions to run [here](https://github.com/nbfigueroa/kuka_interface_packages.git).
+
+For each robot:
+
+Modifying the following line:
+```
+$ bla
+```
+and run the bridge on its corresponding pc:
 ```
 $ rosrun kuka_fri_bridge run_lwr.sh
 ```
