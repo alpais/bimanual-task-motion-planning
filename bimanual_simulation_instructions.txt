@@ -8,7 +8,8 @@ roslaunch state_transformers joint_ctrls_sim.launch input_joints_topic:=/l_arm_p
 
 
 Cartesian Motion Planner for Right Arm:
-
+<impedance control>
 
 
 Cartesian Motion Planner for Left Arm:
+<impedance control>
