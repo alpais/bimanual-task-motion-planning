@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<launch>
+
+        
+        <!-- Arguments for Right Arm Controllers -->
+        <arg name="r_robot_name"           default="KUKA_LASA_PTOOL"/>
+        <arg name="r_ee_link"             default="TOOL"/>  
+        <arg name="r_input_joints_topic"   default="/r_arm_pos_controller/joint_states"/>
+        <arg name="r_output_joints_topic"  default="/r_arm_controller/joint_imp_cmd"/>
+        <arg name="r_robot_base_frame"     default="/calib_right_arm_base_link"/>
+
+        <!-- Arguments for Left Arm Controllers -->
+        <arg name="l_robot_name"           default="KUKA_LASA_PTOOL"/>
+        <arg name="l_ee_link"             default="TOOL"/>  
+        <arg name="l_input_joints_topic"   default="/l_arm_pos_controller/joint_states"/>
+        <arg name="l_output_joints_topic"  default="/l_arm_controller/joint_imp_cmd"/>
+        <arg name="l_robot_base_frame"     default="/calib_left_arm_base_link"/>
+
+
+        <!-- Cartesian topic namespaces -->
+        <arg name="cart_des_topic_ns"              default="/cart_to_joint"/> 
+        <arg name="cart_est_topic_ns"              default="/joint_to_cart"/>
+        
+
+
+        <!-- START JOINT CONTROLLERS FOR RIGHT ARM-->
+        <include file="$(find state_transformers)/launch/sample_task_launchers/joint_ctrls_sim.launch">
+            <arg name="robot_name"           value="$(arg r_robot_name)"   />
+            <arg name="ee_link"              value="$(arg r_ee_link)"      />  
+
+            <arg name="input_joints_topic"   value="$(arg r_input_joints_topic)"/>
+            <arg name="output_joints_topic"  value="$(arg r_output_joints_topic)"/>
+            <arg name="robot_base_frame"     value="$(arg r_robot_base_frame)"/>
+        </include>
+
+        <!-- START JOINT CONTROLLERS FOR RIGHT ARM-->
+        <include file="$(find state_transformers)/launch/sample_task_launchers/joint_ctrls_sim.launch">
+            <arg name="robot_name"           value="$(arg l_robot_name)"   />
+            <arg name="ee_link"              value="$(arg l_ee_link)"      />              
+
+            <arg name="input_joints_topic"   value="$(arg l_input_joints_topic)"/>
+            <arg name="output_joints_topic"  value="$(arg l_output_joints_topic)"/>
+            <arg name="robot_base_frame"     value="$(arg l_robot_base_frame)"/>
+        </include>
+        
+
+
+</launch>

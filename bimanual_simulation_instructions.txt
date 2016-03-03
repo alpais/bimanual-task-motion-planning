@@ -1,0 +1,14 @@
+Joint Controllers for Right Arm:
+
+roslaunch state_transformers joint_ctrls_sim.launch input_joints_topic:=/r_arm_pos_controller/joint_states output_joints_topic:=/r_arm_controller/joint_imp_cmd robot_base_frame:=/calib_right_arm_base_link
+
+
+Joint Controllers for Left Arm:
+roslaunch state_transformers joint_ctrls_sim.launch input_joints_topic:=/l_arm_pos_controller/joint_states output_joints_topic:=/l_arm_controller/joint_imp_cmd robot_base_frame:=/calib_left_arm_base_link
+
+
+Cartesian Motion Planner for Right Arm:
+
+
+
+Cartesian Motion Planner for Left Arm:
