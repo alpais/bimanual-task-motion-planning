@@ -69,7 +69,7 @@ $ roslaunch bimanual_motion_planner bimanual_test.launch
 
 ##### Action Planning  
 ```
-$ roslaunch bimanual_action_planner bimanual_test.launch
+$ roslaunch bimanual_action_planner bimanual_test.py
 ```
 then follow the instructions on the terminal of this node.  
 
