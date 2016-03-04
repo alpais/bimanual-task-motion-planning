@@ -59,17 +59,17 @@ $ roslaunch kuka_lwr_bringup bimanual_simulation.launch
 #####Control/Motion Planning
 Cartesian-to-Joint/Joint-to-Cart Estimation
 ```
-$ roslaunch state_transformers pouring_ctrls_real.launch
+$ roslaunch state_transformers bimanual_joint_ctrls_sim.launch 
 ```
 
 Cartesian Trajectory Generator
 ```
-$ roslaunch motion_planner lasa_sim_fixed_pouring_tool.launch
+$ roslaunch bimanual_motion_planner bimanual_test.launch
 ```
 
 ##### Action Planning  
 ```
-$ rosrun lasa_action_planners pouring_tool_demo_fixed_lasa.py
+$ roslaunch bimanual_motion_planner bimanual_test.launch
 ```
 then follow the instructions on the terminal of this node.  
 
@@ -83,7 +83,7 @@ For each robot:
 
 Modifying the following line:
 ```
-$ bla
+$ ...
 ```
 and run the bridge on its corresponding pc:
 ```

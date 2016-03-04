@@ -1,19 +1,19 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(bimanual_task_motion_planning)
+project(bimanual_action_planners)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS roscpp actionlib actionlib_msgs geometry_msgs robohow_common_msgs sensor_msgs kuka_fri_bridge)
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -54,17 +54,15 @@ find_package(catkin REQUIRED)
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  DIRECTORY action
+  FILES PLAN2CTRL.action
+)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs robohow_common_msgs kuka_fri_bridge sensor_msgs# Or other packages containing msgs
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -77,8 +75,8 @@ find_package(catkin REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES myrobot_gazebo
-#  CATKIN_DEPENDS other_catkin_pkg
+#  LIBRARIES state_transformers
+   CATKIN_DEPENDS actionlib_msgs robohow_common_msgs
 #  DEPENDS system_lib
 )
 
@@ -88,24 +86,22 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
+include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 ## Declare a cpp library
-# add_library(myrobot_gazebo
-#   src/${PROJECT_NAME}/myrobot_gazebo.cpp
+# add_library(state_transformers
+#   src/${PROJECT_NAME}/state_transformers.cpp
 # )
 
 ## Declare a cpp executable
-# add_executable(myrobot_gazebo_node src/myrobot_gazebo_node.cpp)
-
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(myrobot_gazebo_node myrobot_gazebo_generate_messages_cpp)
+# add_executable(plan2ctrl_server src/plan2ctrl_server.cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(myrobot_gazebo_node
-#   ${catkin_LIBRARIES}
-# )
+# target_link_libraries(plan2ctrl_server   ${catkin_LIBRARIES} )
+
+## Add cmake target dependencies of the executable/library
+## as an example, message headers may need to be generated before nodes 
+# add_dependencies(plan2ctrl_server ${lasa_action_planners_EXPORTED_TARGETS} ) 
 
 #############
 ## Install ##
@@ -116,13 +112,12 @@ catkin_package(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(PROGRAMS scripts/plan2ctrl_server scripts/plan2ctrl_client
+         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS myrobot_gazebo myrobot_gazebo_node
+# install(TARGETS state_transformers state_transformers_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -147,7 +142,7 @@ catkin_package(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_myrobot_gazebo.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_state_transformers.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
