@@ -25,7 +25,7 @@
 #include <tf/transform_listener.h>
 //-- Custom ActionLib Stuff --//
 #include "actionlib/server/simple_action_server.h"
-#include <lasa_action_planners/PLAN2CTRLAction.h>
+#include <bimanual_action_planners/PLAN2CTRLAction.h>
 //-- Message Types --//
 #include <robohow_common_msgs/MotionPhase.h>
 #include <robohow_common_msgs/MotionModel.h>
@@ -39,11 +39,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#define EE_STATE_POSE_TOPIC "/joint_to_cart/est_ee_pose"
-#define EE_STATE_FT_TOPIC "/joint_to_cart/est_ee_ft"
-#define EE_CMD_POSE_TOPIC   "/cart_to_joint/des_ee_pose"
-#define EE_CMD_FT_TOPIC   "/cart_to_joint/des_ee_ft"
-#define BASE_LINK			"/base_link"
+
+#define BASE_LINK			 "/base_link"
 #define FORCE_SCALING		3.0
 #define MAX_ROLLING_FORCE	30
 #define FORCE_WAIT_TOL		5
@@ -53,7 +50,9 @@ tf::Pose ee_pose, curr_ee_pose, des_ee_pose;
 Eigen::VectorXd ee_ft;
 volatile bool isOkay, isFTOkay;
 int mState;
-string base_path;
+string base_path, topic_ns;
+string EE_STATE_POSE_TOPIC, EE_STATE_FT_TOPIC, EE_CMD_POSE_TOPIC, EE_CMD_FT_TOPIC;
+
 bool initial_config = true, simulation;
 int tf_count(0);
 double reachingThreshold (0.01), orientationThreshold (0.02), model_dt (0.001); //Defaults: [m],[rad],[s]
@@ -97,11 +96,11 @@ protected:
 
 
 	// NodeHandle instance must be created before this line. Otherwise strange error may occur.
-	actionlib::SimpleActionServer<lasa_action_planners::PLAN2CTRLAction> as_;
+    actionlib::SimpleActionServer<bimanual_action_planners::PLAN2CTRLAction> as_;
 	std::string action_name_;
 	// create messages that are used to published feedback/result
-	lasa_action_planners::PLAN2CTRLFeedback feedback_;
-	lasa_action_planners::PLAN2CTRLResult result_;
+    bimanual_action_planners::PLAN2CTRLFeedback feedback_;
+    bimanual_action_planners::PLAN2CTRLResult result_;
 
 
 	MathLib::Matrix4 toMatrix4(const tf::Pose& pose) {
@@ -276,10 +275,11 @@ public:
 		action_name_(name)
 {
 		ee_ft.resize(6);
+
 		// ROS TOPICS for controllers
-		sub_ = nh_.subscribe<geometry_msgs::PoseStamped>(EE_STATE_POSE_TOPIC, 1, eeStateCallback);
-		pub_ = nh_.advertise<geometry_msgs::PoseStamped>(EE_CMD_POSE_TOPIC, 1);
-		pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(EE_CMD_FT_TOPIC, 1);
+		// sub_ = nh_.subscribe<geometry_msgs::PoseStamped>(EE_STATE_POSE_TOPIC, 1, eeStateCallback);
+		// pub_ = nh_.advertise<geometry_msgs::PoseStamped>(EE_CMD_POSE_TOPIC, 1);
+		// pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(EE_CMD_FT_TOPIC, 1);
 		as_.start();
 }
 
@@ -310,10 +310,28 @@ public:
 		_nh.getParam("model_dt", model_dt);
 		_nh.getParam("reachingThreshold", reachingThreshold);
 		_nh.getParam("orientationThreshold", orientationThreshold);
+		_nh.getParam("topic_ns", topic_ns);
+
+
+		std::stringstream ss_state_pose, ss_state_ft, ss_cmd_pose, ss_cmd_ft;
+		ss_state_pose << "/" << topic_ns << "/joint_to_cart/est_ee_pose";
+		ss_state_ft   << "/" << topic_ns << "/joint_to_cart/est_ee_ft";
+		ss_cmd_pose   << "/" << topic_ns << "/cart_to_joint/des_ee_pose";
+		ss_cmd_ft     << "/" << topic_ns << "/cart_to_joint/des_ee_ft";
+
+		EE_STATE_POSE_TOPIC = ss_state_pose.str();
+		EE_STATE_FT_TOPIC	= ss_state_ft.str();
+		EE_CMD_POSE_TOPIC	= ss_cmd_pose.str();
+		EE_CMD_FT_TOPIC		= ss_cmd_ft.str();
 
 		ROS_INFO_STREAM("Selected Action Mode: " << ad);
+
+		// ROS TOPICS for controllers
+		sub_ = nh_.subscribe<geometry_msgs::PoseStamped>(EE_STATE_POSE_TOPIC, 1, eeStateCallback);
+		pub_ = nh_.advertise<geometry_msgs::PoseStamped>(EE_CMD_POSE_TOPIC, 1);
+		pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(EE_CMD_FT_TOPIC, 1);
 	}
-	void executeCB(const lasa_action_planners::PLAN2CTRLGoalConstPtr &goal)
+    void executeCB(const bimanual_action_planners::PLAN2CTRLGoalConstPtr &goal)
 	{
 
 		std::string desired_action = goal->action_type;

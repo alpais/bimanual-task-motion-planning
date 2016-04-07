@@ -2,7 +2,7 @@
 <package>
   <name>bimanual_action_planners</name>
   <version>0.0.0</version>
-  <description>The lasa_action_planners package</description>
+  <description>The bimanual_action_planners package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

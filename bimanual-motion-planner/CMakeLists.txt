@@ -90,24 +90,15 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 find_package(Eigen REQUIRED)
-find_package(lasa_action_planners)
-include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${lasa_action_planners_INCLUDE_DIRS})
-
-## Declare a cpp library
-# add_library(state_transformers
-#   src/${PROJECT_NAME}/state_transformers.cpp
-# )
+find_package(bimanual_action_planners)
+include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${bimanual_action_planners_INCLUDE_DIRS})
 
 ## Declare a cpp executable
-add_executable(bimanual_motion_planner  src/bimanual_motion_planner.cpp)
+add_executable(decoupled_motion_planner  src/decoupled_motion_planner.cpp)
 
-
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(state_transformers_node state_transformers_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(bimanual_motion_planner   ${catkin_LIBRARIES} )
+target_link_libraries(decoupled_motion_planner   ${catkin_LIBRARIES} )
  
 
 #############
