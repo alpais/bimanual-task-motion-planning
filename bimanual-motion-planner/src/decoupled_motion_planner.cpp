@@ -29,10 +29,6 @@
 #include <bimanual_action_planners/PLAN2CTRLAction.h>
 
 //-- Message Types --//
-#include <robohow_common_msgs/MotionPhase.h>
-#include <robohow_common_msgs/MotionModel.h>
-#include <robohow_common_msgs/GaussianMixtureModel.h>
-#include <robohow_common_msgs/GaussianDistribution.h>
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/WrenchStamped.h"
 
@@ -444,9 +440,7 @@ public:
         ///////////////////////////////////////////////
         /////----- EXECUTE REQUESTED ACTION ------/////
         ///////////////////////////////////////////////
-
-
-        // Use learned models to do shit
+        // Use learned models to do cool stuff
         if(goal->action_type=="LEARNED_MODEL"){
             TaskPhase phase;
             if(goal->action_name == "phase1") {

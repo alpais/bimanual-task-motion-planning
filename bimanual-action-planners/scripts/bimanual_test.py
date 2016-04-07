@@ -73,9 +73,9 @@ if __name__ == '__main__':
 	# Phase 1 Right Arm Attractor in Task RF
 	rA_p1_attr = geometry_msgs.msg.Transform()
 	rA_p1_attr.translation.x = 0.022
-	rA_p1_attr.translation.y = 0.216
-	rA_p1_attr.translation.z = 0.208
-	rA_p1_attr.rotation.x    = 0.133
+	rA_p1_attr.translation.y = 0.136
+	rA_p1_attr.translation.z = 0.178
+	rA_p1_attr.rotation.x    = 0.033
 	rA_p1_attr.rotation.y    = 0.112
 	rA_p1_attr.rotation.z    = -0.473
 	rA_p1_attr.rotation.w    = 0.719
@@ -84,7 +84,7 @@ if __name__ == '__main__':
 	lA_p1_attr = geometry_msgs.msg.Transform()	      
 	lA_p1_attr.translation.x = -0.03
 	lA_p1_attr.translation.y = -0.0604
-	lA_p1_attr.translation.z = 0.1395
+	lA_p1_attr.translation.z = 0.1695
 	lA_p1_attr.rotation.x    = 0.96
 	lA_p1_attr.rotation.y    = -0.242
 	lA_p1_attr.rotation.z    = -0.051
