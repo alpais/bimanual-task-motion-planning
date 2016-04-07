@@ -1,8 +1,9 @@
 #goal definition
 string action_type
 string action_name
-geometry_msgs/Transform object_frame
-geometry_msgs/Transform attractor_frame
+geometry_msgs/Transform 			task_frame
+geometry_msgs/Transform 			right_attractor_frame
+geometry_msgs/Transform 			left_attractor_frame
 string                              force_gmm_id
 int32                               timeout
 robohow_common_msgs/MotionPhase     Phase

@@ -14,14 +14,15 @@ from robohow_common_msgs.msg import MotionModel
 import tf
 import geometry_msgs.msg
 
-def PLAN2CTRL_client(phase, object_frame, attractor_frame, timeout):
+def PLAN2CTRL_client(phase, task_frame, right_attractor_frame, left_attractor_frame, timeout):
     # Creates the SimpleActionClient, passing the type of the action to the constructor.
-    client = actionlib.SimpleActionClient('plan2ctrl', bimanual_action_planners.msg.PLAN2CTRLAction)
+    client = actionlib.SimpleActionClient('bimanual_plan2ctrl', bimanual_action_planners.msg.PLAN2CTRLAction)
     
     
     print "Phase:", phase
-    print "Object Frame: ", object_frame
-    print "Attractor Frame:", attractor_frame
+    print "Task Frame: ", task_frame
+    print "Right Attractor Frame:", right_attractor_frame
+    print "Left Attractor Frame:", left_attractor_frame
     print "Timeout: ", timeout
    
     #Waits until the action server has started up and started listening for goals.
@@ -36,7 +37,7 @@ def PLAN2CTRL_client(phase, object_frame, attractor_frame, timeout):
     
     # Do Action from Learned Models    
     if desired_action=='LEARNED_MODEL':
-      goal = bimanual_action_planners.msg.PLAN2CTRLGoal(action_type=desired_action, action_name = phase, object_frame = object_frame, attractor_frame = attractor_frame, timeout = timeout)
+      goal = bimanual_action_planners.msg.PLAN2CTRLGoal(action_type=desired_action, action_name = phase, task_frame = task_frame, right_attractor_frame = right_attractor_frame, left_attractor_frame = left_attractor_frame, timeout = timeout)
     
     
     # Sends the goal to the action server.
@@ -59,87 +60,71 @@ if __name__ == '__main__':
 
 
 	#Object Frame in world
-	pouring_object = geometry_msgs.msg.Transform()
-	pouring_object.translation.x = -0.60600
-	pouring_object.translation.y = -0.22
-	pouring_object.translation.z = -0.044
-	pouring_object.rotation.x = 0
-	pouring_object.rotation.y = 0
-	pouring_object.rotation.z = 0.994362
-	pouring_object.rotation.w = 0.106039
-
-	#ROBOT RF
-	fake_object = geometry_msgs.msg.Transform()
-	fake_object.translation.x = 0
-	fake_object.translation.y = 0
-	fake_object.translation.z = 0
-	fake_object.rotation.x = 0
-	fake_object.rotation.y = 0
-	fake_object.rotation.z = 0
-	fake_object.rotation.w = 1
-
-	# Good Starting configuration for pouring on LWR LASA
-	home = geometry_msgs.msg.Transform()
-	home.translation.x = -0.483
-	home.translation.y = 0.091
-	home.translation.z = 0.361
-	home.rotation.w =  0.701
-	home.rotation.x = -0.257
-	home.rotation.y = -0.227
-	home.rotation.z = -0.625
-
-	# Reaching Phase Attractor in Dough RF	
-	reach_attr = geometry_msgs.msg.Transform()
-	reach_attr.translation.x = -0.482
-	reach_attr.translation.y = -0.086
-	reach_attr.translation.z = 0.289
-	reach_attr.rotation.w = 0.741
-	reach_attr.rotation.x = -0.085
-	reach_attr.rotation.y = -0.078
-	reach_attr.rotation.z = -0.662
+	task_frame = geometry_msgs.msg.Transform()
+	task_frame.translation.x = -0.500
+	task_frame.translation.y = -0.600
+	task_frame.translation.z = 0.000
+	task_frame.rotation.x = 0
+	task_frame.rotation.y = 0
+	task_frame.rotation.z = 0
+	task_frame.rotation.w = 1
 
 
-	# Pouring Phase Attractor in Dough RF	
-	pour_attr = geometry_msgs.msg.Transform()
-	pour_attr.translation.x = -0.478
-	pour_attr.translation.y = -0.184
-	pour_attr.translation.z = 0.248
-	pour_attr.rotation.x = 0.133
-	pour_attr.rotation.y =  0.112
-	pour_attr.rotation.z = -0.673
-	pour_attr.rotation.w = 0.719
+	# Phase 1 Right Arm Attractor in Task RF
+	rA_p1_attr = geometry_msgs.msg.Transform()
+	rA_p1_attr.translation.x = 0.022
+	rA_p1_attr.translation.y = 0.216
+	rA_p1_attr.translation.z = 0.208
+	rA_p1_attr.rotation.x    = 0.133
+	rA_p1_attr.rotation.y    = 0.112
+	rA_p1_attr.rotation.z    = -0.473
+	rA_p1_attr.rotation.w    = 0.719
 
-	# Back Phase Attractor
-	back_attr = geometry_msgs.msg.Transform()
-	back_attr.translation.x = -0.0326
-	back_attr.translation.y = -0.1367	
-	back_attr.translation.z = 0.3063
-	back_attr.rotation.w = 0.705532
-	back_attr.rotation.x = -0.0329184
-	back_attr.rotation.y = 0.00219692
-	back_attr.rotation.z = 0.606422
+	# Phase 1 Left Arm Attractor in Task RF
+	lA_p1_attr = geometry_msgs.msg.Transform()	      
+	lA_p1_attr.translation.x = -0.03
+	lA_p1_attr.translation.y = -0.0604
+	lA_p1_attr.translation.z = 0.1395
+	lA_p1_attr.rotation.x    = 0.96
+	lA_p1_attr.rotation.y    = -0.242
+	lA_p1_attr.rotation.z    = -0.051
+	lA_p1_attr.rotation.w    = -0.53
 
-	print "\n= = = = = Going to a HOME position= = = = = = = = "
-    # result = PLAN2CTRL_client('home', fake_object, home, 10)
-    # print "Result:"
-    # print result.success
-    
-	result = PLAN2CTRL_client('home', fake_object, reach_attr, 10)
-	print "Result:"		
-	print result.success
+
+	# Phase 2 Right Arm Attractor in Task RF
+	rA_p2_attr = geometry_msgs.msg.Transform()
+	rA_p2_attr.translation.x = 0.034
+	rA_p2_attr.translation.y = 0.462	
+	rA_p2_attr.translation.z = 0.361
+	rA_p2_attr.rotation.x    = -0.189
+	rA_p2_attr.rotation.y    = -0.264
+	rA_p2_attr.rotation.z    = -0.449
+	rA_p2_attr.rotation.w    = 0.833
+
+	# Phase 2 Left Arm Attractor in Task RF
+	lA_p2_attr = geometry_msgs.msg.Transform()
+	lA_p2_attr.translation.x = 0.054
+	lA_p2_attr.translation.y = -0.408	
+	lA_p2_attr.translation.z = 0.346
+	lA_p2_attr.rotation.x    = 0.960
+	lA_p2_attr.rotation.y    = -0.242
+	lA_p2_attr.rotation.z    = -0.051
+	lA_p2_attr.rotation.w    = -0.130	
+
+
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = "
-	raw_input('Press Enter to start pouring')
+	raw_input('Press Enter to Start Bimanual Task')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = "
 	
-	result = PLAN2CTRL_client('pour', fake_object, pour_attr, 10)
+	result = PLAN2CTRL_client('phase1', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success
 	
 	#Wait a few seconds before going back
-	rospy.sleep(2.)
+	rospy.sleep(1.)
 
-	result = PLAN2CTRL_client('back',  fake_object, home, 10)
+	result = PLAN2CTRL_client('phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"
 	print result.success
 

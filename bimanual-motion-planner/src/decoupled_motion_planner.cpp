@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2014 Learning Algorithms and Systems Laboratory, EPFL, Switzerland
+ * Copyright (C) 2016 Learning Algorithms and Systems Laboratory, EPFL, Switzerland
  *
- * motion_planner_pouring.cpp
+ * decoupled_motion_planner.cpp
  *
  * Created on : Feb 6, 2015
  * Author     : nbfigueroa
@@ -23,9 +23,11 @@
 #include <tf/transform_datatypes.h>
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
+
 //-- Custom ActionLib Stuff --//
 #include "actionlib/server/simple_action_server.h"
 #include <bimanual_action_planners/PLAN2CTRLAction.h>
+
 //-- Message Types --//
 #include <robohow_common_msgs/MotionPhase.h>
 #include <robohow_common_msgs/MotionModel.h>
@@ -33,36 +35,91 @@
 #include <robohow_common_msgs/GaussianDistribution.h>
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/WrenchStamped.h"
+
 //-- CDS Stuff --//
 #include "CDSExecution.h"
+
 //-- Eigen Stuff --//
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
 
-#define BASE_LINK			 "/base_link"
-#define FORCE_SCALING		3.0
-#define MAX_ROLLING_FORCE	30
-#define FORCE_WAIT_TOL		5
-
-
-tf::Pose ee_pose, curr_ee_pose, des_ee_pose;
-Eigen::VectorXd ee_ft;
-volatile bool isOkay, isFTOkay;
-int mState;
-string base_path, topic_ns;
-string EE_STATE_POSE_TOPIC, EE_STATE_FT_TOPIC, EE_CMD_POSE_TOPIC, EE_CMD_FT_TOPIC;
-
+tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
+Eigen::VectorXd r_ee_ft, r_curr_ee_ft, l_ee_ft, l_curr_ee_ft;
+volatile bool isOkay;
+string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
+string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC;
+string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC;
+tf::StampedTransform right_arm_base, left_arm_base;
 bool initial_config = true, simulation;
 int tf_count(0);
 double reachingThreshold (0.01), orientationThreshold (0.02), model_dt (0.001); //Defaults: [m],[rad],[s]
-double k = 1;
 
-void eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
-	const geometry_msgs::PoseStamped* data = msg.get();
-	ee_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
-	ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
-	isOkay = true;
+// Callback for the current right end effector pose
+void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
+    const geometry_msgs::PoseStamped* data = msg.get();
+    r_ee_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+    r_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+    isOkay = true;
+}
+
+
+// Callback for the current right end effector force/torque
+void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
+    const geometry_msgs::WrenchStamped* data = msg.get();
+    r_curr_ee_ft[0] = data->wrench.force.x;
+    r_curr_ee_ft[1] = data->wrench.force.y;
+    r_curr_ee_ft[2] = data->wrench.force.z;
+
+    r_curr_ee_ft[3] = data->wrench.torque.x;
+    r_curr_ee_ft[4] = data->wrench.torque.y;
+    r_curr_ee_ft[5] = data->wrench.torque.z;
+}
+
+
+
+// Callback for the current left end effector pose
+void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
+    const geometry_msgs::PoseStamped* data = msg.get();
+    l_ee_pose.setOrigin(tf::Vector3(data->pose.position.x - left_arm_base.getOrigin().getX(),data->pose.position.y - left_arm_base.getOrigin().getY(),data->pose.position.z -  left_arm_base.getOrigin().getZ()));
+    l_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+    isOkay = true;
+}
+
+
+// Callback for the current left end effector force/torque
+void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
+    const geometry_msgs::WrenchStamped* data = msg.get();
+    l_curr_ee_ft[0] = data->wrench.force.x;
+    l_curr_ee_ft[1] = data->wrench.force.y;
+    l_curr_ee_ft[2] = data->wrench.force.z;
+
+    l_curr_ee_ft[3] = data->wrench.torque.x;
+    l_curr_ee_ft[4] = data->wrench.torque.y;
+    l_curr_ee_ft[5] = data->wrench.torque.z;
+}
+
+
+MathLib::Matrix4 toMatrix4(const tf::Pose& pose) {
+    MathLib::Matrix4 mat;
+    mat.Identity();
+    tf::Matrix3x3 mat33(pose.getRotation());
+
+    mat.SetTranslation(MathLib::Vector3(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z()));
+    mat.SetOrientation(MathLib::Matrix3(mat33[0][0], mat33[0][1], mat33[0][2],
+            mat33[1][0], mat33[1][1], mat33[1][2],
+            mat33[2][0], mat33[2][1], mat33[2][2]));
+    return mat;
+}
+
+void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose) {
+    MathLib::Matrix3 m1 = mat4.GetOrientation();
+    MathLib::Vector3 v1 = m1.GetRotationAxis();
+    tf::Vector3 ax(v1(0), v1(1), v1(2));
+    tf::Quaternion q(ax, m1.GetRotationAngle());
+    pose.setRotation(q.normalize());
+    v1.Set(mat4.GetTranslation());
+    pose.setOrigin(tf::Vector3(v1(0),v1(1),v1(2)));
 }
 
 
@@ -70,360 +127,389 @@ class PLAN2CTRLAction
 {
 protected:
 
-	// Pouring phases
-	enum PouringPhase {
-		PHASEHOME=1,
-		PHASEPOUR=1,
-		PHASEBACK=2
-	};
+    // Pouring phases
+    enum TaskPhase {
+        PHASE1=1,
+        PHASE2=2,
+        PHASEREACH=3
+    };
 
-	// Pouring modes. FIXED corresponds to numbers that are good LASA or ROMEO robots.
-	// VISION will use the attractors provided in the action message
-	enum ActionMode {
-		ACTION_LASA_FIXED = 1,
-		ACTION_ROMEO_FIXED,
-		ACTION_VISION
-	};
+    ros::NodeHandle nh_;
+    ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_;
+    ros::Publisher  r_pub_, r_pub_ft_, l_pub_, l_pub_ft_;
+    string right_robot_frame, left_robot_frame;
 
-	ros::NodeHandle nh_;
-	ros::Subscriber sub_, sub_ft_;
-	ros::Publisher pub_, pub_ft_;
-	geometry_msgs::PoseStamped msg_pose;
-	geometry_msgs::WrenchStamped msg_ft;
-	unsigned int action_mode;
-	bool bWaitForForces;
-	string world_frame;
-
-
-	// NodeHandle instance must be created before this line. Otherwise strange error may occur.
+    // NodeHandle instance must be created before this line. Otherwise strange error may occur.
     actionlib::SimpleActionServer<bimanual_action_planners::PLAN2CTRLAction> as_;
-	std::string action_name_;
-	// create messages that are used to published feedback/result
+    std::string action_name_;
+
+    // create messages that are used to published feedback/result
     bimanual_action_planners::PLAN2CTRLFeedback feedback_;
     bimanual_action_planners::PLAN2CTRLResult result_;
 
+    // Send desired EE_pose to robot/joint_ctrls.
+    void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
+        geometry_msgs::PoseStamped r_msg, l_msg;
 
-	MathLib::Matrix4 toMatrix4(const tf::Pose& pose) {
-		MathLib::Matrix4 mat;
-		mat.Identity();
-		tf::Matrix3x3 mat33(pose.getRotation());
+        // Populate right ee message
+        r_msg.pose.position.x     = r_pose_.getOrigin().x();
+        r_msg.pose.position.y     = r_pose_.getOrigin().y();
+        r_msg.pose.position.z     = r_pose_.getOrigin().z();
 
-		mat.SetTranslation(MathLib::Vector3(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z()));
-		mat.SetOrientation(MathLib::Matrix3(mat33[0][0], mat33[0][1], mat33[0][2],
-				mat33[1][0], mat33[1][1], mat33[1][2],
-				mat33[2][0], mat33[2][1], mat33[2][2]));
-		return mat;
-	}
+        r_msg.pose.orientation.x  = r_pose_.getRotation().x();
+        r_msg.pose.orientation.y  = r_pose_.getRotation().y();
+        r_msg.pose.orientation.z  = r_pose_.getRotation().z();
+        r_msg.pose.orientation.w  = r_pose_.getRotation().w();
 
-	void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose) {
-		MathLib::Matrix3 m1 = mat4.GetOrientation();
-		MathLib::Vector3 v1 = m1.GetRotationAxis();
-		tf::Vector3 ax(v1(0), v1(1), v1(2));
-		pose.setRotation(tf::Quaternion(ax, m1.GetRotationAngle()));
-		v1.Set(mat4.GetTranslation());
-		pose.setOrigin(tf::Vector3(v1(0),v1(1),v1(2)));
-	}
+        // Populate left ee message
+        l_msg.pose.position.x     = l_pose_.getOrigin().x() + left_arm_base.getOrigin().getX();
+        l_msg.pose.position.y     = l_pose_.getOrigin().y() + left_arm_base.getOrigin().getY();
+        l_msg.pose.position.z     = l_pose_.getOrigin().z() + left_arm_base.getOrigin().getZ();
 
-	// The famous sendPose!
-	void sendPose(const tf::Pose& pose_) {
-		geometry_msgs::PoseStamped msg;
-		msg.pose.position.x = pose_.getOrigin().x();
-		msg.pose.position.y = pose_.getOrigin().y();
-		msg.pose.position.z = pose_.getOrigin().z();
+        l_msg.pose.orientation.x  = l_pose_.getRotation().x();
+        l_msg.pose.orientation.y  = l_pose_.getRotation().y();
+        l_msg.pose.orientation.z  = l_pose_.getRotation().z();
+        l_msg.pose.orientation.w  = l_pose_.getRotation().w();
 
-		msg.pose.orientation.x = pose_.getRotation().x();
-		msg.pose.orientation.y = pose_.getRotation().y();
-		msg.pose.orientation.z = pose_.getRotation().z();
-		msg.pose.orientation.w = pose_.getRotation().w();
+        // Send right and left ee commands
+        r_pub_.publish(r_msg);
+        l_pub_.publish(l_msg);
+    }
 
-		pub_.publish(msg);
-	}
+    // Execute action from learned models
+    bool learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
+                                 double reachingThreshold, double orientationThreshold, double model_dt,
+                                 tf::Transform trans_obj, tf::Transform trans_r_att, tf::Transform trans_l_att,
+                                 std::string r_model_base_path, std::string l_model_base_path) {
 
-	// Do stuff with learned models
-	// Phase - Reach, Roll or Back?
-	// Dynamics type - to select the type of master/slave dynamics (linear/model etc.)
-	// reachingThreshold - you know
-	// model_dt - you know
-	bool learned_model_execution(PouringPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
-			double reachingThreshold, double orientationThreshold, double model_dt,
-			tf::Transform trans_obj, tf::Transform trans_att, std::string model_base_path) {
+        ROS_INFO_STREAM(" Right Model Path "            << r_model_base_path);
+        ROS_INFO_STREAM(" Left Model Path "             << l_model_base_path);
+        ROS_INFO_STREAM(" Execute Learned model: phase "<< phase);
+        ROS_INFO_STREAM(" Reaching threshold "          << reachingThreshold);
+        ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
+        ROS_INFO_STREAM(" Model DT "                    << model_dt);
 
-		ROS_INFO_STREAM(" Model Path "<<model_base_path);
-		ROS_INFO_STREAM("Learned model execution with phase "<<phase);
-		ROS_INFO_STREAM(" Reaching threshold "<<reachingThreshold);
-		ROS_INFO_STREAM(" Orientation threshold "<<orientationThreshold);
-		ROS_INFO_STREAM(" Model DT "<<model_dt);
-
-		ros::Rate wait(1);
-		tf::Transform  trans_final_target;
-
-		// convert attractor information to world frame
-		trans_final_target.mult(trans_obj, trans_att);
-
-		ROS_INFO_STREAM("Final target origin "<<trans_final_target.getOrigin().getX()<<","<<trans_final_target.getOrigin().getY()<<","<<trans_final_target.getOrigin().getZ());
-		ROS_INFO_STREAM("Final target orient "<<trans_final_target.getRotation().getX()<<","<<trans_final_target.getRotation().getY()<<","<<trans_final_target.getRotation().getZ()<<","<<trans_final_target.getRotation().getW());
-
-		if (initial_config == true)
-			curr_ee_pose = ee_pose;
-		else
-			curr_ee_pose = des_ee_pose;
-
-		// Initialize CDS
-		CDSExecution *cdsRun = new CDSExecution;
-		cdsRun->initSimple(model_base_path, phase);
-		cdsRun->setObjectFrame(toMatrix4(trans_obj));
-		cdsRun->setAttractorFrame(toMatrix4(trans_att));
-		cdsRun->setCurrentEEPose(toMatrix4(curr_ee_pose));
-		cdsRun->setDT(model_dt);
-		cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
-		cdsRun->postInit();
-
-		ros::Duration loop_rate(model_dt);
-		tf::Pose mNextRobotEEPose = curr_ee_pose;
-		tf::Transform trans_ee;
-		std::vector<double> gmr_in, gmr_out;
-		gmr_in.resize(1);gmr_out.resize(1);
-		double pos_err, ori_err, prog_curr, full_err;
-
-		ROS_INFO("Execution started");
-		tf::Pose p;
-		bool bfirst = true;
-
-		static tf::TransformBroadcaster br;
-		while(ros::ok()) {
-			if (initial_config == true)
-				curr_ee_pose = ee_pose;
-			else
-				curr_ee_pose = des_ee_pose;
-
-			// Publish attractors if running in simulation or with fixed values
-			trans_ee.setRotation(tf::Quaternion(curr_ee_pose.getRotation()));
-			trans_ee.setOrigin(tf::Vector3(curr_ee_pose.getOrigin()));
-
-			// To Visualize EE Frames
-			if (simulation==true){
-				int frame_viz = int(model_dt*1000);
-				if (tf_count==0 || tf_count%frame_viz==0){
-					stringstream ss;
-					ss <<  "/ee_tf_" << tf_count;
-					br.sendTransform(tf::StampedTransform(trans_ee, ros::Time::now(), world_frame, ss.str()));
-				}
-				tf_count++;
-			}
-			else{
-				br.sendTransform(tf::StampedTransform(trans_ee, ros::Time::now(), world_frame, "/ee_tf"));
-			}
+        // Convert attractors to world frame
+        tf::Transform  right_final_target, left_final_target;
+        right_final_target.mult(trans_obj, trans_r_att);
+        left_final_target.mult(trans_obj, trans_l_att);
 
 
-			br.sendTransform(tf::StampedTransform(trans_final_target, ros::Time::now(), world_frame, "/attractor"));
-			br.sendTransform(tf::StampedTransform(trans_obj, ros::Time::now(), world_frame, "/object_frame"));
+        // Setting Initial conditions
+        if (initial_config == true){
+            r_curr_ee_pose = r_ee_pose;
+            l_curr_ee_pose = l_ee_pose;
+        }
 
-			// Current progress variable (position/orientation error).
-			// TODO: send this back to action client as current progress
-			pos_err = (trans_final_target.getOrigin() - curr_ee_pose.getOrigin()).length();
-			//Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
-			ori_err = acos(abs(trans_final_target.getRotation().dot(curr_ee_pose.getRotation())));
-			ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : " << reachingThreshold << " ... Current Error: "<<pos_err);
-			ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Error: "<<ori_err);
+        // Initialize CDS for right arm
+        CDSExecution *right_cdsRun = new CDSExecution;
+        right_cdsRun->initSimple(r_model_base_path, phase);
+        right_cdsRun->setObjectFrame(toMatrix4(trans_obj));
+        right_cdsRun->setAttractorFrame(toMatrix4(trans_r_att));
+        right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
+        right_cdsRun->setDT(model_dt);
+        right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
+        right_cdsRun->postInit();
 
-			double att_pos_err = (trans_final_target.getOrigin() - des_ee_pose.getOrigin()).length();
-			double att_ori_err = acos(abs(trans_final_target.getRotation().dot(des_ee_pose.getRotation())));
 
-			ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Position Error: " << att_pos_err);
-			ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Orientation Error: " << att_ori_err);
+        // Initialize CDS for left arm
+        CDSExecution *left_cdsRun = new CDSExecution;
+        left_cdsRun->initSimple(l_model_base_path, phase);
+        left_cdsRun->setObjectFrame(toMatrix4(trans_obj));
+        left_cdsRun->setAttractorFrame(toMatrix4(trans_l_att));
+        left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
+        left_cdsRun->setDT(model_dt);
+        left_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
+        left_cdsRun->postInit();
 
-			// Compute Next Desired EE Pose
-			cdsRun->setCurrentEEPose(toMatrix4(mNextRobotEEPose));
-			toPose(cdsRun->getNextEEPose(), mNextRobotEEPose);
-			des_ee_pose = mNextRobotEEPose;
 
-			// Make next pose the current pose for open-loop simulation
-			if (simulation==true)
-				initial_config=false;
+        // Vairable for execution
+        ros::Duration loop_rate(model_dt);
+        static tf::TransformBroadcaster br;
+        tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
+        tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
 
-			// If orientation error is VERY low or nan because of qdiff take target orientation
-			if (att_ori_err < 0.005 || isnan(att_ori_err)) //[rad] and [m]//
-//			if (isnan(att_ori_err)) //[rad] and [m]
-				des_ee_pose.setRotation(tf::Quaternion(trans_final_target.getRotation()));
+        tf::Transform r_trans_ee, l_trans_ee;
+        double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
-			// Send the computed pose from one of the above phases
-			if (simulation==false)
-				sendPose(des_ee_pose);
 
-			// Broadcast/view Desired EE Pose
-			br.sendTransform(tf::StampedTransform(des_ee_pose, ros::Time::now(), world_frame, "/des_ee_mp"));
-			ROS_INFO_STREAM_THROTTLE(1, "Sent Position: "<<des_ee_pose.getOrigin().x()<<","<<des_ee_pose.getOrigin().y()<<","<<des_ee_pose.getOrigin().z());
-			tf::Quaternion q = des_ee_pose.getRotation();
-			ROS_INFO_STREAM_THROTTLE(1, "Sent Orientation: "<<q.x()<<","<<q.y()<<","<<q.z()<<","<<q.w());
+        ROS_INFO("Execution started");
+        while(ros::ok()) {
 
-			feedback_.progress = prog_curr;
-			as_.publishFeedback(feedback_);
+            // Setting Initial conditions
+            if (initial_config == true){
+                r_curr_ee_pose = r_ee_pose;
+                l_curr_ee_pose = l_ee_pose;
+            }
+            else{
+                r_curr_ee_pose = r_des_ee_pose;
+                l_curr_ee_pose = l_des_ee_pose;
+            }
 
-			if(pos_err < reachingThreshold && (ori_err < orientationThreshold || isnan(ori_err))) {
-				break;
-			}
-			loop_rate.sleep();
-		}
-		delete cdsRun;
-		return ros::ok();
-	}
+            // Publish attractors if running in simulation or with fixed values
+            r_trans_ee.setRotation(tf::Quaternion(r_curr_ee_pose.getRotation()));
+            r_trans_ee.setOrigin(tf::Vector3(r_curr_ee_pose.getOrigin()));
+
+            l_trans_ee.setRotation(tf::Quaternion(l_curr_ee_pose.getRotation()));
+            l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
+
+            // To Visualize EE Frames
+            if (simulation==true){
+                int frame_viz = int(model_dt*1000);
+                if (tf_count==0 || tf_count%frame_viz==0){
+                    stringstream r_ss, l_ss;
+                    r_ss <<  "/r_ee_tf_" << tf_count;
+                    l_ss <<  "/l_ee_tf_" << tf_count;
+                    br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, r_ss.str()));
+                    br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, l_ss.str()));
+                }
+                tf_count++;
+            }
+            else{
+                br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
+                br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
+            }
+
+            br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
+            br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+            br.sendTransform(tf::StampedTransform(trans_obj, ros::Time::now(), right_robot_frame, "/task_frame"));
+
+            // Current progress variable (position/orientation error).
+            r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
+            l_pos_err = (left_final_target.getOrigin()  - l_curr_ee_pose.getOrigin()).length();
+
+            //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
+            r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
+            l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
+            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
+            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << r_ori_err);
+
+            double r_att_pos_err = (right_final_target.getOrigin() - r_des_ee_pose.getOrigin()).length();
+            double r_att_ori_err = acos(abs(right_final_target.getRotation().dot(r_des_ee_pose.getRotation())));
+
+            double l_att_pos_err = (left_final_target.getOrigin() - l_des_ee_pose.getOrigin()).length();
+            double l_att_ori_err = acos(abs(left_final_target.getRotation().dot(l_des_ee_pose.getRotation())));
+
+            ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Position Error: "    << r_att_pos_err << " Left Position Error: "    << l_att_pos_err);
+            ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Orientation Error: " << r_att_ori_err << " Left Orientation Error: " << l_att_ori_err);
+
+            // Compute Next Desired EE Pose for Right Arm
+            right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
+            toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
+            r_des_ee_pose = r_mNextRobotEEPose;
+
+            // Compute Next Desired EE Pose for Left Arm
+            left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
+            toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
+            l_des_ee_pose = l_mNextRobotEEPose;
+
+            // Make next pose the current pose for open-loop simulation
+            if (simulation==true)
+                initial_config=false;
+
+            // CHECK If orientation error is VERY low or nan because of qdiff take target orientation
+            if (r_att_ori_err < 0.005 || isnan(r_att_ori_err)) //[rad] and [m]//
+                r_des_ee_pose.setRotation(tf::Quaternion(right_final_target.getRotation()).normalize());
+
+            if (l_att_ori_err < 0.005 || isnan(l_att_ori_err)) //[rad] and [m]//
+                l_des_ee_pose.setRotation(tf::Quaternion(left_final_target.getRotation()).normalize());
+
+            //******************************//
+            //  Send the computed ee poses  //
+            //******************************//
+            if (simulation==false)
+                sendPose(r_des_ee_pose, l_des_ee_pose);
+
+            as_.publishFeedback(feedback_);
+            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
+                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
+                    break;
+                }
+            loop_rate.sleep();
+        }
+        delete right_cdsRun;
+        delete left_cdsRun;
+        return ros::ok();
+    }
 
 public:
 
-	PLAN2CTRLAction(std::string name) :
-		as_(nh_, name, boost::bind(&PLAN2CTRLAction::executeCB, this, _1), false),
-		action_name_(name)
-{
-		ee_ft.resize(6);
-
-		// ROS TOPICS for controllers
-		// sub_ = nh_.subscribe<geometry_msgs::PoseStamped>(EE_STATE_POSE_TOPIC, 1, eeStateCallback);
-		// pub_ = nh_.advertise<geometry_msgs::PoseStamped>(EE_CMD_POSE_TOPIC, 1);
-		// pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(EE_CMD_FT_TOPIC, 1);
-		as_.start();
-}
+    PLAN2CTRLAction(std::string name) :
+        as_(nh_, name, boost::bind(&PLAN2CTRLAction::executeCB, this, _1), false),
+        action_name_(name)
+    {
+        r_ee_ft.resize(6);
+        l_ee_ft.resize(6);
+        as_.start();
+    }
 
 
-	~PLAN2CTRLAction(void)
-	{
-	}
+    ~PLAN2CTRLAction(void)
+    {
+    }
 
-	// Select which mode to use from launch file. Fixed numbers for LASA/BOXY robot or the Vision tracking.
-	void initialize() {
-		std::string ad;
-		ros::NodeHandle _nh("~");
-		_nh.getParam("action_mode", ad);
-		if(ad == "lasa_fixed") {
-			action_mode = ACTION_LASA_FIXED;
-		} else if(ad == "romeo_fixed") {
-			action_mode = ACTION_ROMEO_FIXED;
-		} else if(ad == "vision") {
-			action_mode = ACTION_VISION;
-		} else {
-			ROS_ERROR_STREAM("Unrecognized action type. Must be one of 'lasa_fixed', 'romeo_fixed', 'vision'. Found '"<<ad<<"'");
-			throw;
-		}
+    // Select which mode to use from launch file. Fixed numbers for LASA/BOXY robot or the Vision tracking.
+    void initialize() {
+        std::string ad;
+        ros::NodeHandle _nh("~");
 
-		_nh.getParam("world_frame", world_frame);
-		_nh.getParam("model_base_path", base_path);
-		_nh.getParam("simulation", simulation);
-		_nh.getParam("model_dt", model_dt);
-		_nh.getParam("reachingThreshold", reachingThreshold);
-		_nh.getParam("orientationThreshold", orientationThreshold);
-		_nh.getParam("topic_ns", topic_ns);
+        // Read Parameters from Launch File
+        _nh.getParam("right_robot_frame", right_robot_frame);
+        _nh.getParam("left_robot_frame", left_robot_frame);
+        _nh.getParam("right_model_base_path", r_base_path);
+        _nh.getParam("left_model_base_path", l_base_path);
+        _nh.getParam("simulation", simulation);
+        _nh.getParam("model_dt", model_dt);
+        _nh.getParam("reachingThreshold", reachingThreshold);
+        _nh.getParam("orientationThreshold", orientationThreshold);
+        _nh.getParam("r_topic_ns", r_topic_ns);
+        _nh.getParam("l_topic_ns", l_topic_ns);
 
 
-		std::stringstream ss_state_pose, ss_state_ft, ss_cmd_pose, ss_cmd_ft;
-		ss_state_pose << "/" << topic_ns << "/joint_to_cart/est_ee_pose";
-		ss_state_ft   << "/" << topic_ns << "/joint_to_cart/est_ee_ft";
-		ss_cmd_pose   << "/" << topic_ns << "/cart_to_joint/des_ee_pose";
-		ss_cmd_ft     << "/" << topic_ns << "/cart_to_joint/des_ee_ft";
+        std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_cmd_pose, r_ss_cmd_ft;
+        r_ss_state_pose << "/" << r_topic_ns << "/joint_to_cart/est_ee_pose";
+        r_ss_state_ft   << "/" << r_topic_ns << "/joint_to_cart/est_ee_ft";
+        r_ss_cmd_pose   << "/" << r_topic_ns << "/cart_to_joint/des_ee_pose";
+        r_ss_cmd_ft     << "/" << r_topic_ns << "/cart_to_joint/des_ee_ft";
 
-		EE_STATE_POSE_TOPIC = ss_state_pose.str();
-		EE_STATE_FT_TOPIC	= ss_state_ft.str();
-		EE_CMD_POSE_TOPIC	= ss_cmd_pose.str();
-		EE_CMD_FT_TOPIC		= ss_cmd_ft.str();
+        R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
+        R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
+        R_EE_CMD_POSE_TOPIC	  = r_ss_cmd_pose.str();
+        R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
 
-		ROS_INFO_STREAM("Selected Action Mode: " << ad);
+        // ROS TOPICS for right arm controllers
+        r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, r_eeStateCallback);
+        r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, r_ftStateCallback);
+        r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
+        r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
 
-		// ROS TOPICS for controllers
-		sub_ = nh_.subscribe<geometry_msgs::PoseStamped>(EE_STATE_POSE_TOPIC, 1, eeStateCallback);
-		pub_ = nh_.advertise<geometry_msgs::PoseStamped>(EE_CMD_POSE_TOPIC, 1);
-		pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(EE_CMD_FT_TOPIC, 1);
-	}
+
+        std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_cmd_pose, l_ss_cmd_ft;
+        l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
+        l_ss_state_ft   << "/" << l_topic_ns << "/joint_to_cart/est_ee_ft";
+        l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
+        l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
+
+        L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
+        L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
+        L_EE_CMD_POSE_TOPIC	  = l_ss_cmd_pose.str();
+        L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
+
+
+        // ROS TOPICS for left arm controllers
+        l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, l_eeStateCallback);
+        l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, l_ftStateCallback);
+        l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
+        l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
+
+
+        tf::TransformListener listener;
+        try {
+            listener.waitForTransform(right_robot_frame, "/world_frame", ros::Time(0), ros::Duration(10.0) );
+            listener.lookupTransform(right_robot_frame, "/world_frame", ros::Time(0), right_arm_base);
+        } catch (tf::TransformException ex) {
+            ROS_ERROR("%s",ex.what());
+        }
+        try {
+            listener.waitForTransform(left_robot_frame, right_robot_frame, ros::Time(0), ros::Duration(10.0) );
+            listener.lookupTransform(left_robot_frame, right_robot_frame, ros::Time(0), left_arm_base);
+        } catch (tf::TransformException ex) {
+            ROS_ERROR("%s",ex.what());
+        }
+
+
+    }
     void executeCB(const bimanual_action_planners::PLAN2CTRLGoalConstPtr &goal)
-	{
+    {
 
-		std::string desired_action = goal->action_type;
-		ROS_INFO_STREAM( "Desired Action is " << desired_action);
+        std::string desired_action = goal->action_type;
+        ROS_INFO_STREAM( "Desired Action is " << desired_action);
 
-		isOkay = false;
-		ros::Rate r(10);
-		ROS_INFO("Waiting for EE pose/ft topic...");
-		while(ros::ok() && (!isOkay)) {
-			r.sleep();
-		}
-		if(!ros::ok()) {
-			result_.success = 0;
-			ROS_INFO("%s: Failed", action_name_.c_str());
-			as_.setAborted(result_);
-			return;
-		}
+        isOkay = false;
+        ros::Rate r(10);
+        ROS_INFO("Waiting for EE pose/ft topic...");
+        while(ros::ok() && (!isOkay)) {
+            r.sleep();
+        }
+        if(!ros::ok()) {
+            result_.success = 0;
+            ROS_INFO("%s: Failed", action_name_.c_str());
+            as_.setAborted(result_);
+            return;
+        }
 
-		// initialize action progress as null
-		feedback_.progress = 0;
-		bool success = false;
+        // initialize action progress as null
+        feedback_.progress = 0;
+        bool success = false;
 
-		///////////////////////////////////////////////
-		/////----- EXECUTE REQUESTED ACTION ------/////
-		///////////////////////////////////////////////
+        ///////////////////////////////////////////////
+        /////----- EXECUTE REQUESTED ACTION ------/////
+        ///////////////////////////////////////////////
 
 
-		// Use learned models to do shit
-		if(goal->action_type=="LEARNED_MODEL"){
-			PouringPhase phase;
-			if(goal->action_name == "home") {
-				phase = PHASEHOME;
-			} else if(goal->action_name == "pour") {
-				phase = PHASEPOUR;
-			} else if(goal->action_name == "back") {
-				phase = PHASEBACK;
-			} else {
-				ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
-				result_.success = 0;
-				as_.setAborted(result_);
-				return;
-			}
+        // Use learned models to do shit
+        if(goal->action_type=="LEARNED_MODEL"){
+            TaskPhase phase;
+            if(goal->action_name == "reach") {
+                phase = PHASEREACH;
+            } else if(goal->action_name == "phase1") {
+                phase = PHASE1;
+            } else if(goal->action_name == "phase2") {
+                phase = PHASE2;
+            } else {
+                ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
+                result_.success = 0;
+                as_.setAborted(result_);
+                return;
+            }
 
-			//TODO: update these from action
-//			double reachingThreshold = 0.01, orientationThreshold = 0.02, model_dt = 0.001; //[m] [rad]
-			CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
+            CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
             CDSController::DynamicsType slaveType = CDSController::UTHETA;
-			tf::Transform trans_obj, trans_att;
+            tf::Transform trans_obj, trans_r_att, trans_l_att;
 
-			switch (action_mode) {
-			case ACTION_ROMEO_FIXED:
-				break;
-			case ACTION_LASA_FIXED:
+            // Set transform for task frame
+            trans_obj.setRotation(tf::Quaternion(goal->task_frame.rotation.x,goal->task_frame.rotation.y,
+                                                 goal->task_frame.rotation.z,goal->task_frame.rotation.w));
+            trans_obj.setOrigin(tf::Vector3(goal->task_frame.translation.x, goal->task_frame.translation.y,
+                                            goal->task_frame.translation.z));
 
-			case ACTION_VISION:
-				 trans_obj.setRotation(tf::Quaternion(goal->object_frame.rotation.x,goal->object_frame.rotation.y,
-					goal->object_frame.rotation.z,goal->object_frame.rotation.w));
-			     trans_obj.setOrigin(tf::Vector3(goal->object_frame.translation.x, goal->object_frame.translation.y,
-					goal->object_frame.translation.z));
-				 trans_att.setRotation(tf::Quaternion(goal->attractor_frame.rotation.x,goal->attractor_frame.rotation.y,
-							goal->attractor_frame.rotation.z,goal->attractor_frame.rotation.w));
-				 trans_att.setOrigin(tf::Vector3(goal->attractor_frame.translation.x, goal->attractor_frame.translation.y,
-							goal->attractor_frame.translation.z));
-				break;
-			default:
-				break;
-			}
+            // Set transform for right arm attractor
+            trans_r_att.setRotation(tf::Quaternion(goal->right_attractor_frame.rotation.x,goal->right_attractor_frame.rotation.y,
+                                                   goal->right_attractor_frame.rotation.z,goal->right_attractor_frame.rotation.w));
+            trans_r_att.setOrigin(tf::Vector3(goal->right_attractor_frame.translation.x, goal->right_attractor_frame.translation.y,
+                                              goal->right_attractor_frame.translation.z));
 
-			success = learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-					model_dt, trans_obj, trans_att, base_path);
-		}
+            // Set transform for left arm attractor
+            trans_l_att.setRotation(tf::Quaternion(goal->left_attractor_frame.rotation.x,goal->left_attractor_frame.rotation.y,
+                                                   goal->left_attractor_frame.rotation.z,goal->left_attractor_frame.rotation.w));
+            trans_l_att.setOrigin(tf::Vector3(goal->left_attractor_frame.translation.x, goal->left_attractor_frame.translation.y,
+                                              goal->left_attractor_frame.translation.z));
 
-		result_.success = success;
-		if(success)
-		{
-			ROS_INFO("%s: Succeeded", action_name_.c_str());
-			as_.setSucceeded(result_);
-		} else {
-			ROS_INFO("%s: Failed", action_name_.c_str());
-			as_.setAborted(result_);
-		}
+            // Execute action from learned action model
+            success = learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
+                                              model_dt, trans_obj, trans_r_att, trans_l_att, r_base_path, l_base_path);
+        }
 
-	}
+        result_.success = success;
+        if(success)
+        {
+            ROS_INFO("%s: Succeeded", action_name_.c_str());
+            as_.setSucceeded(result_);
+        } else {
+            ROS_INFO("%s: Failed", action_name_.c_str());
+            as_.setAborted(result_);
+        }
+
+    }
 };
 
 
 int main(int argc, char** argv) {
 
-	ros::init(argc, argv, "plan2ctrl");
-	ROS_INFO("Initializing Server");
-	PLAN2CTRLAction action_execution(ros::this_node::getName());
-	action_execution.initialize();
-	ros::spin();
+    ros::init(argc, argv, "bimanual_plan2ctrl");
+    ROS_INFO("Initializing Server");
+    PLAN2CTRLAction action_execution(ros::this_node::getName());
+    action_execution.initialize();
+    ros::spin();
     return 0;
 }
