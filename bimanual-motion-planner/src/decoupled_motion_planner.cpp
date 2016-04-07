@@ -130,8 +130,7 @@ protected:
     // Pouring phases
     enum TaskPhase {
         PHASE1=1,
-        PHASE2=2,
-        PHASEREACH=3
+        PHASE2=2
     };
 
     ros::NodeHandle nh_;
@@ -450,9 +449,7 @@ public:
         // Use learned models to do shit
         if(goal->action_type=="LEARNED_MODEL"){
             TaskPhase phase;
-            if(goal->action_name == "reach") {
-                phase = PHASEREACH;
-            } else if(goal->action_name == "phase1") {
+            if(goal->action_name == "phase1") {
                 phase = PHASE1;
             } else if(goal->action_name == "phase2") {
                 phase = PHASE2;
