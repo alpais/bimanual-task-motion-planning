@@ -12,7 +12,7 @@
 			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/>
 
 
-		  <node name="bimanual_plan2ctrl" pkg="bimanual_motion_planner" type="bimanual_action_server" output="screen" respawn="false">	  	
+		  <node name="bimanual_plan2ctrl" pkg="bimanual_motion_planner" type="decoupled_motion_planner" output="screen" respawn="false">	  	
 		  	<param name="simulation" 			 		value="$(arg simulation)" />
 		  	<param name="right_robot_frame" 		    value="$(arg r_robot_base_frame)" />
 		  	<param name="left_robot_frame" 		     	value="$(arg l_robot_base_frame)" />

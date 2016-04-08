@@ -437,6 +437,7 @@ public:
         feedback_.progress = 0;
         bool success = false;
 
+
         // Setup transforms for task-space control
         tf::Transform trans_obj, trans_r_att, trans_l_att;
         // Set transform for task frame
@@ -477,6 +478,7 @@ public:
 
             CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
             CDSController::DynamicsType slaveType = CDSController::UTHETA;
+
 
             // Execute action from learned action model
             success = decoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
