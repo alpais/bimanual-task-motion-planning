@@ -109,21 +109,24 @@ if __name__ == '__main__':
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	raw_input('Press Enter to Run Bimanual Task with Coordinated Reaching DS')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	action_type = 'DECOUPLED_LEARNED_MODEL'  
-	# action_type = 'BIMANUAL_DS'  
+	# action_type = 'DECOUPLED_LEARNED_MODEL'  
 
-	result = PLAN2CTRL_client(action_type, 'phase1', task_frame, rA_p1_attr, lA_p1_attr, 10)
+	# result = PLAN2CTRL_client(action_type, 'phase1', task_frame, rA_p1_attr, lA_p1_attr, 10)
+	# print "Result:"		
+	# print result.success
+	
+	# #Wait a few seconds before going back
+	# rospy.sleep(1.)
+	# result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
+	# print "Result:"
+	# print result.success
+
+
+	action_type = 'BIMANUAL_DS'  
+	result = PLAN2CTRL_client(action_type, '', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success
 	
-	#Wait a few seconds before going back
-	rospy.sleep(1.)
-
-	action_type = 'DECOUPLED_LEARNED_MODEL'  
-	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
-	print "Result:"
-	print result.success
-
 
     except rospy.ROSInterruptException:
         print "program interrupted before completion"

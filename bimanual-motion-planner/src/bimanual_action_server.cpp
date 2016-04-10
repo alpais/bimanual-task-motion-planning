@@ -17,12 +17,14 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
  * Public License for more details
  */
+
 #include <ros/ros.h>
 //-- TF Stuff --//
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
+#include <tf_conversions/tf_eigen.h>
 
 //-- Custom ActionLib Stuff --//
 #include "actionlib/server/simple_action_server.h"
@@ -31,6 +33,7 @@
 //-- Message Types --//
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/WrenchStamped.h"
+#include <visualization_msgs/Marker.h>
 
 //-- CDS Stuff --//
 #include "CDSExecution.h"
@@ -40,16 +43,31 @@
 #include <Eigen/Geometry>
 
 
+// Right/Left EE states/cmds/topics
 tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
 Eigen::VectorXd r_ee_ft, r_curr_ee_ft, l_ee_ft, l_curr_ee_ft;
-volatile bool isOkay;
 string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
 string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC;
 string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC;
 tf::StampedTransform right_arm_base, left_arm_base;
+
+// Simulation/execution variables
+volatile bool isOkay;
 bool initial_config = true, simulation;
 int tf_count(0);
 double reachingThreshold (0.01), orientationThreshold (0.02), model_dt (0.001); //Defaults: [m],[rad],[s]
+
+// Visualization variables for Bimanual DS Action
+uint32_t   shape = visualization_msgs::Marker::CUBE;
+uint32_t   arrow = visualization_msgs::Marker::ARROW;
+visualization_msgs::Marker ro_marker;
+visualization_msgs::Marker vo_marker;
+visualization_msgs::Marker vo_arrow_left;
+visualization_msgs::Marker vo_arrow_right;
+
+//************************************//
+// FUNCTIONS USED BY ANY ACTION TYPE  //
+//***********************************//
 
 // Callback for the current right end effector pose
 void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
@@ -119,11 +137,46 @@ void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose) {
 }
 
 
-class PLAN2CTRLAction
+void compute_object_pose(const tf::Transform& right, const tf::Transform& left, tf::Transform& object){
+
+    // Compute object position (midpoint between left and right reaching points)
+    tf::Vector3 o_pos = left.getOrigin() + (right.getOrigin() - left.getOrigin())/2;
+    tf::Vector3 tmp(right.getOrigin());
+    tmp.setX(tmp.getX() + 0.05);
+
+    // Compute object orientation (xdir: direction from right to left reaching point, ydir: y plane in world rf)
+    Eigen::Vector3d xdir (right.getOrigin().getX() - left.getOrigin().getX(), right.getOrigin().getY() - left.getOrigin().getY(), right.getOrigin().getZ() - left.getOrigin().getZ());
+
+    // Construct a plane "parallel" to the x dir of the robot base (table) and get the normal for the zdir
+    Eigen::Hyperplane<double,3> p = Eigen::Hyperplane<double,3>::Through(Eigen::Vector3d(right.getOrigin().getX(),right.getOrigin().getY(),right.getOrigin().getZ()),
+              Eigen::Vector3d(left.getOrigin().getX(),left.getOrigin().getY(),left.getOrigin().getZ()),
+              Eigen::Vector3d(tmp.getX(),tmp.getY(),tmp.getZ()));
+    p.normalize();
+    Eigen::Vector3d zdir = p.normal();
+
+    Eigen::Vector3d Rx = xdir/xdir.norm();
+    Eigen::Vector3d Rz = zdir/zdir.norm();
+    Eigen::Vector3d Ry = Rz.cross(Rx)/(Rz.cross(Rx)).norm();
+
+    Eigen::Matrix3d R;
+    R << Rx, Ry, Rz;
+    tf::Matrix3x3 tf3d;
+    tf::matrixEigenToTF(R,tf3d);
+    tf::Quaternion o_rot;
+    tf3d.getRotation(o_rot);
+
+    // Set position and orientation of object
+    object.setRotation(o_rot);
+    object.setOrigin(o_pos);
+
+}
+
+
+class BimanualActionServer
 {
 protected:
 
-    // Pouring phases
+    // Task phases
     enum TaskPhase {
         PHASE1=1,
         PHASE2=2
@@ -131,8 +184,9 @@ protected:
 
     ros::NodeHandle nh_;
     ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_;
-    ros::Publisher  r_pub_, r_pub_ft_, l_pub_, l_pub_ft_;
+    ros::Publisher  r_pub_, r_pub_ft_, l_pub_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_;
     string right_robot_frame, left_robot_frame;
+
 
     // NodeHandle instance must be created before this line. Otherwise strange error may occur.
     actionlib::SimpleActionServer<bimanual_action_planners::PLAN2CTRLAction> as_;
@@ -171,10 +225,95 @@ protected:
         l_pub_.publish(l_msg);
     }
 
-    // Execute action from learned models
+
+    // Publish real object shape for VO bimanual DS
+    void publish_ro_rviz(const tf::Transform& ro_pose, const double& object_length){
+
+        // Marker 6DOF pose
+        ro_marker.pose.position.x    = ro_pose.getOrigin().getX();
+        ro_marker.pose.position.y    = ro_pose.getOrigin().getY();
+        ro_marker.pose.position.z    = ro_pose.getOrigin().getZ();
+        ro_marker.pose.orientation.x = ro_pose.getRotation().getX();
+        ro_marker.pose.orientation.y = ro_pose.getRotation().getY();
+        ro_marker.pose.orientation.z = ro_pose.getRotation().getZ();
+        ro_marker.pose.orientation.w = ro_pose.getRotation().getW();
+
+        // Marker shape
+        ro_marker.scale.x = object_length;
+        ro_marker.scale.y = 0.01;
+        ro_marker.scale.z = 0.01;
+
+        // Publish shape
+        ro_pub_.publish(ro_marker);
+
+    }
+
+
+    // Publish virtual object shape for VO bimanual DS
+    void publish_vo_rviz(const tf::Transform& vo_pose,  const double& object_length, const tf::Transform& right, const tf::Transform& left){
+
+        // Marker 6DOF pose
+        vo_marker.pose.position.x    = vo_pose.getOrigin().getX();
+        vo_marker.pose.position.y    = vo_pose.getOrigin().getY();
+        vo_marker.pose.position.z    = vo_pose.getOrigin().getZ();
+        vo_marker.pose.orientation.x = vo_pose.getRotation().getX();
+        vo_marker.pose.orientation.y = vo_pose.getRotation().getY();
+        vo_marker.pose.orientation.z = vo_pose.getRotation().getZ();
+        vo_marker.pose.orientation.w = vo_pose.getRotation().getW();
+
+        // Marker shape
+        vo_marker.scale.x = object_length;
+        vo_marker.scale.y = 0.01;
+        vo_marker.scale.z = 0.01;
+
+        // Publish shape
+        vo_pub_.publish(vo_marker);
+
+        // Compute end-points of VO
+        tf::Transform left_pose (vo_pose.inverse()), right_pose (vo_pose.inverse()) ;
+        tf::Vector3 pos_l (left_pose.getOrigin()), pos_r (right_pose.getOrigin());
+        double object_length_2 = object_length / 2;
+        pos_l.setX(left_pose.getOrigin().getX() - object_length_2);
+        pos_r.setX(right_pose.getOrigin().getX() + object_length_2);
+
+        // Left VO endpoint
+        left_pose.setOrigin(pos_l);
+        left_pose.mult(vo_pose, left_pose);
+        left_pose.mult(left_pose.inverse(),vo_pose);
+
+        // Right VO endpoint
+        right_pose.setOrigin(pos_r);
+        right_pose.mult(vo_pose, right_pose);
+        right_pose.mult(right_pose.inverse(),vo_pose);
+
+        // Publish left arrow
+        vo_arrow_left.points.resize(2);
+        vo_arrow_left.points[0].x = left_pose.getOrigin().getX();
+        vo_arrow_left.points[0].y = left_pose.getOrigin().getY();
+        vo_arrow_left.points[0].z = left_pose.getOrigin().getZ();
+        vo_arrow_left.points[1].x = left.getOrigin().getX();
+        vo_arrow_left.points[1].y = left.getOrigin().getY();
+        vo_arrow_left.points[1].z = left.getOrigin().getZ();
+        vo_l_pub_.publish(vo_arrow_left);
+
+
+        // Publish right arrow
+        vo_arrow_right.points.resize(2);
+        vo_arrow_right.points[0].x = right_pose.getOrigin().getX();
+        vo_arrow_right.points[0].y = right_pose.getOrigin().getY();
+        vo_arrow_right.points[0].z = right_pose.getOrigin().getZ();
+        vo_arrow_right.points[1].x = right.getOrigin().getX();
+        vo_arrow_right.points[1].y = right.getOrigin().getY();
+        vo_arrow_right.points[1].z = right.getOrigin().getZ();
+        vo_r_pub_.publish(vo_arrow_right);
+
+    }
+
+
+    // ACTION TYPE 1: Execute action from two independent learned models
     bool decoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
                                  double reachingThreshold, double orientationThreshold, double model_dt,
-                                 tf::Transform trans_obj, tf::Transform trans_r_att, tf::Transform trans_l_att,
+                                 tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att,
                                  std::string r_model_base_path, std::string l_model_base_path) {
 
         ROS_INFO_STREAM(" Right Model Path "            << r_model_base_path);
@@ -186,8 +325,8 @@ protected:
 
         // Convert attractors to world frame
         tf::Transform  right_final_target, left_final_target;
-        right_final_target.mult(trans_obj, trans_r_att);
-        left_final_target.mult(trans_obj, trans_l_att);
+        right_final_target.mult(task_frame, right_att);
+        left_final_target.mult(task_frame, left_att);
 
 
         // Setting Initial conditions
@@ -199,8 +338,8 @@ protected:
         // Initialize CDS for right arm
         CDSExecution *right_cdsRun = new CDSExecution;
         right_cdsRun->initSimple(r_model_base_path, phase);
-        right_cdsRun->setObjectFrame(toMatrix4(trans_obj));
-        right_cdsRun->setAttractorFrame(toMatrix4(trans_r_att));
+        right_cdsRun->setObjectFrame(toMatrix4(task_frame));
+        right_cdsRun->setAttractorFrame(toMatrix4(right_att));
         right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
         right_cdsRun->setDT(model_dt);
         right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
@@ -210,8 +349,8 @@ protected:
         // Initialize CDS for left arm
         CDSExecution *left_cdsRun = new CDSExecution;
         left_cdsRun->initSimple(l_model_base_path, phase);
-        left_cdsRun->setObjectFrame(toMatrix4(trans_obj));
-        left_cdsRun->setAttractorFrame(toMatrix4(trans_l_att));
+        left_cdsRun->setObjectFrame(toMatrix4(task_frame));
+        left_cdsRun->setAttractorFrame(toMatrix4(left_att));
         left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
         left_cdsRun->setDT(model_dt);
         left_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
@@ -267,7 +406,7 @@ protected:
 
             br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
             br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
-            br.sendTransform(tf::StampedTransform(trans_obj, ros::Time::now(), right_robot_frame, "/task_frame"));
+            br.sendTransform(tf::StampedTransform(task_frame, ros::Time::now(), right_robot_frame, "/task_frame"));
 
             // Current progress variable (position/orientation error).
             r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
@@ -327,10 +466,63 @@ protected:
         return ros::ok();
     }
 
+    // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
+    bool coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
+
+        // Convert attractors to world frame
+        tf::Transform  right_final_target, left_final_target, virtual_object, real_object;
+        right_final_target.mult(task_frame, right_att);
+        left_final_target.mult(task_frame, left_att);
+
+        // Compute Real object frame from desired left/right attractors
+        compute_object_pose(left_final_target, right_final_target, real_object);
+        double object_length (left_final_target.getOrigin().distance(right_final_target.getOrigin()));
+        ROS_INFO_STREAM("Object length " << object_length);
+
+        int count (0);
+        static tf::TransformBroadcaster br;
+        while(ros::ok()) {
+
+            // Current robot end-effector poses
+            r_curr_ee_pose = r_ee_pose;
+            l_curr_ee_pose = l_ee_pose;
+
+            // Compute Virtual object frame from current left/right ee poses
+            compute_object_pose(l_curr_ee_pose, r_curr_ee_pose, virtual_object);
+
+            //View real/virtual objects
+            publish_ro_rviz(real_object, object_length);
+            publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
+
+            // View attractors and VO/Task frames
+            br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
+            br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+
+
+            if (count > 100000)
+                    break;
+            count++;
+        }
+
+        return ros::ok();
+    }
+
+
+    // ACTION TYPE 3: Execute bimanual action with coupled learned dynamics
+    bool coupled_learned_model_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
+
+        // Convert attractors to world frame
+        tf::Transform  right_final_target, left_final_target, virtual_object;
+        right_final_target.mult(task_frame, right_att);
+        left_final_target.mult(task_frame, left_att);
+
+    }
+
+
 public:
 
-    PLAN2CTRLAction(std::string name) :
-        as_(nh_, name, boost::bind(&PLAN2CTRLAction::executeCB, this, _1), false),
+    BimanualActionServer(std::string name) :
+        as_(nh_, name, boost::bind(&BimanualActionServer::executeCB, this, _1), false),
         action_name_(name)
     {
         r_ee_ft.resize(6);
@@ -339,7 +531,7 @@ public:
     }
 
 
-    ~PLAN2CTRLAction(void)
+    ~BimanualActionServer(void)
     {
     }
 
@@ -398,6 +590,7 @@ public:
         l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
 
 
+        // Getting left and right robot base frame
         tf::TransformListener listener;
         try {
             listener.waitForTransform(right_robot_frame, "/world_frame", ros::Time(0), ros::Duration(10.0) );
@@ -411,6 +604,61 @@ public:
         } catch (tf::TransformException ex) {
             ROS_ERROR("%s",ex.what());
         }
+
+        // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
+        ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);
+        vo_pub_   = nh_.advertise<visualization_msgs::Marker>("virtual_object", 1);
+        vo_l_pub_ = nh_.advertise<visualization_msgs::Marker>("left_vo", 1);
+        vo_r_pub_ = nh_.advertise<visualization_msgs::Marker>("right_vo", 1);
+
+        // Real object marker settings
+        ro_marker.header.frame_id = right_robot_frame;
+        ro_marker.action = visualization_msgs::Marker::ADD;
+        ro_marker.ns = "basic_shapes";
+        ro_marker.id = 0;
+        ro_marker.type = visualization_msgs::Marker::CUBE;
+
+        ro_marker.color.r = 0.0f;
+        ro_marker.color.g = 0.0f;
+        ro_marker.color.b = 1.0f;
+        ro_marker.color.a = 0.6f;
+
+        // Virtual object marker settings
+        vo_marker.header.frame_id = right_robot_frame;
+        vo_marker.action = visualization_msgs::Marker::ADD;
+        vo_marker.ns = "basic_shapes";
+        vo_marker.id = 1;
+        vo_marker.type = visualization_msgs::Marker::CUBE;
+        vo_marker.color.r = 0.0f;
+        vo_marker.color.g = 1.0f;
+        vo_marker.color.b = 0.0f;
+        vo_marker.color.a = 0.6f;
+
+        vo_arrow_left.header.frame_id = right_robot_frame;
+        vo_arrow_left.action = visualization_msgs::Marker::ADD;
+        vo_arrow_left.ns = "basic_shapes";
+        vo_arrow_left.id = 2;
+        vo_arrow_left.type = visualization_msgs::Marker::ARROW;
+        vo_arrow_left.color.r = 1.0f;
+        vo_arrow_left.color.g = 0.0f;
+        vo_arrow_left.color.b = 0.0f;
+        vo_arrow_left.color.a = 0.6f;
+        vo_arrow_left.scale.x = 0.005;
+        vo_arrow_left.scale.y = 0.01;
+        vo_arrow_left.scale.z = 0.01;
+
+        vo_arrow_right.header.frame_id = right_robot_frame;
+        vo_arrow_right.action = visualization_msgs::Marker::ADD;
+        vo_arrow_right.ns = "basic_shapes";
+        vo_arrow_right.id = 3;
+        vo_arrow_right.type = visualization_msgs::Marker::ARROW;
+        vo_arrow_right.color.r = 1.0f;
+        vo_arrow_right.color.g = 0.0f;
+        vo_arrow_right.color.b = 0.0f;
+        vo_arrow_right.color.a = 0.6f;
+        vo_arrow_right.scale.x = 0.005;
+        vo_arrow_right.scale.y = 0.01;
+        vo_arrow_right.scale.z = 0.01;
 
 
     }
@@ -439,30 +687,31 @@ public:
 
 
         // Setup transforms for task-space control
-        tf::Transform trans_obj, trans_r_att, trans_l_att;
+        tf::Transform task_frame, right_att, left_att;
         // Set transform for task frame
-        trans_obj.setRotation(tf::Quaternion(goal->task_frame.rotation.x,goal->task_frame.rotation.y,
+        task_frame.setRotation(tf::Quaternion(goal->task_frame.rotation.x,goal->task_frame.rotation.y,
                                              goal->task_frame.rotation.z,goal->task_frame.rotation.w));
-        trans_obj.setOrigin(tf::Vector3(goal->task_frame.translation.x, goal->task_frame.translation.y,
+        task_frame.setOrigin(tf::Vector3(goal->task_frame.translation.x, goal->task_frame.translation.y,
                                         goal->task_frame.translation.z));
 
         // Set transform for right arm attractor
-        trans_r_att.setRotation(tf::Quaternion(goal->right_attractor_frame.rotation.x,goal->right_attractor_frame.rotation.y,
+        right_att.setRotation(tf::Quaternion(goal->right_attractor_frame.rotation.x,goal->right_attractor_frame.rotation.y,
                                                goal->right_attractor_frame.rotation.z,goal->right_attractor_frame.rotation.w));
-        trans_r_att.setOrigin(tf::Vector3(goal->right_attractor_frame.translation.x, goal->right_attractor_frame.translation.y,
+        right_att.setOrigin(tf::Vector3(goal->right_attractor_frame.translation.x, goal->right_attractor_frame.translation.y,
                                           goal->right_attractor_frame.translation.z));
 
         // Set transform for left arm attractor
-        trans_l_att.setRotation(tf::Quaternion(goal->left_attractor_frame.rotation.x,goal->left_attractor_frame.rotation.y,
+        left_att.setRotation(tf::Quaternion(goal->left_attractor_frame.rotation.x,goal->left_attractor_frame.rotation.y,
                                                goal->left_attractor_frame.rotation.z,goal->left_attractor_frame.rotation.w));
-        trans_l_att.setOrigin(tf::Vector3(goal->left_attractor_frame.translation.x, goal->left_attractor_frame.translation.y,
+        left_att.setOrigin(tf::Vector3(goal->left_attractor_frame.translation.x, goal->left_attractor_frame.translation.y,
                                           goal->left_attractor_frame.translation.z));
 
 
-        ///////////////////////////////////////////////
-        /////----- EXECUTE REQUESTED ACTION ------/////
-        ///////////////////////////////////////////////
-        // Use learned models to do cool stuff
+        ////////////////////////////////////////////////////
+        /////----- EXECUTE REQUESTED ACTION TYPE ------/////
+        ////////////////////////////////////////////////////
+
+        //---> ACTION TYPE 1: Use two independent decoupled learned models to execute the action
         if(goal->action_type=="DECOUPLED_LEARNED_MODEL"){
             TaskPhase phase;
             if(goal->action_name == "phase1") {
@@ -482,12 +731,17 @@ public:
 
             // Execute action from learned action model
             success = decoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-                                              model_dt, trans_obj, trans_r_att, trans_l_att, r_base_path, l_base_path);
+                                              model_dt, task_frame, right_att, left_att, r_base_path, l_base_path);
         }
 
-        if(goal->action_type=="BIMANUAL_DS"){
+        //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
+        if(goal->action_type=="BIMANUAL_DS")
+            success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att);
 
-        }
+        //---> ACTION TYPE 3: Use coupled learned models to execute the action
+        if(goal->action_type=="BIMANUAL_DS")
+            success = coupled_learned_model_execution(task_frame, right_att, left_att);
+
 
         result_.success = success;
         if(success)
@@ -507,7 +761,7 @@ int main(int argc, char** argv) {
 
     ros::init(argc, argv, "bimanual_plan2ctrl");
     ROS_INFO("Initializing Server");
-    PLAN2CTRLAction action_execution(ros::this_node::getName());
+    BimanualActionServer action_execution(ros::this_node::getName());
     action_execution.initialize();
     ros::spin();
     return 0;
