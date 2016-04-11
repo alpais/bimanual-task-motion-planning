@@ -2,7 +2,6 @@
 This repository includes the packages and instructions to run the LASA Bimanual Motion planning architecture developed initially for a bimanual zucchini peeling task within the Robohow project, but can be used for any bimanual task which invloves coordination between two end-effectors and controlling for a desired cartesian pose/ft/stiffness.
 
 ---
-###Installation:
 
 ####System Requirements:
 
