@@ -23,29 +23,14 @@ $ git clone <remote branch>
 $ cd /catkin_ws/
 $ catkin_make
 ```
-####Package list:
-
-  1. [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation):
-  ```
-  $ git clone https://github.com/epfl-lasa/kuka-rviz-simulation.git
-  ```
-  and don't forget to install all [dependencies](https://github.com/epfl-lasa/kuka-rviz-simulation) for this package.
+####Depenencies list:
   
-  2. If not already installed, [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages):
-  ```
-  $ git clone https://github.com/nbfigueroa/kuka_interface_packages.git
-  ```
-  and don't forget to install all [dependencies](https://github.com/nbfigueroa/kuka_interface_packages) for this package.
-
-  3. [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) package:
-  ```
-  $ git clone https://github.com/epfl-lasa/coupled-dynamical-systems.git
-  ```
-  
-  4. [state-transfomers](https://github.com/epfl-lasa/state-transformers) package:
-  ```
-  $ git clone https://github.com/epfl-lasa/state-transformers
-  ```
+| Dependencies  |
+| ------------- |
+| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation) |
+| [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)      |
+| [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems)     |
+| [state-transfomers](https://github.com/epfl-lasa/state-transformers) |
   
 ---
 ###Simulation of a Bi-manual reach with independent CDS for each arm:
