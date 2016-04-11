@@ -9,20 +9,6 @@ This repository includes the packages and instructions to run the LASA Bimanual 
 OS: Ubuntu 14.04
 ROS compatibility: Indigo
 
-####Instructions:
-
-For **each package/repo** listed below, the user needs to do the following:
-
-*Download:*
-```
-$ cd /catkin_ws/src
-$ git clone <remote branch>
-```
-*Build:*
-```
-$ cd /catkin_ws/
-$ catkin_make
-```
 ####Depenencies list:
   
 | Dependencies  |
