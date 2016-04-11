@@ -27,10 +27,11 @@ $ catkin_make
   
 | Dependencies  |
 | ------------- |
-| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation) |
-| [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)      |
-| [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems)     |
-| [state-transfomers](https://github.com/epfl-lasa/state-transformers) |
+| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
+| [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)    |
+| [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) |
+| [state-transfomers](https://github.com/epfl-lasa/state-transformers)                |
+| [bimanual-dynamical-system](https://github.com/epfl-lasa/bimanual-dynamical-system) |
   
 ---
 ###Simulation of a Bi-manual reach with independent CDS for each arm:
