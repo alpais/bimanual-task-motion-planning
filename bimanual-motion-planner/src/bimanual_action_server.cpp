@@ -19,6 +19,7 @@
  */
 
 #include <ros/ros.h>
+
 //-- TF Stuff --//
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
@@ -33,10 +34,13 @@
 //-- Message Types --//
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/WrenchStamped.h"
-#include <visualization_msgs/Marker.h>
 
 //-- CDS Stuff --//
 #include "CDSExecution.h"
+
+//-- Virtual Object Stuff --//
+#include "bimanual_ds.h"
+#include <visualization_msgs/Marker.h>
 
 //-- Eigen Stuff --//
 #include <Eigen/Core>
@@ -55,7 +59,7 @@ tf::StampedTransform right_arm_base, left_arm_base;
 volatile bool isOkay;
 bool initial_config = true, simulation;
 int tf_count(0);
-double reachingThreshold (0.01), orientationThreshold (0.02), model_dt (0.001); //Defaults: [m],[rad],[s]
+double reachingThreshold (0.01), orientationThreshold (0.02), model_dt (0.002), dt (0.002); //Defaults: [m],[rad],[s]
 
 // Visualization variables for Bimanual DS Action
 uint32_t   shape = visualization_msgs::Marker::CUBE;
@@ -64,6 +68,10 @@ visualization_msgs::Marker ro_marker;
 visualization_msgs::Marker vo_marker;
 visualization_msgs::Marker vo_arrow_left;
 visualization_msgs::Marker vo_arrow_right;
+
+// Variables for Bimanual DS
+#define WN_CART_PLANNER   (70.0)
+
 
 //************************************//
 // FUNCTIONS USED BY ANY ACTION TYPE  //
@@ -467,7 +475,7 @@ protected:
     }
 
     // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
-    bool coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
+    bool coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt){
 
         // Convert attractors to world frame
         tf::Transform  right_final_target, left_final_target, virtual_object, real_object;
@@ -477,7 +485,24 @@ protected:
         // Compute Real object frame from desired left/right attractors
         compute_object_pose(left_final_target, right_final_target, real_object);
         double object_length (left_final_target.getOrigin().distance(right_final_target.getOrigin()));
-        ROS_INFO_STREAM("Object length " << object_length);
+
+        // Initialize Virtual Object Dynamical System
+        bimanual_ds *vo_DS = new bimanual_ds();
+        //Initialization paramaters for vo_DS->(double dt, Gamma, DGamma, Gain_A, Gain_K_l, Gain_K_r)
+        vo_DS->initialize(dt,0.0,0.1,200.0,50.0,50.0);
+//        DRPos_End_right.Zero();
+//        DDRPos_End_right.Zero();
+//        DRPos_End_left.Zero();
+//        DDRPos_End_left.Zero();
+        vo_DS->Set_Left_robot_state(RPos_End_left, DRPos_End_left, DDRPos_End_left);
+        vo_DS->Set_Right_robot_state(RPos_End_right, DRPos_End_right, DDRPos_End_right);
+
+//        ROri_Intercept=ROri_object;
+        vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
+        vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
+        vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
+        vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
+        vo_DS->initialize_Virrtual_object();
 
         int count (0);
         static tf::TransformBroadcaster br;
@@ -490,13 +515,45 @@ protected:
             // Compute Virtual object frame from current left/right ee poses
             compute_object_pose(l_curr_ee_pose, r_curr_ee_pose, virtual_object);
 
-            //View real/virtual objects
+            //View real object
             publish_ro_rviz(real_object, object_length);
-            publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
+
 
             // View attractors and VO/Task frames
             br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
             br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+
+            // Update Virtual Object DS
+            vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
+            vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
+            vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
+            vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
+            vo_DS->Update();
+
+            // Get Left and Right Desired Robot States
+            vo_DS->Get_Left_robot_state(PosDesired_End_left,DPosDesired_End_left,DDPosDesired_End_left);
+            vo_DS->Get_Right_robot_state(PosDesired_End_right,DPosDesired_End_right,DDPosDesired_End_right);
+
+            // Get Current Virtual Object State
+            Position_VO.Resize(3);
+            Position_VO=vo_DS->Get_virtual_object_pos();
+
+            Position_VO.Resize(4);
+            Position_VO=vo_DS->Get_virtual_object_orie();
+
+            Virtial_object.position.x=Position_VO(0);Virtial_object.position.y=Position_VO(1);Virtial_object.position.z=Position_VO(2);
+            Virtial_object.orientation.w=Position_VO(0);Virtial_object.orientation.x=Position_VO(1);Virtial_object.orientation.y=Position_VO(2);
+            Virtial_object.orientation.z=Position_VO(3);
+
+            //View virtual object
+            publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
+
+            RPos_End_left_Open_Loop=PosDesired_End_left;
+            RPos_End_right_Open_Loop=PosDesired_End_right;
+            DRPos_End_left=DPosDesired_End_left;
+            DDRPos_End_left=DDPosDesired_End_left;
+            DRPos_End_right=DPosDesired_End_right;
+            DDRPos_End_right=DDPosDesired_End_right;
 
 
             if (count > 100000)
@@ -662,6 +719,7 @@ public:
 
 
     }
+
     void executeCB(const bimanual_action_planners::PLAN2CTRLGoalConstPtr &goal)
     {
 
@@ -736,7 +794,7 @@ public:
 
         //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
         if(goal->action_type=="BIMANUAL_DS")
-            success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att);
+            success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, dt);
 
         //---> ACTION TYPE 3: Use coupled learned models to execute the action
         if(goal->action_type=="BIMANUAL_DS")
