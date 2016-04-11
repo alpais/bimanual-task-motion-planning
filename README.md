@@ -3,12 +3,11 @@ This repository includes the packages and instructions to run the LASA Bimanual 
 
 ---
 
-####System Requirements:
+#### Requirements:
 
 OS: Ubuntu 14.04
 ROS compatibility: Indigo
 
-####Depenencies list:
   
 | Dependencies  |
 | ------------- |
