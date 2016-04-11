@@ -39,7 +39,7 @@
 #include "CDSExecution.h"
 
 //-- Virtual Object Stuff --//
-#include "bimanual_ds.h"
+#include "bimanual_ds_execution.h"
 #include <visualization_msgs/Marker.h>
 
 //-- Eigen Stuff --//
@@ -487,22 +487,18 @@ protected:
         double object_length (left_final_target.getOrigin().distance(right_final_target.getOrigin()));
 
         // Initialize Virtual Object Dynamical System
-        bimanual_ds *vo_DS = new bimanual_ds();
-        //Initialization paramaters for vo_DS->(double dt, Gamma, DGamma, Gain_A, Gain_K_l, Gain_K_r)
-        vo_DS->initialize(dt,0.0,0.1,200.0,50.0,50.0);
-//        DRPos_End_right.Zero();
-//        DDRPos_End_right.Zero();
-//        DRPos_End_left.Zero();
-//        DDRPos_End_left.Zero();
-        vo_DS->Set_Left_robot_state(RPos_End_left, DRPos_End_left, DDRPos_End_left);
-        vo_DS->Set_Right_robot_state(RPos_End_right, DRPos_End_right, DDRPos_End_right);
+        bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
+        vo_dsRun->init(dt,0.0,0.1,200.0,50.0,50.0);
+
+//        vo_DS->Set_Left_robot_state(RPos_End_left, DRPos_End_left, DDRPos_End_left);
+//        vo_DS->Set_Right_robot_state(RPos_End_right, DRPos_End_right, DDRPos_End_right);
 
 //        ROri_Intercept=ROri_object;
-        vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
-        vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
-        vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
-        vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
-        vo_DS->initialize_Virrtual_object();
+//        vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
+//        vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
+//        vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
+//        vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
+//        vo_DS->initialize_Virrtual_object();
 
         int count (0);
         static tf::TransformBroadcaster br;
@@ -524,37 +520,38 @@ protected:
             br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
 
             // Update Virtual Object DS
-            vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
-            vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
-            vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
-            vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
-            vo_DS->Update();
+//            vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
+//            vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
+//            vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
+//            vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
+//            vo_DS->Update();
 
             // Get Left and Right Desired Robot States
-            vo_DS->Get_Left_robot_state(PosDesired_End_left,DPosDesired_End_left,DDPosDesired_End_left);
-            vo_DS->Get_Right_robot_state(PosDesired_End_right,DPosDesired_End_right,DDPosDesired_End_right);
+//            vo_DS->Get_Left_robot_state(PosDesired_End_left,DPosDesired_End_left,DDPosDesired_End_left);
+//            vo_DS->Get_Right_robot_state(PosDesired_End_right,DPosDesired_End_right,DDPosDesired_End_right);
 
             // Get Current Virtual Object State
-            Position_VO.Resize(3);
-            Position_VO=vo_DS->Get_virtual_object_pos();
+//            Position_VO.Resize(3);
+//            Position_VO=vo_DS->Get_virtual_object_pos();
 
-            Position_VO.Resize(4);
-            Position_VO=vo_DS->Get_virtual_object_orie();
+//            Position_VO.Resize(4);
+//            Position_VO=vo_DS->Get_virtual_object_orie();
 
-            Virtial_object.position.x=Position_VO(0);Virtial_object.position.y=Position_VO(1);Virtial_object.position.z=Position_VO(2);
-            Virtial_object.orientation.w=Position_VO(0);Virtial_object.orientation.x=Position_VO(1);Virtial_object.orientation.y=Position_VO(2);
-            Virtial_object.orientation.z=Position_VO(3);
+//            Virtial_object.position.x=Position_VO(0);Virtial_object.position.y=Position_VO(1);Virtial_object.position.z=Position_VO(2);
+//            Virtial_object.orientation.w=Position_VO(0);Virtial_object.orientation.x=Position_VO(1);Virtial_object.orientation.y=Position_VO(2);
+//            Virtial_object.orientation.z=Position_VO(3);
 
             //View virtual object
             publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
 
-            RPos_End_left_Open_Loop=PosDesired_End_left;
-            RPos_End_right_Open_Loop=PosDesired_End_right;
-            DRPos_End_left=DPosDesired_End_left;
-            DDRPos_End_left=DDPosDesired_End_left;
-            DRPos_End_right=DPosDesired_End_right;
-            DDRPos_End_right=DDPosDesired_End_right;
+//            RPos_End_left_Open_Loop=PosDesired_End_left;
+//            RPos_End_right_Open_Loop=PosDesired_End_right;
+//            DRPos_End_left=DPosDesired_End_left;
+//            DDRPos_End_left=DDPosDesired_End_left;
+//            DRPos_End_right=DPosDesired_End_right;
+//            DDRPos_End_right=DDPosDesired_End_right;
 
+            // Do CDDynamics on Left/Right Orientation
 
             if (count > 100000)
                     break;
