@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2016 Learning Algorithms and Systems Laboratory, EPFL, Switzerland
  *
- * decoupled_motion_planner.cpp
+ * bimanual_action_server.cpp
  *
- * Created on : Feb 6, 2015
+ * Created on : April 12, 2016
  * Author     : nbfigueroa
  * Email      : nadia.figueroafernandez@epfl.ch
  * Website    : lasa.epfl.ch
@@ -486,42 +486,56 @@ protected:
         compute_object_pose(left_final_target, right_final_target, real_object);
         double object_length (left_final_target.getOrigin().distance(right_final_target.getOrigin()));
 
+        // State Variables for Virtial Object Dynamical System
+        Eigen::Vector3d real_object_velocity;
+        real_object_velocity.setZero();
+
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
         vo_dsRun->init(dt,0.0,0.1,200.0,50.0,50.0);
+        vo_dsRun->setInitialEEStates(l_ee_pose,r_ee_pose);
+        vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
+        vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
+        vo_dsRun->initializeVirtualObject();
 
-//        vo_DS->Set_Left_robot_state(RPos_End_left, DRPos_End_left, DDRPos_End_left);
-//        vo_DS->Set_Right_robot_state(RPos_End_right, DRPos_End_right, DDRPos_End_right);
-
-//        ROri_Intercept=ROri_object;
-//        vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
-//        vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
-//        vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
-//        vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
-//        vo_DS->initialize_Virrtual_object();
+        // Compute Virtual object frame from current left/right ee poses
+//        compute_object_pose(l_curr_ee_pose, r_curr_ee_pose, virtual_object);
 
         int count (0);
         static tf::TransformBroadcaster br;
         while(ros::ok()) {
 
-            // Current robot end-effector poses
-            r_curr_ee_pose = r_ee_pose;
-            l_curr_ee_pose = l_ee_pose;
-
-            // Compute Virtual object frame from current left/right ee poses
-            compute_object_pose(l_curr_ee_pose, r_curr_ee_pose, virtual_object);
+            // View attractors
+            br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
+            br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+            br.sendTransform(tf::StampedTransform(real_object, ros::Time::now(), right_robot_frame, "/real_object"));
 
             //View real object
             publish_ro_rviz(real_object, object_length);
 
+            // Set Current Object States and Intercept Positions
+            vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
+            vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
 
-            // View attractors and VO/Task frames
-            br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
-            br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+            // Update Current robot end-effector poses
+            r_curr_ee_pose = r_ee_pose;
+            l_curr_ee_pose = l_ee_pose;
+
+            // Set Current ee States
+
+            // Get Desired ee States
+
+            // Get virtual object pose
+            vo_dsRun->getVirtualObjectPose(virtual_object);
+
+            //View virtual object
+            publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
+            br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
 
             // Update Virtual Object DS
 //            vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
 //            vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
+
 //            vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
 //            vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
 //            vo_DS->Update();
@@ -530,28 +544,7 @@ protected:
 //            vo_DS->Get_Left_robot_state(PosDesired_End_left,DPosDesired_End_left,DDPosDesired_End_left);
 //            vo_DS->Get_Right_robot_state(PosDesired_End_right,DPosDesired_End_right,DDPosDesired_End_right);
 
-            // Get Current Virtual Object State
-//            Position_VO.Resize(3);
-//            Position_VO=vo_DS->Get_virtual_object_pos();
 
-//            Position_VO.Resize(4);
-//            Position_VO=vo_DS->Get_virtual_object_orie();
-
-//            Virtial_object.position.x=Position_VO(0);Virtial_object.position.y=Position_VO(1);Virtial_object.position.z=Position_VO(2);
-//            Virtial_object.orientation.w=Position_VO(0);Virtial_object.orientation.x=Position_VO(1);Virtial_object.orientation.y=Position_VO(2);
-//            Virtial_object.orientation.z=Position_VO(3);
-
-            //View virtual object
-            publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
-
-//            RPos_End_left_Open_Loop=PosDesired_End_left;
-//            RPos_End_right_Open_Loop=PosDesired_End_right;
-//            DRPos_End_left=DPosDesired_End_left;
-//            DDRPos_End_left=DDPosDesired_End_left;
-//            DRPos_End_right=DPosDesired_End_right;
-//            DDRPos_End_right=DDPosDesired_End_right;
-
-            // Do CDDynamics on Left/Right Orientation
 
             if (count > 100000)
                     break;
