@@ -122,7 +122,7 @@ if __name__ == '__main__':
 	# print result.success
 
 
-	action_type = 'BIMANUAL_DS'  
+	action_type = 'BIMANUAL_REACH'  
 	result = PLAN2CTRL_client(action_type, '', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success

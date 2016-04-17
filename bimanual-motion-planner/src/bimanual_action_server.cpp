@@ -493,13 +493,11 @@ protected:
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
         vo_dsRun->init(dt,0.0,0.1,200.0,50.0,50.0);
-        vo_dsRun->setInitialEEStates(l_ee_pose,r_ee_pose);
+        vo_dsRun->setCurrentEEStates(l_ee_pose,r_ee_pose);
         vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
         vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
         vo_dsRun->initializeVirtualObject();
 
-        // Compute Virtual object frame from current left/right ee poses
-//        compute_object_pose(l_curr_ee_pose, r_curr_ee_pose, virtual_object);
 
         int count (0);
         static tf::TransformBroadcaster br;
@@ -510,39 +508,34 @@ protected:
             br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
             br.sendTransform(tf::StampedTransform(real_object, ros::Time::now(), right_robot_frame, "/real_object"));
 
-            //View real object
+            // View real object
             publish_ro_rviz(real_object, object_length);
 
-            // Set Current Object States and Intercept Positions
+            // Set Current Object State (From Object Pose Tracking/Predicting Module)
             vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
+
+            // Set Predicted Intercept Positions (From Intercept Point Estimation Module)
             vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
 
-            // Update Current robot end-effector poses
+            // Update Current robot end-effector poses (From Fwd Kinematics)
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
 
             // Set Current ee States
+            vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
+
+            // Update VO DS
+            vo_dsRun->update();
+
+            // Get New Virtual Object Pose
+            vo_dsRun->getVirtualObjectPose(virtual_object);
 
             // Get Desired ee States
-
-            // Get virtual object pose
-            vo_dsRun->getVirtualObjectPose(virtual_object);
+            vo_dsRun->getNextEEStates(l_des_ee_pose,r_des_ee_pose);
 
             //View virtual object
             publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
             br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
-
-            // Update Virtual Object DS
-//            vo_DS->Set_object_state(RPos_object,DRPos_object,DDRPos_object,RPos_Intercept,RPos_Intercept_left,RPos_Intercept_right);
-//            vo_DS->Set_object_Orien(ROri_object,ROri_Intercept);
-
-//            vo_DS->Set_Left_robot_state(RPos_End_left,DRPos_End_left,DDRPos_End_left);
-//            vo_DS->Set_Right_robot_state(RPos_End_right,DRPos_End_right,DDRPos_End_right);
-//            vo_DS->Update();
-
-            // Get Left and Right Desired Robot States
-//            vo_DS->Get_Left_robot_state(PosDesired_End_left,DPosDesired_End_left,DDPosDesired_End_left);
-//            vo_DS->Get_Right_robot_state(PosDesired_End_right,DPosDesired_End_right,DDPosDesired_End_right);
 
 
 
@@ -555,8 +548,8 @@ protected:
     }
 
 
-    // ACTION TYPE 3: Execute bimanual action with coupled learned dynamics
-    bool coupled_learned_model_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
+    // ACTION TYPE 3: Execute collision avoidance between master/slave arm with virtual object dynamical system
+    bool collision_avoidance_vo_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
 
         // Convert attractors to world frame
         tf::Transform  right_final_target, left_final_target, virtual_object;
@@ -777,18 +770,19 @@ public:
             CDSController::DynamicsType slaveType = CDSController::UTHETA;
 
 
+
             // Execute action from learned action model
             success = decoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
                                               model_dt, task_frame, right_att, left_att, r_base_path, l_base_path);
         }
 
         //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
-        if(goal->action_type=="BIMANUAL_DS")
+        if(goal->action_type=="BIMANUAL_REACH")
             success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, dt);
 
         //---> ACTION TYPE 3: Use coupled learned models to execute the action
-        if(goal->action_type=="BIMANUAL_DS")
-            success = coupled_learned_model_execution(task_frame, right_att, left_att);
+        if(goal->action_type=="COLL_AVOID_VO")
+            success = collision_avoidance_vo_execution(task_frame, right_att, left_att);
 
 
         result_.success = success;
