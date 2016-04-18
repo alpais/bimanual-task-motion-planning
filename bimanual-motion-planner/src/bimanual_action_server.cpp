@@ -59,7 +59,7 @@ tf::StampedTransform right_arm_base, left_arm_base;
 volatile bool isOkay;
 bool initial_config = true, simulation;
 int tf_count(0);
-double reachingThreshold (0.01), orientationThreshold (0.02), model_dt (0.002), dt (0.002); //Defaults: [m],[rad],[s]
+double reachingThreshold (0.01), orientationThreshold (0.05), model_dt (0.002), dt (0.002); //Defaults: [m],[rad],[s]
 
 // Visualization variables for Bimanual DS Action
 uint32_t   shape = visualization_msgs::Marker::CUBE;
@@ -490,17 +490,24 @@ protected:
         Eigen::Vector3d real_object_velocity;
         real_object_velocity.setZero();
 
+        // Setting Initial conditions
+        r_curr_ee_pose = r_ee_pose;
+        l_curr_ee_pose = l_ee_pose;
+
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-        vo_dsRun->init(dt,0.0,0.1,200.0,50.0,50.0);
-        vo_dsRun->setCurrentEEStates(l_ee_pose,r_ee_pose);
+        vo_dsRun->init(dt,0.0,0.1,500.0,200.0,200.0);
         vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
         vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
+        vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
         vo_dsRun->initializeVirtualObject();
 
-
-        int count (0);
+        // Vairable for execution
+        ros::Duration loop_rate(dt);
         static tf::TransformBroadcaster br;
+        tf::Transform r_trans_ee, l_trans_ee;
+        double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
+
         while(ros::ok()) {
 
             // View attractors
@@ -524,6 +531,16 @@ protected:
             // Set Current ee States
             vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
 
+            // Current progress variable (position/orientation error).
+            r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
+            l_pos_err = (left_final_target.getOrigin()  - l_curr_ee_pose.getOrigin()).length();
+
+            //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
+            r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
+            l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
+            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
+            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << r_ori_err);
+
             // Update VO DS
             vo_dsRun->update();
 
@@ -533,17 +550,38 @@ protected:
             // Get Desired ee States
             vo_dsRun->getNextEEStates(l_des_ee_pose,r_des_ee_pose);
 
+
+            //******************************//
+            //  Send the computed ee poses  //
+            //******************************//
+            sendPose(r_des_ee_pose, l_des_ee_pose);
+
+            // Visualize desired end-effector poses
+            r_trans_ee.setRotation(tf::Quaternion(r_des_ee_pose.getRotation()));
+            r_trans_ee.setOrigin(tf::Vector3(r_des_ee_pose.getOrigin()));
+
+            l_trans_ee.setRotation(tf::Quaternion(l_des_ee_pose.getRotation()));
+            l_trans_ee.setOrigin(tf::Vector3(l_des_ee_pose.getOrigin()));
+
+            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
+            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
+
             //View virtual object
             publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
             br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
 
+            // Open Loop
+            r_curr_ee_pose = r_des_ee_pose;
+            l_curr_ee_pose = l_des_ee_pose;
 
-
-            if (count > 100000)
+            as_.publishFeedback(feedback_);
+            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
+                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
                     break;
-            count++;
+                }
+            loop_rate.sleep();
         }
-
+        delete vo_dsRun;
         return ros::ok();
     }
 

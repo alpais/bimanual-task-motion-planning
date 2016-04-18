@@ -67,7 +67,7 @@ if __name__ == '__main__':
 	rA_p1_attr = geometry_msgs.msg.Transform()
 	rA_p1_attr.translation.x = 0.022
 	rA_p1_attr.translation.y = 0.136
-	rA_p1_attr.translation.z = 0.178
+	rA_p1_attr.translation.z = 0.228
 	rA_p1_attr.rotation.x    = 0.033
 	rA_p1_attr.rotation.y    = 0.112
 	rA_p1_attr.rotation.z    = -0.473
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 	lA_p1_attr = geometry_msgs.msg.Transform()	      
 	lA_p1_attr.translation.x = -0.03
 	lA_p1_attr.translation.y = -0.0604
-	lA_p1_attr.translation.z = 0.1695
+	lA_p1_attr.translation.z = 0.1495
 	lA_p1_attr.rotation.x    = 0.96
 	lA_p1_attr.rotation.y    = -0.242
 	lA_p1_attr.rotation.z    = -0.051
@@ -109,24 +109,27 @@ if __name__ == '__main__':
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	raw_input('Press Enter to Run Bimanual Task with Coordinated Reaching DS')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	# action_type = 'DECOUPLED_LEARNED_MODEL'  
 
+	# action_type = 'DECOUPLED_LEARNED_MODEL'  
 	# result = PLAN2CTRL_client(action_type, 'phase1', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	# print "Result:"		
 	# print result.success
 	
-	# #Wait a few seconds before going back
-	# rospy.sleep(1.)
-	# result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
-	# print "Result:"
-	# print result.success
-
-
+	# Reach with Coordinated DS
 	action_type = 'BIMANUAL_REACH'  
 	result = PLAN2CTRL_client(action_type, '', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success
 	
+
+	# #Wait a few seconds before going back
+	rospy.sleep(1.)
+
+	# Reach with Decoupled DS
+	action_type = 'DECOUPLED_LEARNED_MODEL'  
+	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
+	print "Result:"
+	print result.success
 
     except rospy.ROSInterruptException:
         print "program interrupted before completion"
