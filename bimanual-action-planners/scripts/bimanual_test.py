@@ -9,8 +9,8 @@ import actionlib
 
 # Import the messages
 import bimanual_action_planners.msg
-from robohow_common_msgs.msg import MotionPhase
-from robohow_common_msgs.msg import MotionModel
+# from robohow_common_msgs.msg import MotionPhase
+# from robohow_common_msgs.msg import MotionModel
 import tf
 import geometry_msgs.msg
 

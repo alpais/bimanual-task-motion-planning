@@ -6,7 +6,6 @@ geometry_msgs/Transform 			right_attractor_frame
 geometry_msgs/Transform 			left_attractor_frame
 string                              force_gmm_id
 int32                               timeout
-robohow_common_msgs/MotionPhase     Phase
 float64                             dt
 float64                             threshold
 float64                             height

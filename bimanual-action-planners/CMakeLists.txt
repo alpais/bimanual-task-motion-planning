@@ -4,7 +4,7 @@ project(bimanual_action_planners)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp actionlib actionlib_msgs geometry_msgs robohow_common_msgs sensor_msgs kuka_fri_bridge)
+find_package(catkin REQUIRED COMPONENTS roscpp actionlib actionlib_msgs geometry_msgs sensor_msgs kuka_fri_bridge)
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
@@ -61,7 +61,7 @@ add_action_files(
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs robohow_common_msgs kuka_fri_bridge sensor_msgs# Or other packages containing msgs
+  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs kuka_fri_bridge sensor_msgs# Or other packages containing msgs
 )
 
 ###################################
@@ -76,7 +76,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES state_transformers
-   CATKIN_DEPENDS actionlib_msgs robohow_common_msgs
+   CATKIN_DEPENDS actionlib_msgs
 #  DEPENDS system_lib
 )
 
