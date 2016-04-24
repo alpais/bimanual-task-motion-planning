@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # Script for testing PLN2CTRL client 
-import roslib; roslib.load_manifest('lasa_action_planners')
+import roslib; roslib.load_manifest('bimanual_action_planners')
 import rospy
 import numpy
 # Import the SimpleActionClient
@@ -9,8 +9,6 @@ import actionlib
 
 # Import the messages
 import bimanual_action_planners.msg
-from robohow_common_msgs.msg import MotionPhase
-from robohow_common_msgs.msg import MotionModel
 import tf
 import geometry_msgs.msg
 

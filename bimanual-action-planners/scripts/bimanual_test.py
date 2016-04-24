@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # Script for testing PLN2CTRL client 
-import roslib; roslib.load_manifest('lasa_action_planners')
+import roslib; roslib.load_manifest('bimanual_action_planners')
 import rospy
 import numpy
 # Import the SimpleActionClient

@@ -59,7 +59,7 @@ tf::StampedTransform right_arm_base, left_arm_base;
 volatile bool isOkay;
 bool initial_config = true, simulation;
 int tf_count(0);
-double reachingThreshold (0.01), orientationThreshold (0.05), model_dt (0.002), dt (0.002); //Defaults: [m],[rad],[s]
+double reachingThreshold (0.01), orientationThreshold (0.1), model_dt (0.002), dt (0.002); //Defaults: [m],[rad],[s]
 
 // Visualization variables for Bimanual DS Action
 uint32_t   shape = visualization_msgs::Marker::CUBE;
@@ -463,10 +463,21 @@ protected:
                 sendPose(r_des_ee_pose, l_des_ee_pose);
 
             as_.publishFeedback(feedback_);
-            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
-                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
+
+
+
+            if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
+                if (phase == PHASE2)
                     break;
-                }
+                else
+                    if((r_ori_err < orientationThreshold || isnan(r_ori_err)) && (l_ori_err < orientationThreshold || isnan(l_ori_err)))
+                        break;
+            }
+
+//            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
+//                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
+//                    break;
+//                }
             loop_rate.sleep();
         }
         delete right_cdsRun;
@@ -496,7 +507,7 @@ protected:
 
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-        vo_dsRun->init(dt,0.0,0.1,500.0,200.0,200.0);
+        vo_dsRun->init(dt,0.0,0.5,800.0,200.0,200.0);
         vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
         vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
         vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
@@ -575,10 +586,12 @@ protected:
             l_curr_ee_pose = l_des_ee_pose;
 
             as_.publishFeedback(feedback_);
-            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
-                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
+
+            // Only Check for Position Error
+            if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold) {
                     break;
                 }
+
             loop_rate.sleep();
         }
         delete vo_dsRun;
