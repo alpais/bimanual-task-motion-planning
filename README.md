@@ -22,7 +22,7 @@ ROS compatibility: Indigo
 
 #####Simulation and Visualization
 ```
-$ roslaunch kuka_lwr_bringup bimanual_simulation.launch
+$ roslaunch kuka_lwr_bringup bimanual2_simulation.launch
 ```
 
 #####Low-level Controllers
