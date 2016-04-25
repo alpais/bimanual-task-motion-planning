@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="path_save"   default="/home/nbfigueroa/Desktop/Peeling_demos/"/>
+	<arg name="topic"  	    default="/KUKA_RightArm/joint_states /KUKA_RightArm/Pose /KUKA_RightArm/FT /KUKA_RightArm/Stiff /KUKA_LeftArm/joint_states /KUKA_LeftArm/Pose /KUKA_LeftArm/FT /KUKA_LeftArm/Stiff /tool/ft_sensor/netft_data /hand/ft_sensor/netft_data /kinect2/depth_lowres/camera_info /kinect2/depth_lowres/image /kinect2/rgb_lowres/image /tf"/>
+	<arg name="file_name"  	default="demo_x"/>
+
+    <include file="$(find record_ros)/launch/record_ros.launch">
+			<arg name="path_save"   value="$(arg path_save)"/>
+			<arg name="topic"  	    value="$(arg topic)"/>
+			<arg name="file_name"  	value="$(arg file_name)"/>
+    </include>
+
+</launch>
+
