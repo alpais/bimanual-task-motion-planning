@@ -18,7 +18,7 @@ ROS compatibility: Indigo
 | [bimanual-dynamical-system](https://github.com/epfl-lasa/bimanual-dynamical-system) |
   
 ---
-###Simulation of a Bi-manual reach with independent CDS for each arm:
+###Simulation of a Bi-manual reaching motions:
 
 #####Simulation and Visualization
 ```
