@@ -52,7 +52,7 @@ $ rosrun bimanual_action_planners virtual_object_test.py
 ---
 ###Demonstration Recording for Bimanual Tasks:
 
-To record/replay demonstrations you must install the following packages:
+To record/replay demonstrations you must install these additional packages:
 
 | Dependencies  |
 | ------------- |
@@ -78,7 +78,7 @@ $ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true vision:=
 $ roslaunch bimanual_action_planners record_bimanual_demos.launch 
 ```
 
-### Start/Stop a Recording (Rosbag)
+#### Start/Stop a Recording (Rosbag)
 ```
 $ rosservice call /record/cmd "cmd: 'record/stop'"
 ```
