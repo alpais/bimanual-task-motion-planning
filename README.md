@@ -78,8 +78,18 @@ $ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true vision:=
 $ roslaunch bimanual_action_planners record_bimanual_demos.launch 
 ```
 
-#### Start/Stop a Recording (Rosbag)
+##### Start/Stop a Recording (Rosbag)
 ```
 $ rosservice call /record/cmd "cmd: 'record/stop'"
+```
+---
+###Replaying a recorded demonstration of a Bimanual Task:
+#####Visualization and sensor bringup (ft sensors, vision)
+```
+$ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true not_bag:=false 
+```
+#####Play bag
+```
+$ rosbag play *.bag
 ```
 
