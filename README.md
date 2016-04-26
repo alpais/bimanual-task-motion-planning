@@ -8,7 +8,9 @@ This repository includes the packages and instructions to run the LASA Bimanual 
 OS: Ubuntu 14.04
 ROS compatibility: Indigo
 
-  
+---
+###Simulation of a Bi-manual reaching motions:
+
 | Dependencies  |
 | ------------- |
 | [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
@@ -16,9 +18,6 @@ ROS compatibility: Indigo
 | [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) |
 | [state-transfomers](https://github.com/epfl-lasa/state-transformers)                |
 | [bimanual-dynamical-system](https://github.com/epfl-lasa/bimanual-dynamical-system) |
-  
----
-###Simulation of a Bi-manual reaching motions:
 
 #####Simulation and Visualization
 ```
@@ -51,5 +50,36 @@ $ rosrun bimanual_action_planners virtual_object_test.py
 ```
 
 ---
+###Demonstration Recording for Bimanual Tasks:
 
+To record/replay demonstrations you must install the following packages:
+
+| Dependencies  |
+| ------------- |
+| [net-ft-ros](https://github.com/epfl-lasa/net-ft-ros) |
+| [vision_pkg](https://github.com/epfl-lasa/vision_pkg) |
+| [record_ros](https://github.com/epfl-lasa/record_ros) |
+
+#####Stream Robot data (joint states, Pose, FT, Stiff)
+```
+$ rosrun kuka_fri_bridge run_lwr.sh right
+```
+```
+$ rosrun kuka_fri_bridge run_lwr.sh left
+```
+
+#####Visualization and sensor bringup (ft sensors, vision)
+```
+$ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true vision:=true 
+```
+
+##### Recorder node for all topics necessary
+```
+$ roslaunch bimanual_action_planners record_bimanual_demos.launch 
+```
+
+### Start/Stop a Recording (Rosbag)
+```
+$ rosservice call /record/cmd "cmd: 'record/stop'"
+```
 
