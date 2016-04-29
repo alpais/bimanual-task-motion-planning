@@ -59,6 +59,7 @@ To record/replay demonstrations you must install these additional packages:
 | [net-ft-ros](https://github.com/epfl-lasa/net-ft-ros) |
 | [vision_pkg](https://github.com/epfl-lasa/vision_pkg) |
 | [record_ros](https://github.com/epfl-lasa/record_ros) |
+| [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)|
 
 #####Stream Robot data (joint states, Pose, FT, Stiff)
 ```
@@ -93,3 +94,5 @@ $ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true not_bag:
 $ rosbag play *.bag
 ```
 
+#####Extract topics to Mat file
+Use  [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)
