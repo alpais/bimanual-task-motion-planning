@@ -10,47 +10,6 @@ ROS compatibility: Indigo
 
 ---
 ---
-###Simulation of a Bi-manual reaching motions:
-
-| Dependencies  |
-| ------------- |
-| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
-| [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)    |
-| [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) |
-| [state-transfomers](https://github.com/epfl-lasa/state-transformers)                |
-| [bimanual-dynamical-system](https://github.com/epfl-lasa/bimanual-dynamical-system) |
-
-#####Simulation and Visualization
-```
-$ roslaunch kuka_lwr_bringup bimanual2_simulation.launch
-```
-
-#####Low-level Controllers
-Cartesian-to-Joint/Joint-to-Cart Estimation
-```
-$ roslaunch state_transformers bimanual_joint_ctrls_sim.launch 
-```
-
-#####Cartesian Trajectory Generator
-A bimanual action server, containing different types of control methods for bimanual action, currently 1) independent CDS for each arm (no coupling) and 2) Virtual Object Dynamical System (spatial and temporal coupling)
-
-```
-$ roslaunch bimanual_motion_planner bimanual_action_server.launch
-```
-
-##### Action Planning  
-
-To run a test with two CDS models independently for each arm:
-```
-$ rosrun bimanual_action_planners decoupled_test.py
-```
-
-To run a test with the Virtual Object Dynamical System:
-```
-$ rosrun bimanual_action_planners virtual_object_test.py
-```
-
----
 ###Demonstration Recording for Bimanual Tasks:
 
 To record/replay demonstrations you must install these additional packages:
@@ -97,3 +56,64 @@ $ rosbag play *.bag
 
 #####Extract topics to Mat file
 Use  [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)
+
+
+
+---
+---
+###Simulation of a Bi-manual reaching motions:
+
+| Dependencies  |
+| ------------- |
+| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
+| [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)    |
+| [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) |
+| [state-transfomers](https://github.com/epfl-lasa/state-transformers)                |
+| [bimanual-dynamical-system](https://github.com/epfl-lasa/bimanual-dynamical-system) |
+
+#####Simulation and Visualization
+```
+$ roslaunch kuka_lwr_bringup bimanual2_simulation.launch
+```
+
+#####Low-level Controllers
+Cartesian-to-Joint/Joint-to-Cart Estimation
+```
+$ roslaunch state_transformers bimanual_joint_ctrls_sim.launch 
+```
+
+#####Cartesian Trajectory Generator
+A bimanual action server, containing different types of control methods for bimanual action, currently 1) independent CDS for each arm (no coupling) and 2) Virtual Object Dynamical System (spatial and temporal coupling)
+
+```
+$ roslaunch bimanual_motion_planner bimanual_action_server.launch
+```
+
+##### Action Planning  
+
+To run a test with two CDS models independently for each arm:
+```
+$ rosrun bimanual_action_planners decoupled_test.py
+```
+
+To run a test with the Virtual Object Dynamical System:
+```
+$ rosrun bimanual_action_planners virtual_object_test.py
+```
+
+---
+---
+###Real-time Execution of a Bi-manual reaching motions:
+#####Stream Robot data (joint states, Pose, FT, Stiff)
+```
+$ rosrun kuka_fri_bridge run_lwr.sh right
+```
+```
+$ rosrun kuka_fri_bridge run_lwr.sh left
+```
+follow instructions on [kuka_bridge](ahttps://github.com/nbfigueroa/kuka_interface_packages) to set control mode for each robot. (joint impedance control, control = 1)
+
+#####Visualization and sensor bringup (ft sensors, vision)
+```
+$ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true vision:=true 
+```
