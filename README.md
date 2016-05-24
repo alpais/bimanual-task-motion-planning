@@ -9,6 +9,7 @@ OS: Ubuntu 14.04
 ROS compatibility: Indigo
 
 ---
+---
 ###Simulation of a Bi-manual reaching motions:
 
 | Dependencies  |
