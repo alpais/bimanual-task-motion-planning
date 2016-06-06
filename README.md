@@ -16,6 +16,7 @@ To record/replay demonstrations you must install these additional packages:
 
 | Dependencies  |
 | ------------- |
+| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
 | [net-ft-ros](https://github.com/epfl-lasa/net-ft-ros) |
 | [vision_pkg](https://github.com/epfl-lasa/vision_pkg) |
 | [record_ros](https://github.com/epfl-lasa/record_ros) |
@@ -65,7 +66,6 @@ Use  [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)
 
 | Dependencies  |
 | ------------- |
-| [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
 | [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)    |
 | [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) |
 | [state-transfomers](https://github.com/epfl-lasa/state-transformers)                |
