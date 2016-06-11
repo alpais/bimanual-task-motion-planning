@@ -19,7 +19,7 @@ To record/replay demonstrations you must install these packages:
 | [kuka_interface_packages](https://github.com/nbfigueroa/kuka_interface_packages)    |
 | [kuka-rviz-simulation](https://github.com/epfl-lasa/kuka-rviz-simulation)           |
 | [net-ft-ros](https://github.com/epfl-lasa/net-ft-ros) |
-| [vision_pkg](https://github.com/epfl-lasa/vision_pkg) |
+| [optitrack-lasa](https://github.com/epfl-lasa/vision_pkg) |
 | [record_ros](https://github.com/epfl-lasa/record_ros) |
 | [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)|
 
