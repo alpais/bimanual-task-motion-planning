@@ -517,7 +517,7 @@ protected:
         ros::Duration loop_rate(dt);
         static tf::TransformBroadcaster br;
         tf::Transform r_trans_ee, l_trans_ee;
-        double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
+        double object_err;
 
         while(ros::ok()) {
 
@@ -541,16 +541,6 @@ protected:
 
             // Set Current ee States
             vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
-
-            // Current progress variable (position/orientation error).
-            r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
-            l_pos_err = (left_final_target.getOrigin()  - l_curr_ee_pose.getOrigin()).length();
-
-            //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
-            r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
-            l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
-            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
-            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << r_ori_err);
 
             // Update VO DS
             vo_dsRun->update();
@@ -581,14 +571,20 @@ protected:
             publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
             br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
 
-            // Open Loop
-            r_curr_ee_pose = r_des_ee_pose;
-            l_curr_ee_pose = l_des_ee_pose;
+            // Open Loop Hack
+            // r_curr_ee_pose = r_des_ee_pose;
+            // l_curr_ee_pose = l_des_ee_pose;
+
+
+            // Current progress variable (position)
+            object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();  
+            reachingThreshold = 0.012;          
+            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err); 
 
             as_.publishFeedback(feedback_);
 
-            // Only Check for Position Error
-            if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold) {
+            // // Only Check for Position Error
+            if(object_err < reachingThreshold) {
                     break;
                 }
 
