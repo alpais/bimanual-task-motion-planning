@@ -21,7 +21,6 @@ To record/replay demonstrations you must install these packages:
 | [net-ft-ros](https://github.com/epfl-lasa/net-ft-ros) |
 | [optitrack-lasa](https://github.com/epfl-lasa/vision_pkg) |
 | [record_ros](https://github.com/epfl-lasa/record_ros) |
-| [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)|
 
 #####Stream Robot data (joint states, Pose, FT, Stiff)
 ```
