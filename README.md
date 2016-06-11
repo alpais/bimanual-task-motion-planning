@@ -12,7 +12,7 @@ ROS compatibility: Indigo
 ---
 ###Demonstration Recording for Bimanual Tasks:
 
-To record/replay demonstrations you must install these additional packages:
+To record/replay demonstrations you must install these packages:
 
 | Dependencies  |
 | ------------- |
