@@ -69,6 +69,7 @@ Use  [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)
 | [coupled-dynamical-systems](https://github.com/epfl-lasa/coupled-dynamical-systems) |
 | [state-transfomers](https://github.com/epfl-lasa/state-transformers)                |
 | [bimanual-dynamical-system](https://github.com/epfl-lasa/bimanual-dynamical-system) |
+| [fast-gmm](https://github.com/epfl-lasa/fast-gmm.git)|
 
 #####Simulation and Visualization
 ```
