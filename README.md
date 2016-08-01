@@ -9,6 +9,10 @@ OS: Ubuntu 14.04
 ROS compatibility: Indigo
 
 ---
+
+###Modular Architecture Description:
+![alt tag](https://github.com/epfl-lasa/bimanual-task-motion-planning/blob/master/img/lasa-bimanual-architecture.png)
+
 ---
 ###Demonstration Recording for Bimanual Tasks:
 
