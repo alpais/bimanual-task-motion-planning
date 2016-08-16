@@ -94,11 +94,12 @@ if __name__ == '__main__':
 	rA_p2_attr.rotation.z    = -0.449
 	rA_p2_attr.rotation.w    = 0.833
 
+
 	# Phase 2 Left Arm Attractor in Task RF
 	lA_p2_attr = geometry_msgs.msg.Transform()
-	lA_p2_attr.translation.x = 0.054
-	lA_p2_attr.translation.y = -0.408	
-	lA_p2_attr.translation.z = 0.346
+	lA_p2_attr.translation.x = -0.064
+	lA_p2_attr.translation.y = -0.358	
+	lA_p2_attr.translation.z = 0.604
 	lA_p2_attr.rotation.x    = 0.960
 	lA_p2_attr.rotation.y    = -0.242
 	lA_p2_attr.rotation.z    = -0.051
@@ -126,7 +127,7 @@ if __name__ == '__main__':
 	rospy.sleep(1.)
 
 	# Reach with Decoupled DS
-	action_type = 'DECOUPLED_LEARNED_MODEL'  
+	action_type = 'BIMANUAL_REACH'  
 	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"
 	print result.success

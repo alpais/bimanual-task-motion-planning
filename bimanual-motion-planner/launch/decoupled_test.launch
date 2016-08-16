@@ -11,6 +11,8 @@
 	        <arg name="r_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Right"/>
 			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/>
 
+ 		<node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.5 -0.6 0 0 0 0 1  /task_frame /world_frame  100"/>
+
 
 		  <node name="bimanual_plan2ctrl" pkg="bimanual_motion_planner" type="decoupled_motion_planner" output="screen" respawn="false">	  	
 		  	<param name="simulation" 			 		value="$(arg simulation)" />

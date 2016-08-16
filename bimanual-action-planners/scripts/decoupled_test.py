@@ -12,6 +12,8 @@ import bimanual_action_planners.msg
 import tf
 import geometry_msgs.msg
 
+
+
 def PLAN2CTRL_client(action_type, phase, task_frame, right_attractor_frame, left_attractor_frame, timeout):
     # Creates the SimpleActionClient, passing the type of action to the constructor.
     client = actionlib.SimpleActionClient('bimanual_plan2ctrl', bimanual_action_planners.msg.PLAN2CTRLAction)
@@ -61,6 +63,7 @@ if __name__ == '__main__':
 	task_frame.rotation.w = 1
 
 
+
 	# Phase 1 Right Arm Attractor in Task RF
 	rA_p1_attr = geometry_msgs.msg.Transform()
 	rA_p1_attr.translation.x = 0.022
@@ -94,9 +97,9 @@ if __name__ == '__main__':
 
 	# Phase 2 Left Arm Attractor in Task RF
 	lA_p2_attr = geometry_msgs.msg.Transform()
-	lA_p2_attr.translation.x = 0.054
-	lA_p2_attr.translation.y = -0.408	
-	lA_p2_attr.translation.z = 0.346
+	lA_p2_attr.translation.x = -0.064
+	lA_p2_attr.translation.y = -0.358	
+	lA_p2_attr.translation.z = 0.604
 	lA_p2_attr.rotation.x    = 0.960
 	lA_p2_attr.rotation.y    = -0.242
 	lA_p2_attr.rotation.z    = -0.051
