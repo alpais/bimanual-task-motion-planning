@@ -1,10 +1,10 @@
-id: 1.0
-name: Reach
+id: 4.0
+name: Trash
 type: []
-systems: 3.0
-system:
-- type: arm
-  name: left_arm
+systems: 2.0
+master:
+  type: arm
+  name: right_arm
   id: 1.0
   connected: []
   control: controlable
@@ -27,7 +27,7 @@ system:
   model:
   - modeltype: CDS
     modelfile:
-    - name: masterGMM.txt
+    - name: master_posGMM.txt
       dt: 0.01
       gmmtype: Master
       input:
@@ -37,7 +37,7 @@ system:
         type: Velocity
         dim: [x, y, z]
       gains: {alpha: 1.0, beta: 1.0, delta: 1.0}
-    - name: slaveGMM.txt
+    - name: master_oriGMM.txt
       dt: 0.02
       gmmtype: Slave
       input:
@@ -47,7 +47,7 @@ system:
         type: Velocity
         dim: [x, y, z]
       gains: {alpha: 1.0, beta: 1.0, delta: 1.0}
-    - name: cplGMM.txt
+    - name: master_cplGMM.txt
       dt: 0.01
       gmmtype: Coupling
       input:
@@ -65,7 +65,7 @@ system:
       gains: []
   - modeltype: GMM
     modelfile:
-      name: StiffGMM.txt
+      name: master_stiffGMM.txt
       dt: 0.01
       input:
         type: Position
@@ -73,8 +73,9 @@ system:
       output:
         type: Stiffness
         dim: [lambda]
-- type: arm
-  name: right_arm
+slave:
+  type: arm
+  name: left_arm
   id: 2.0
   connected: []
   control: controlable
@@ -86,18 +87,18 @@ system:
   - [0.0, 0.0, -1.0, 0.3]
   - [0.0, 0.0, 0.0, 1.0]
   attractor_type: floating
-  pose_threshold: [0.02, 0.02, 0.02]
-  force_threshold: [0.0, 5.0, 0.0]
   start_pose:
   - [-0.4609, 0.407, -0.7886, -0.4358]
   - [0.8416, 0.4824, -0.2429, 0.3225]
   - [0.2816, -0.7756, -0.5649, 0.3436]
   - [0.0, 0.0, 0.0, 1.0]
+  pose_threshold: [0.02, 0.02, 0.02]
+  force_threshold: [0.0, 5.0, 0.0]
   start_stiffness: [300.0, 300.0, 300.0, 50.0, 50.0, 50.0]
   model:
   - modeltype: CDS
     modelfile:
-    - name: masterGMM.txt
+    - name: slave_posGMM.txt
       dt: 0.01
       gmmtype: Master
       input:
@@ -107,7 +108,7 @@ system:
         type: Velocity
         dim: [x, y, z]
       gains: {alpha: 1.0, beta: 1.0, delta: 1.0}
-    - name: slaveGMM.txt
+    - name: slave_oriGMM.txt
       dt: 0.02
       gmmtype: Slave
       input:
@@ -117,7 +118,7 @@ system:
         type: Velocity
         dim: [x, y, z]
       gains: {alpha: 1.0, beta: 1.0, delta: 1.0}
-    - name: cplGMM.txt
+    - name: slave_cplGMM.txt
       dt: 0.01
       gmmtype: Coupling
       input:
@@ -135,7 +136,7 @@ system:
       gains: []
   - modeltype: GMM
     modelfile:
-      name: StiffGMM.txt
+      name: slave_stiffGMM.txt
       dt: 0.01
       input:
         type: Position
@@ -143,16 +144,14 @@ system:
       output:
         type: Stiffness
         dim: [lambda]
-coordination:
+coupling:
   type: asymmetric
   master: left_arm
   slave: right_arm
-  dim: [x, y, z]
-  model: []
-precondition:
-  exist: [left_arm, right_arm]
-  pose:
-  - []
-  - []
-  sequence: 0.0
-postcondition: all attractors reached
+  input:
+    dim: [y, z]
+  output:
+    dim: [z]
+condition:
+  slave: norm_slave(x,y,z)<thr
+  master: ['norm_master(x,y,z)<thr']
