@@ -96,12 +96,12 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${biman
 ## Declare a cpp executable
 add_executable(decoupled_motion_planner  src/decoupled_motion_planner.cpp)
 add_executable(bimanual_action_server  src/bimanual_action_server.cpp)
-add_executable(coordinated_motion_planner  src/coordinated_motion_planner.cpp)
+#add_executable(coordinated_motion_planner  src/coordinated_motion_planner.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(decoupled_motion_planner   ${catkin_LIBRARIES} )
  target_link_libraries(bimanual_action_server   ${catkin_LIBRARIES} )
- target_link_libraries(coordinated_motion_planner   ${catkin_LIBRARIES} )
+#target_link_libraries(coordinated_motion_planner   ${catkin_LIBRARIES} )
 
 #############
 ## Install ##
