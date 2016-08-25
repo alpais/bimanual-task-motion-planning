@@ -77,7 +77,8 @@ void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
 // Callback for the current left end effector pose
 void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
     const geometry_msgs::PoseStamped* data = msg.get();
-    l_ee_pose.setOrigin(tf::Vector3(data->pose.position.x - left_arm_base.getOrigin().getX(),data->pose.position.y - left_arm_base.getOrigin().getY(),data->pose.position.z -  left_arm_base.getOrigin().getZ()));
+//    l_ee_pose.setOrigin(tf::Vector3(data->pose.position.x + left_arm_base.getOrigin().getX(),data->pose.position.y + left_arm_base.getOrigin().getY(),data->pose.position.z +  left_arm_base.getOrigin().getZ()));
+    l_ee_pose.setOrigin(tf::Vector3(data->pose.position.x, data->pose.position.y, data->pose.position.z));
     l_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
     isOkay = true;
 }
@@ -157,9 +158,14 @@ protected:
         r_msg.pose.orientation.w  = r_pose_.getRotation().w();
 
         // Populate left ee message
-        l_msg.pose.position.x     = l_pose_.getOrigin().x() + left_arm_base.getOrigin().getX();
-        l_msg.pose.position.y     = l_pose_.getOrigin().y() + left_arm_base.getOrigin().getY();
-        l_msg.pose.position.z     = l_pose_.getOrigin().z() + left_arm_base.getOrigin().getZ();
+//        l_msg.pose.position.x     = l_pose_.getOrigin().x() + left_arm_base.getOrigin().getX();
+//        l_msg.pose.position.y     = l_pose_.getOrigin().y() + left_arm_base.getOrigin().getY();
+//        l_msg.pose.position.z     = l_pose_.getOrigin().z() + left_arm_base.getOrigin().getZ();
+
+        l_msg.pose.position.x     = l_pose_.getOrigin().x() ;
+        l_msg.pose.position.y     = l_pose_.getOrigin().y() ;
+        l_msg.pose.position.z     = l_pose_.getOrigin().z() ;
+
 
         l_msg.pose.orientation.x  = l_pose_.getRotation().x();
         l_msg.pose.orientation.y  = l_pose_.getRotation().y();

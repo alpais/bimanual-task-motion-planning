@@ -150,6 +150,7 @@ void compute_object_pose(const tf::Transform& right, const tf::Transform& left, 
     // Compute object position (midpoint between left and right reaching points)
     tf::Vector3 o_pos = left.getOrigin() + (right.getOrigin() - left.getOrigin())/2;
     tf::Vector3 tmp(right.getOrigin());
+//    tmp.setX(tmp.getX() + 0.05);
     tmp.setX(tmp.getX() + 0.05);
 
     // Compute object orientation (xdir: direction from right to left reaching point, ydir: y plane in world rf)
@@ -507,7 +508,7 @@ protected:
 
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-        vo_dsRun->init(dt,0.0,0.5,800.0,200.0,200.0);
+        vo_dsRun->init(dt,0.5,0.5,800.0,400.0,400.0);
         vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
         vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
         vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
@@ -564,8 +565,8 @@ protected:
             l_trans_ee.setRotation(tf::Quaternion(l_des_ee_pose.getRotation()));
             l_trans_ee.setOrigin(tf::Vector3(l_des_ee_pose.getOrigin()));
 
-            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
-            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
+            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_des_ee"));
+            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_des_ee"));
 
             //View virtual object
             publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
@@ -578,7 +579,7 @@ protected:
 
             // Current progress variable (position)
             object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();  
-            reachingThreshold = 0.012;          
+//            reachingThreshold = 0.012;
             ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err); 
 
             as_.publishFeedback(feedback_);
@@ -629,7 +630,7 @@ public:
 
         // Read Parameters from Launch File
         _nh.getParam("right_robot_frame", right_robot_frame);
-        _nh.getParam("left_robot_frame", left_robot_frame);
+        _nh.getParam("left_robot_frame", left_robot_frame);        
         _nh.getParam("right_model_base_path", r_base_path);
         _nh.getParam("left_model_base_path", l_base_path);
         _nh.getParam("simulation", simulation);
@@ -691,6 +692,7 @@ public:
         } catch (tf::TransformException ex) {
             ROS_ERROR("%s",ex.what());
         }
+
 
         // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
         ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);

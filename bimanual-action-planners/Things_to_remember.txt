@@ -3,11 +3,11 @@ Things to know:
 ---Preferred Initial Conifiguration---
 Left Arm:
 name: ['left_arm_0_joint', 'left_arm_1_joint', 'left_arm_2_joint', 'left_arm_3_joint', 'left_arm_4_joint', 'left_arm_5_joint', 'left_arm_6_joint']
-position: [-0.06164811924099922, 0.3531913161277771, 2.792526803190927, 1.2878607511520386, 2.6382107734680176, 1.396073818206787, 1.4732959270477295]
+position: [0.05110707879066467, 0.22047770023345947, 2.792526803190927, 1.4739289283752441, 2.4664623737335205, 1.3952455520629883, 1.7482995986938477]
 
 Right Arm:
 name: ['right_arm_0_joint', 'right_arm_1_joint', 'right_arm_2_joint', 'right_arm_3_joint', 'right_arm_4_joint', 'right_arm_5_joint', 'right_arm_6_joint']
-position: [0.2261713594198227, 0.21025998890399933, 2.792526803190927, 1.2714859247207642, -2.792526803190927, 1.530930757522583, 1.7486783266067505]
+position: [-1.0762380361557007, 0.8758195638656616, 1.6818004846572876, -1.2367960214614868, -0.21789032220840454, 1.5499436855316162, 2.9348559379577637]
 
 
 --- Tool Reference Frames ---
@@ -52,10 +52,10 @@ From Task_frame to Tool_ft
 
 Right Final Attractor:
 From Task_frame to Hand_ft
-- Translation: [-0.078, 0.376, 0.494]
-- Rotation: in Quaternion [0.990, 0.060, -0.021, 0.128]
-            in RPY (radian) [2.888, 0.056, 0.115]
-            in RPY (degree) [165.487, 3.230, 6.577]
+- Translation: [-0.104, 0.498, 0.574]
+- Rotation: in Quaternion [0.884, 0.282, -0.133, 0.348]
+            in RPY (radian) [2.499, 0.446, 0.467]
+            in RPY (degree) [143.167, 25.528, 26.735]
 
 Left Final Attractor:
 From Task_frame ro Tool_ft

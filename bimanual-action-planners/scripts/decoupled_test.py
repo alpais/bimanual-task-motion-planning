@@ -52,58 +52,60 @@ if __name__ == '__main__':
         rospy.init_node('plan2ctrl_client')
 
 
-	#Object Frame in world
+	#Task Frame in world
 	task_frame = geometry_msgs.msg.Transform()
-	task_frame.translation.x = -0.500
-	task_frame.translation.y = -0.600
-	task_frame.translation.z = 0.000
+	task_frame.translation.x = -0.403
+	task_frame.translation.y = -0.426
+	task_frame.translation.z = 0.013
 	task_frame.rotation.x = 0
 	task_frame.rotation.y = 0
 	task_frame.rotation.z = 0
 	task_frame.rotation.w = 1
 
 
-
 	# Phase 1 Right Arm Attractor in Task RF
 	rA_p1_attr = geometry_msgs.msg.Transform()
-	rA_p1_attr.translation.x = 0.022
-	rA_p1_attr.translation.y = 0.136
-	rA_p1_attr.translation.z = 0.178
-	rA_p1_attr.rotation.x    = 0.033
-	rA_p1_attr.rotation.y    = 0.112
-	rA_p1_attr.rotation.z    = -0.473
-	rA_p1_attr.rotation.w    = 0.719
+	rA_p1_attr.translation.x = -0.129
+	rA_p1_attr.translation.y = 0.226
+	rA_p1_attr.translation.z = 0.208
+	rA_p1_attr.rotation.x    = 0.903  
+	rA_p1_attr.rotation.y    = -0.012
+	rA_p1_attr.rotation.z    = -0.009
+	rA_p1_attr.rotation.w    = 0.430
+
 
 	# Phase 1 Left Arm Attractor in Task RF
 	lA_p1_attr = geometry_msgs.msg.Transform()	      
-	lA_p1_attr.translation.x = -0.03
-	lA_p1_attr.translation.y = -0.104
-	lA_p1_attr.translation.z = 0.1695
-	lA_p1_attr.rotation.x    = 0.96
-	lA_p1_attr.rotation.y    = -0.242
-	lA_p1_attr.rotation.z    = -0.051
-	lA_p1_attr.rotation.w    = -0.53
+	lA_p1_attr.translation.x = -0.069
+	lA_p1_attr.translation.y = -0.246 
+	lA_p1_attr.translation.z = 0.210
+	lA_p1_attr.rotation.x    = 0.065 
+	lA_p1_attr.rotation.y    = 0.857 
+	lA_p1_attr.rotation.z    = 0.511 
+	lA_p1_attr.rotation.w    = -0.011
 
 
 	# Phase 2 Right Arm Attractor in Task RF
 	rA_p2_attr = geometry_msgs.msg.Transform()
-	rA_p2_attr.translation.x = 0.034
-	rA_p2_attr.translation.y = 0.462	
-	rA_p2_attr.translation.z = 0.361
-	rA_p2_attr.rotation.x    = -0.189
-	rA_p2_attr.rotation.y    = -0.264
-	rA_p2_attr.rotation.z    = -0.449
-	rA_p2_attr.rotation.w    = 0.833
+	rA_p2_attr.translation.x = -0.104
+	rA_p2_attr.translation.y = 0.498 	
+	rA_p2_attr.translation.z = 0.574
+	rA_p2_attr.rotation.x    = 0.884 
+	rA_p2_attr.rotation.y    = 0.282 
+	rA_p2_attr.rotation.z    = -0.133
+	rA_p2_attr.rotation.w    = 0.348 
+
+
 
 	# Phase 2 Left Arm Attractor in Task RF
 	lA_p2_attr = geometry_msgs.msg.Transform()
-	lA_p2_attr.translation.x = -0.064
-	lA_p2_attr.translation.y = -0.358	
-	lA_p2_attr.translation.z = 0.604
-	lA_p2_attr.rotation.x    = 0.960
-	lA_p2_attr.rotation.y    = -0.242
-	lA_p2_attr.rotation.z    = -0.051
-	lA_p2_attr.rotation.w    = -0.130	
+	lA_p2_attr.translation.x = -0.078 
+	lA_p2_attr.translation.y = -0.434 	
+	lA_p2_attr.translation.z = 0.394
+	lA_p2_attr.rotation.x    = 0.112 
+	lA_p2_attr.rotation.y    = 0.949 
+	lA_p2_attr.rotation.z    = 0.293 
+	lA_p2_attr.rotation.w    = -0.037
 
 
 
