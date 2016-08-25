@@ -12,8 +12,8 @@
 			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/>
 
 		  <node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.403 -0.426 0.013 0 0 0 1  /world_frame /task_frame  100"/>
-		  <node pkg="tf" type="static_transform_publisher" name="right_att"  args="-0.129 0.226 0.208 0.903 -0.012 -0.009 0.430  /task_frame /right_att  100"/>
-		  <node pkg="tf" type="static_transform_publisher" name="left_att"  args="-0.069 -0.246  0.210 0.065  0.857  0.511  -0.011  /task_frame /left_att  100"/>
+		  <node pkg="tf" type="static_transform_publisher" name="right_att"  args="-0.152 0.102 0.275 0.715 0.609 -0.166 0.300   /task_frame /right_att  100"/>		  
+		  <node pkg="tf" type="static_transform_publisher" name="left_att"  args="-0.098 -0.296 0.194 0.049 0.827 0.557 -0.052  /task_frame /left_att  100"/>
 
 
 
@@ -22,7 +22,7 @@
 		  	<param name="right_robot_frame" 		    value="$(arg r_robot_base_frame)" />
 		  	<param name="left_robot_frame" 		     	value="$(arg l_robot_base_frame)" />
 		  	<param name="model_dt" 				 		value="0.01" />
-		  	<param name="reachingThreshold" 	 		value="0.0125" />
+		  	<param name="reachingThreshold" 	 		value="0.015" />
 		  	<param name="orientationThreshold"   		value="0.05" />
 			<param name="right_model_base_path"        	value="$(arg r_model_path)" />
 			<param name="left_model_base_path"        	value="$(arg l_model_path)" />

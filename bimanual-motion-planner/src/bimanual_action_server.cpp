@@ -466,7 +466,6 @@ protected:
             as_.publishFeedback(feedback_);
 
 
-
             if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
                 if (phase == PHASE2)
                     break;
@@ -576,10 +575,9 @@ protected:
             // r_curr_ee_pose = r_des_ee_pose;
             // l_curr_ee_pose = l_des_ee_pose;
 
-
             // Current progress variable (position)
             object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();  
-//            reachingThreshold = 0.012;
+            reachingThreshold = 0.017;
             ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err); 
 
             as_.publishFeedback(feedback_);
