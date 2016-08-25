@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+
+			<arg name="simulation"               default="false"/> 
+			<arg name="r_arm_ns"                 default="right_arm"/> 
+			<arg name="l_arm_ns"                 default="left_arm"/>
+
+			<arg name="r_robot_base_frame"       default="/calib_right_arm_base_link"/>
+			<arg name="l_robot_base_frame"       default="/calib_left_arm_base_link"/>
+	        
+	        	<arg name="r_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/scooping_task"/>
+			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/scooping_task"/>
+
+ 			<node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.5 -0.6 0 0 0 0 1  /task_frame /world_frame  100"/>
+
+
+		  <node name="bimanual_plan2ctrl" pkg="bimanual_motion_planner" type="coupled_motion_planner" output="screen" respawn="false">	  	
+		  	<param name="simulation" 			value="$(arg simulation)" />
+		  	<param name="right_robot_frame" 		value="$(arg r_robot_base_frame)" />
+		  	<param name="left_robot_frame" 		     	value="$(arg l_robot_base_frame)" />
+		  	<param name="model_dt" 				value="0.01" />
+		  	<param name="reachingThreshold" 	 	value="0.01" />
+		  	<param name="orientationThreshold"   		value="0.02" />
+			<param name="right_model_base_path"        	value="$(arg r_model_path)" />
+			<param name="left_model_base_path"        	value="$(arg l_model_path)" />
+			<param name="r_topic_ns"        		value="$(arg r_arm_ns)" />
+			<param name="l_topic_ns"        		value="$(arg l_arm_ns)" />
+		  </node>
+
+
+</launch>
