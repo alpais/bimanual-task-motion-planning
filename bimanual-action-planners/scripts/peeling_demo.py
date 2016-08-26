@@ -42,35 +42,6 @@ def PLAN2CTRL_client(action_type, phase, task_frame, right_attractor_frame, left
     # Prints out the result of executing the action
     return client.get_result()
 
-def JointBiCtrl_client(action_type= action_type, action_name = phase, right_target_config, left_target_config):
- # Creates the SimpleActionClient, passing the type of action to the constructor.
-    client = actionlib.SimpleActionClient('bimanual_plan2ctrl', bimanual_action_planners.msg.PLAN2CTRLAction)
-    print "Phase:", phase
-    print "Task Frame: ", task_frame
-    print "Right Attractor Frame:", right_attractor_frame
-    print "Left Attractor Frame:", left_attractor_frame
-    print "Timeout: ", timeout
-   
-    #Waits until the action server has started up and started listening for goals.
-    print "waiting for server"
-    client.wait_for_server()
-    
-    #-----------------------------------------------#
-    #----- Set of Goals for the Motion Planner -----#
-    #-----------------------------------------------#    
-    goal = bimanual_action_planners.msg.PLAN2CTRLGoal(action_type= action_type, action_name = phase, task_frame = task_frame, right_attractor_frame = right_attractor_frame, left_attractor_frame = left_attractor_frame, timeout = timeout)
-   
-
-    # Sends the goal to the action server.
-    print "sending goal", goal
-    client.send_goal(goal)
-    
-    # Waits for the server to finish performing the action.
-    print "waiting for result"
-    client.wait_for_result()
-
-    # Prints out the result of executing the action
-    return client.get_result()    
 
 
 if __name__ == '__main__':
@@ -135,9 +106,9 @@ if __name__ == '__main__':
 	lA_p2_attr.rotation.w    = -0.037
 
 
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run Bimanual Task with Coordinated Reaching DS')
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+	print "\n\n= = = = = = = = = = = = = = = = = = = = "
+	raw_input('Run Initial Reach with Bimanual VO DS')
+	print "\n\n= = = = = = = = = = = = = = = = = = = = "
 
 	# Reach with Coordinated DS
 	action_type = 'BIMANUAL_REACH'  

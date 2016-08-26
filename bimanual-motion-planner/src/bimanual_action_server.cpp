@@ -43,9 +43,16 @@
 #include <visualization_msgs/Marker.h>
 
 //-- Eigen Stuff --//
-#include <Eigen/Core>
-#include <Eigen/Geometry>
+#include "Eigen/Core"
+#include "Eigen/Geometry"
 
+//-- FT Sensors Stuff --//
+#include "netft_rdt_driver/String_cmd.h"
+
+#define MAX_PEELING_FORCE	15
+#define FORCE_WAIT_TOL		9
+#define R_ARM_ID            1
+#define L_ARM_ID            2
 
 // Right/Left EE states/cmds/topics
 tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
@@ -96,6 +103,7 @@ void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
     r_curr_ee_ft[3] = data->wrench.torque.x;
     r_curr_ee_ft[4] = data->wrench.torque.y;
     r_curr_ee_ft[5] = data->wrench.torque.z;
+
 }
 
 
@@ -119,6 +127,7 @@ void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
     l_curr_ee_ft[3] = data->wrench.torque.x;
     l_curr_ee_ft[4] = data->wrench.torque.y;
     l_curr_ee_ft[5] = data->wrench.torque.z;
+
 }
 
 
@@ -192,10 +201,15 @@ protected:
     };
 
     ros::NodeHandle nh_;
+
+    // Publishers + Subscribers
     ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_;
     ros::Publisher  r_pub_, r_pub_ft_, l_pub_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_;
     string right_robot_frame, left_robot_frame;
 
+    // Service Clients
+    ros::ServiceClient hand_ft_client;
+    ros::ServiceClient tool_ft_client;
 
     // NodeHandle instance must be created before this line. Otherwise strange error may occur.
     actionlib::SimpleActionServer<bimanual_action_planners::PLAN2CTRLAction> as_;
@@ -204,6 +218,11 @@ protected:
     // create messages that are used to published feedback/result
     bimanual_action_planners::PLAN2CTRLFeedback feedback_;
     bimanual_action_planners::PLAN2CTRLResult result_;
+
+    // Create messages for sending force commands
+    geometry_msgs::WrenchStamped msg_ft;
+    geometry_msgs::PoseStamped msg_pose;
+    bool bWaitForForces;
 
     // Send desired EE_pose to robot/joint_ctrls.
     void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
@@ -232,6 +251,122 @@ protected:
         // Send right and left ee commands
         r_pub_.publish(r_msg);
         l_pub_.publish(l_msg);
+    }
+
+    void sendNormalForce(double fz, int arm_id) {
+            msg_ft.wrench.force.x = 0;
+            msg_ft.wrench.force.y = 0;
+            msg_ft.wrench.force.z = fz;
+
+            msg_ft.wrench.torque.x = 0;
+            msg_ft.wrench.torque.y = 0;
+            msg_ft.wrench.torque.z = 0;
+
+            if (arm_id == R_ARM_ID){
+                    r_pub_ft_.publish(msg_ft);
+            }
+            else{
+                l_pub_ft_.publish(msg_ft);
+            }
+
+        }
+
+        // This will block until the desired force is achieved!
+        void sendAndWaitForNormalForce(double fz, int arm_id) {
+            if(bWaitForForces) {
+                ROS_INFO_STREAM("Waiting for force "<<fz<<" N.");
+                sendPose(r_ee_pose, l_ee_pose);
+                Eigen::VectorXd curr_ee_ft(6);
+
+                ros::Rate wait(500);
+                while(ros::ok()) {
+                    sendNormalForce(fz, arm_id);
+
+                    if (arm_id == R_ARM_ID){
+                            curr_ee_ft = r_curr_ee_ft;
+                    }
+                    else{
+                        curr_ee_ft = l_curr_ee_ft;
+                    }
+
+                    ROS_INFO_STREAM("Sending Normal force: " << fz << " Fz diff: " << fabs(curr_ee_ft[2]-fz));
+
+                    if(fabs(curr_ee_ft[2]-fz) < FORCE_WAIT_TOL) {
+                        break;
+                    }
+                    ros::spinOnce();
+                    wait.sleep();
+                }
+            }
+        }
+
+        bool find_object_by_contact(int arm_id, double min_height, double vertical_speed, double thr_force) {
+            double rate = 200;
+            thr_force = fabs(thr_force);
+            ros::Rate thread_rate(rate);
+            Eigen::VectorXd ee_ft(6);
+
+
+            // Figure out if it is the right arm or the left arm
+            tf::Pose arm_pose;
+            if (arm_id == R_ARM_ID){
+                arm_pose = r_ee_pose;
+            }
+            else{
+                arm_pose = l_ee_pose;
+            }
+
+            double startz = arm_pose.getOrigin().z();
+
+            msg_pose.pose.position.x = arm_pose.getOrigin().x();
+            msg_pose.pose.position.y = arm_pose.getOrigin().y();
+            msg_pose.pose.position.z = startz;
+            msg_pose.pose.orientation.x = arm_pose.getRotation().x();
+            msg_pose.pose.orientation.y = arm_pose.getRotation().y();
+            msg_pose.pose.orientation.z = arm_pose.getRotation().z();
+            msg_pose.pose.orientation.w = arm_pose.getRotation().w();
+
+            ROS_INFO_STREAM("Finding table up to max dist. "<<min_height<<" with vertical speed "<<vertical_speed<<" and threshold force "<<thr_force<<"N.");
+            while(ros::ok()) {
+                msg_pose.pose.position.z = msg_pose.pose.position.z - vertical_speed/rate;
+
+                if (arm_id == R_ARM_ID){
+                        r_pub_.publish(msg_pose);
+                        ee_ft = r_ee_ft;
+                }
+                else{
+                    l_pub_.publish(msg_pose);
+                    ee_ft = l_ee_ft;
+                }
+                // Go down until force reaches the threshold
+                if(fabs(ee_ft[2]) > thr_force) {
+                    break;
+                }
+                if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
+                    ROS_INFO("Max distance reached");
+                    return false;
+                }
+                thread_rate.sleep();
+                feedback_.progress = ee_ft[2];
+                as_.publishFeedback(feedback_);
+            }
+            if(!ros::ok()) {
+                return false;
+            }
+            tf::Vector3 table(arm_pose.getOrigin());
+            ROS_INFO_STREAM("Table found at height "<<table[2]);
+            msg_pose.pose.position.z = table[2];
+
+            if (arm_id == R_ARM_ID){
+                    r_pub_.publish(msg_pose);
+            }
+            else{
+                l_pub_.publish(msg_pose);
+            }
+
+            sendAndWaitForNormalForce(0, arm_id);
+
+            return true;
     }
 
 
@@ -514,7 +649,7 @@ protected:
 
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-        vo_dsRun->init(dt,1.0,1.0,800.0,300.0,300.0);
+        vo_dsRun->init(dt,1.0,0.5,800.0,200.0,200.0);
         vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
         vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
         vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
@@ -525,6 +660,26 @@ protected:
         static tf::TransformBroadcaster br;
         tf::Transform r_trans_ee, l_trans_ee;
         double object_err;
+
+
+        // Before Starting a Reach Bias the FT-Sensors!
+        netft_rdt_driver::String_cmd srv;
+        srv.request.cmd  = "bias";
+        srv.response.res = "";
+        if (hand_ft_client.call(srv))
+        {
+          ROS_INFO_STREAM("net_ft res: " << srv.response.res);
+        }else{
+          ROS_ERROR("Failed to call netft bias service for hand");
+        }
+
+        if (tool_ft_client.call(srv))
+        {
+          ROS_INFO_STREAM("net_ft res: " << srv.response.res);
+        }else{
+          ROS_ERROR("Failed to call netft bias service for tool");
+        }
+
 
         while(ros::ok()) {
 
@@ -584,7 +739,7 @@ protected:
 
             // Current progress variable (position)
             object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();  
-            reachingThreshold = 0.016;
+            reachingThreshold = 0.017;
             ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
 
             as_.publishFeedback(feedback_);
@@ -594,13 +749,6 @@ protected:
                     sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
                 }
-//            else{
-//                if (abs(object_err - reachingThreshold) < 0.005){
-//                    sendPose(r_curr_ee_pose, l_curr_ee_pose);
-//                    break;
-//                 }
-//            }
-
 
 
             loop_rate.sleep();
@@ -685,7 +833,7 @@ public:
 
         std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_cmd_pose, r_ss_cmd_ft;
         r_ss_state_pose << "/" << r_topic_ns << "/joint_to_cart/est_ee_pose";
-        r_ss_state_ft   << "/" << r_topic_ns << "/joint_to_cart/est_ee_ft";
+        r_ss_state_ft   << "/hand/ft_sensor/netft_data";
         r_ss_cmd_pose   << "/" << r_topic_ns << "/cart_to_joint/des_ee_pose";
         r_ss_cmd_ft     << "/" << r_topic_ns << "/cart_to_joint/des_ee_ft";
 
@@ -694,16 +842,18 @@ public:
         R_EE_CMD_POSE_TOPIC	  = r_ss_cmd_pose.str();
         R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
 
+
         // ROS TOPICS for right arm controllers
         r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, r_eeStateCallback);
         r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, r_ftStateCallback);
+
         r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
         r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
 
 
         std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_cmd_pose, l_ss_cmd_ft;
         l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
-        l_ss_state_ft   << "/" << l_topic_ns << "/joint_to_cart/est_ee_ft";
+        l_ss_state_ft   << "/tool/ft_sensor/netft_data";
         l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
         l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
 
@@ -713,11 +863,23 @@ public:
         L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
 
 
+        r_curr_ee_ft.resize(6);
+        l_curr_ee_ft.resize(6);
+
         // ROS TOPICS for left arm controllers
         l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, l_eeStateCallback);
         l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, l_ftStateCallback);
         l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
         l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
+
+
+        ROS_INFO_STREAM("Right (BHand-Zucchini) FT Sensor: " << R_EE_STATE_FT_TOPIC);
+        ROS_INFO_STREAM("Left (Peel-Tool) FT Sensor: " << L_EE_STATE_FT_TOPIC);
+
+
+        // Service Clients for FT/Sensor Biasing
+        hand_ft_client = nh_.serviceClient<netft_rdt_driver::String_cmd>("/hand/ft_sensor/bias_cmd");
+        tool_ft_client = nh_.serviceClient<netft_rdt_driver::String_cmd>("/tool/ft_sensor/bias_cmd");
 
 
         // Getting left and right robot base frame

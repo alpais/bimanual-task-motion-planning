@@ -5,11 +5,11 @@ project(bimanual_motion_planner)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 ##find_package(catkin REQUIRED mathlib std_tools robotlib cds_execution tf tf_conversions cmake_modules)
-find_package(catkin REQUIRED COMPONENTS mathlib std_tools robotlib cds_execution tf cmake_modules visualization_msgs tf_conversions bimanual_ds_execution)
+find_package(catkin REQUIRED COMPONENTS mathlib std_tools robotlib cds_execution tf cmake_modules visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(Eigen REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed

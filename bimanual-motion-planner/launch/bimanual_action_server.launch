@@ -21,7 +21,7 @@
 		  	<param name="simulation" 			 		value="$(arg simulation)" />
 		  	<param name="right_robot_frame" 		    value="$(arg r_robot_base_frame)" />
 		  	<param name="left_robot_frame" 		     	value="$(arg l_robot_base_frame)" />
-		  	<param name="model_dt" 				 		value="0.005" />
+		  	<param name="model_dt" 				 		value="0.01" />
 		  	<param name="reachingThreshold" 	 		value="0.015" />
 		  	<param name="orientationThreshold"   		value="0.05" />
 			<param name="right_model_base_path"        	value="$(arg r_model_path)" />

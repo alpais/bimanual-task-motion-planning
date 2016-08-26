@@ -1,0 +1,93 @@
+passwords (lasapc18 + beast): olivejuice
+password lasapc39: lasarobots
+
+
+Beast
+
+-> roscore
+
+
+lasapc18
+
+-> rosrun kuka_fri_bridge run_lwr.sh left
+pg down pg down
+control 1
+
+-> roslaunch kinect2_bridge kinect2_bridge.launch
+
+
+lasapc39
+
+-> rosrun kuka_fri_bridge run_lwr.sh right
+pg down pg down
+control 1
+
+
+*BEAST (Motion/Action)*
+
+Visualizer + FT Sensors + Robot
+-> roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true
+
+
+State-Tranformers
+-> roslaunch state_transformers bimanual_joint_ctrls_real.launch 
+
+
+Action Server
+-> roslaunch bimanual_motion_planner bimanual_action_server.launch
+
+Action Planner
+-> rosrun bimanual_action_planners virtual_object_test.py (VO)
+
+-> rosrun bimanual_action_planners decoupled_test.py
+
+*BEAST (Kinect)*
+Receive images creates point cloud
+-> rosrun kinect2_receiver publisher_node
+
+Zucchini segmentation
+-> roslaunch process_table_scene bimanual_scene.launch
+
+Object Features
+-> rosrun object_feature_generator feature_generator_node
+
+object-features: /zucchini/feats (geometry_msgs::WrenchStamped)
+
+
+==========================================
+Starting point:
+
+Left Arm JA
+-63.18 39.31 69.77 -94.92 -83.27 121.67
+
+Left Arm Pose
+pose: 
+  position: 
+    x: -0.478208553153
+    y: 0.293892165422
+    z: 0.358620220169
+  orientation: 
+    x: 0.0874392467621
+    y: 0.914306616073
+    z: 0.393397715854
+    w: -0.040447831736
+
+Right Arm JA (deg)
+-28.53 21.80 21.96 -76.40 34.69 90.90 121.87 
+
+Right Arm Pose
+pose: 
+  position: 
+    x: -0.512714249915
+    y: 0.0307938005629
+    z: 0.542822199663
+  orientation: 
+    x: 0.84641023377
+    y: 0.383911316569
+    z: -0.143987811067
+    w: 0.339807780139
+
+
+========================================
+
+Initial Reach
