@@ -159,7 +159,7 @@ void compute_object_pose(const tf::Transform& right, const tf::Transform& left, 
     // Compute object position (midpoint between left and right reaching points)
     tf::Vector3 o_pos = left.getOrigin() + (right.getOrigin() - left.getOrigin())/2;
     tf::Vector3 tmp(right.getOrigin());
-//    tmp.setX(tmp.getX() + 0.05);
+    //    tmp.setX(tmp.getX() + 0.05);
     tmp.setX(tmp.getX() + 0.05);
 
     // Compute object orientation (xdir: direction from right to left reaching point, ydir: y plane in world rf)
@@ -167,8 +167,8 @@ void compute_object_pose(const tf::Transform& right, const tf::Transform& left, 
 
     // Construct a plane "parallel" to the x dir of the robot base (table) and get the normal for the zdir
     Eigen::Hyperplane<double,3> p = Eigen::Hyperplane<double,3>::Through(Eigen::Vector3d(right.getOrigin().getX(),right.getOrigin().getY(),right.getOrigin().getZ()),
-              Eigen::Vector3d(left.getOrigin().getX(),left.getOrigin().getY(),left.getOrigin().getZ()),
-              Eigen::Vector3d(tmp.getX(),tmp.getY(),tmp.getZ()));
+                                                                         Eigen::Vector3d(left.getOrigin().getX(),left.getOrigin().getY(),left.getOrigin().getZ()),
+                                                                         Eigen::Vector3d(tmp.getX(),tmp.getY(),tmp.getZ()));
     p.normalize();
     Eigen::Vector3d zdir = p.normal();
 
@@ -196,8 +196,8 @@ protected:
 
     // Task phases
     enum TaskPhase {
-        PHASE1=1,
-        PHASE2=2
+        PHASE_REACH_TO_PEEL = 1,
+        PHASE_PEEL = 2
     };
 
     ros::NodeHandle nh_;
@@ -222,7 +222,8 @@ protected:
     // Create messages for sending force commands
     geometry_msgs::WrenchStamped msg_ft;
     geometry_msgs::PoseStamped msg_pose;
-    bool bWaitForForces;
+    bool bWaitForForces_left_arm;
+    bool bWaitForForces_right_arm;
 
     // Send desired EE_pose to robot/joint_ctrls.
     void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
@@ -254,57 +255,63 @@ protected:
     }
 
     void sendNormalForce(double fz, int arm_id) {
-            msg_ft.wrench.force.x = 0;
-            msg_ft.wrench.force.y = 0;
-            msg_ft.wrench.force.z = fz;
+        msg_ft.wrench.force.x = 0;
+        msg_ft.wrench.force.y = 0;
+        msg_ft.wrench.force.z = fz;
 
-            msg_ft.wrench.torque.x = 0;
-            msg_ft.wrench.torque.y = 0;
-            msg_ft.wrench.torque.z = 0;
+        msg_ft.wrench.torque.x = 0;
+        msg_ft.wrench.torque.y = 0;
+        msg_ft.wrench.torque.z = 0;
 
-            if (arm_id == R_ARM_ID){
-                    r_pub_ft_.publish(msg_ft);
-            }
-            else{
-                l_pub_ft_.publish(msg_ft);
-            }
-
+        if (arm_id == R_ARM_ID){
+            r_pub_ft_.publish(msg_ft);
+        }
+        else{
+            l_pub_ft_.publish(msg_ft);
         }
 
-        // This will block until the desired force is achieved!
-        void sendAndWaitForNormalForce(double fz, int arm_id) {
-            if(bWaitForForces) {
-                ROS_INFO_STREAM("Waiting for force "<<fz<<" N.");
-                sendPose(r_ee_pose, l_ee_pose);
-                Eigen::VectorXd curr_ee_ft(6);
+    }
 
-                ros::Rate wait(500);
-                while(ros::ok()) {
-                    sendNormalForce(fz, arm_id);
+    // This will block until the desired force is achieved!
+    void sendAndWaitForNormalForce(double fz, int arm_id) {
+        if (arm_id==R_ARM_ID && bWaitForForces_right_arm){
+            ROS_INFO_STREAM("Waiting for force on right arm "<<fz<<" N.");
+            sendPose(r_ee_pose, l_ee_pose);
 
-                    if (arm_id == R_ARM_ID){
-                            curr_ee_ft = r_curr_ee_ft;
-                    }
-                    else{
-                        curr_ee_ft = l_curr_ee_ft;
-                    }
-
-                    ROS_INFO_STREAM("Sending Normal force: " << fz << " Fz diff: " << fabs(curr_ee_ft[2]-fz));
-
-                    if(fabs(curr_ee_ft[2]-fz) < FORCE_WAIT_TOL) {
-                        break;
-                    }
-                    ros::spinOnce();
-                    wait.sleep();
+            ros::Rate wait(500);
+            while(ros::ok()) {
+                sendNormalForce(fz, arm_id);
+                ROS_INFO_STREAM("Sending Normal force: " << fz << " Fz diff: " << fabs(r_ee_ft[2]-fz));
+                if(fabs(r_ee_ft[2]-fz) < FORCE_WAIT_TOL) {
+                    break;
                 }
+                ros::spinOnce();
+                wait.sleep();
             }
         }
 
+        else if (arm_id==L_ARM_ID && bWaitForForces_left_arm){
+            ROS_INFO_STREAM("Waiting for force on left arm "<<fz<<" N.");
+            sendPose(r_ee_pose, l_ee_pose);
+
+            ros::Rate wait(500);
+            while(ros::ok()) {
+                sendNormalForce(fz, arm_id);
+                ROS_INFO_STREAM("Sending Normal force: " << fz << " Fz diff: " << fabs(l_ee_ft[2]-fz));
+                if(fabs(l_ee_ft[2]-fz) < FORCE_WAIT_TOL) {
+                    break;
+                }
+                ros::spinOnce();
+                wait.sleep();
+            }
+        }
+}
         bool find_object_by_contact(int arm_id, double min_height, double vertical_speed, double thr_force) {
             double rate = 200;
             thr_force = fabs(thr_force);
             ros::Rate thread_rate(rate);
-            Eigen::VectorXd ee_ft(6);
+            Eigen::VectorXd ee_ft;
+            ee_ft.resize(6);
 
 
             // Figure out if it is the right arm or the left arm
@@ -331,8 +338,8 @@ protected:
                 msg_pose.pose.position.z = msg_pose.pose.position.z - vertical_speed/rate;
 
                 if (arm_id == R_ARM_ID){
-                        r_pub_.publish(msg_pose);
-                        ee_ft = r_ee_ft;
+                    r_pub_.publish(msg_pose);
+                    ee_ft = r_ee_ft;
                 }
                 else{
                     l_pub_.publish(msg_pose);
@@ -358,7 +365,7 @@ protected:
             msg_pose.pose.position.z = table[2];
 
             if (arm_id == R_ARM_ID){
-                    r_pub_.publish(msg_pose);
+                r_pub_.publish(msg_pose);
             }
             else{
                 l_pub_.publish(msg_pose);
@@ -367,697 +374,723 @@ protected:
             sendAndWaitForNormalForce(0, arm_id);
 
             return true;
-    }
-
-
-    // Publish real object shape for VO bimanual DS
-    void publish_ro_rviz(const tf::Transform& ro_pose, const double& object_length){
-
-        // Marker 6DOF pose
-        ro_marker.pose.position.x    = ro_pose.getOrigin().getX();
-        ro_marker.pose.position.y    = ro_pose.getOrigin().getY();
-        ro_marker.pose.position.z    = ro_pose.getOrigin().getZ();
-        ro_marker.pose.orientation.x = ro_pose.getRotation().getX();
-        ro_marker.pose.orientation.y = ro_pose.getRotation().getY();
-        ro_marker.pose.orientation.z = ro_pose.getRotation().getZ();
-        ro_marker.pose.orientation.w = ro_pose.getRotation().getW();
-
-        // Marker shape
-        ro_marker.scale.x = object_length;
-        ro_marker.scale.y = 0.01;
-        ro_marker.scale.z = 0.01;
-
-        // Publish shape
-        ro_pub_.publish(ro_marker);
-
-    }
-
-
-    // Publish virtual object shape for VO bimanual DS
-    void publish_vo_rviz(const tf::Transform& vo_pose,  const double& object_length, const tf::Transform& right, const tf::Transform& left){
-
-        // Marker 6DOF pose
-        vo_marker.pose.position.x    = vo_pose.getOrigin().getX();
-        vo_marker.pose.position.y    = vo_pose.getOrigin().getY();
-        vo_marker.pose.position.z    = vo_pose.getOrigin().getZ();
-        vo_marker.pose.orientation.x = vo_pose.getRotation().getX();
-        vo_marker.pose.orientation.y = vo_pose.getRotation().getY();
-        vo_marker.pose.orientation.z = vo_pose.getRotation().getZ();
-        vo_marker.pose.orientation.w = vo_pose.getRotation().getW();
-
-        // Marker shape
-        vo_marker.scale.x = object_length;
-        vo_marker.scale.y = 0.01;
-        vo_marker.scale.z = 0.01;
-
-        // Publish shape
-        vo_pub_.publish(vo_marker);
-
-        // Compute end-points of VO
-        tf::Transform left_pose (vo_pose.inverse()), right_pose (vo_pose.inverse()) ;
-        tf::Vector3 pos_l (left_pose.getOrigin()), pos_r (right_pose.getOrigin());
-        double object_length_2 = object_length / 2;
-        pos_l.setX(left_pose.getOrigin().getX() - object_length_2);
-        pos_r.setX(right_pose.getOrigin().getX() + object_length_2);
-
-        // Left VO endpoint
-        left_pose.setOrigin(pos_l);
-        left_pose.mult(vo_pose, left_pose);
-        left_pose.mult(left_pose.inverse(),vo_pose);
-
-        // Right VO endpoint
-        right_pose.setOrigin(pos_r);
-        right_pose.mult(vo_pose, right_pose);
-        right_pose.mult(right_pose.inverse(),vo_pose);
-
-        // Publish left arrow
-        vo_arrow_left.points.resize(2);
-        vo_arrow_left.points[0].x = left_pose.getOrigin().getX();
-        vo_arrow_left.points[0].y = left_pose.getOrigin().getY();
-        vo_arrow_left.points[0].z = left_pose.getOrigin().getZ();
-        vo_arrow_left.points[1].x = left.getOrigin().getX();
-        vo_arrow_left.points[1].y = left.getOrigin().getY();
-        vo_arrow_left.points[1].z = left.getOrigin().getZ();
-        vo_l_pub_.publish(vo_arrow_left);
-
-
-        // Publish right arrow
-        vo_arrow_right.points.resize(2);
-        vo_arrow_right.points[0].x = right_pose.getOrigin().getX();
-        vo_arrow_right.points[0].y = right_pose.getOrigin().getY();
-        vo_arrow_right.points[0].z = right_pose.getOrigin().getZ();
-        vo_arrow_right.points[1].x = right.getOrigin().getX();
-        vo_arrow_right.points[1].y = right.getOrigin().getY();
-        vo_arrow_right.points[1].z = right.getOrigin().getZ();
-        vo_r_pub_.publish(vo_arrow_right);
-
-    }
-
-
-    // ACTION TYPE 1: Execute action from two independent learned models
-    bool decoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
-                                 double reachingThreshold, double orientationThreshold, double model_dt,
-                                 tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att,
-                                 std::string r_model_base_path, std::string l_model_base_path) {
-
-        ROS_INFO_STREAM(" Right Model Path "            << r_model_base_path);
-        ROS_INFO_STREAM(" Left Model Path "             << l_model_base_path);
-        ROS_INFO_STREAM(" Execute Learned model: phase "<< phase);
-        ROS_INFO_STREAM(" Reaching threshold "          << reachingThreshold);
-        ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
-        ROS_INFO_STREAM(" Model DT "                    << model_dt);
-
-        // Convert attractors to world frame
-        tf::Transform  right_final_target, left_final_target;
-        right_final_target.mult(task_frame, right_att);
-        left_final_target.mult(task_frame, left_att);
-
-
-        // Setting Initial conditions
-        if (initial_config == true){
-            r_curr_ee_pose = r_ee_pose;
-            l_curr_ee_pose = l_ee_pose;
         }
 
-        // Initialize CDS for right arm
-        CDSExecution *right_cdsRun = new CDSExecution;
-        right_cdsRun->initSimple(r_model_base_path, phase);
-        right_cdsRun->setObjectFrame(toMatrix4(task_frame));
-        right_cdsRun->setAttractorFrame(toMatrix4(right_att));
-        right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
-        right_cdsRun->setDT(model_dt);
-        right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
-        right_cdsRun->postInit();
+
+        // Publish real object shape for VO bimanual DS
+        void publish_ro_rviz(const tf::Transform& ro_pose, const double& object_length){
+
+            // Marker 6DOF pose
+            ro_marker.pose.position.x    = ro_pose.getOrigin().getX();
+            ro_marker.pose.position.y    = ro_pose.getOrigin().getY();
+            ro_marker.pose.position.z    = ro_pose.getOrigin().getZ();
+            ro_marker.pose.orientation.x = ro_pose.getRotation().getX();
+            ro_marker.pose.orientation.y = ro_pose.getRotation().getY();
+            ro_marker.pose.orientation.z = ro_pose.getRotation().getZ();
+            ro_marker.pose.orientation.w = ro_pose.getRotation().getW();
+
+            // Marker shape
+            ro_marker.scale.x = object_length;
+            ro_marker.scale.y = 0.01;
+            ro_marker.scale.z = 0.01;
+
+            // Publish shape
+            ro_pub_.publish(ro_marker);
+
+        }
 
 
-        // Initialize CDS for left arm
-        CDSExecution *left_cdsRun = new CDSExecution;
-        left_cdsRun->initSimple(l_model_base_path, phase);
-        left_cdsRun->setObjectFrame(toMatrix4(task_frame));
-        left_cdsRun->setAttractorFrame(toMatrix4(left_att));
-        left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
-        left_cdsRun->setDT(model_dt);
-        left_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
-        left_cdsRun->postInit();
+        // Publish virtual object shape for VO bimanual DS
+        void publish_vo_rviz(const tf::Transform& vo_pose,  const double& object_length, const tf::Transform& right, const tf::Transform& left){
+
+            // Marker 6DOF pose
+            vo_marker.pose.position.x    = vo_pose.getOrigin().getX();
+            vo_marker.pose.position.y    = vo_pose.getOrigin().getY();
+            vo_marker.pose.position.z    = vo_pose.getOrigin().getZ();
+            vo_marker.pose.orientation.x = vo_pose.getRotation().getX();
+            vo_marker.pose.orientation.y = vo_pose.getRotation().getY();
+            vo_marker.pose.orientation.z = vo_pose.getRotation().getZ();
+            vo_marker.pose.orientation.w = vo_pose.getRotation().getW();
+
+            // Marker shape
+            vo_marker.scale.x = object_length;
+            vo_marker.scale.y = 0.01;
+            vo_marker.scale.z = 0.01;
+
+            // Publish shape
+            vo_pub_.publish(vo_marker);
+
+            // Compute end-points of VO
+            tf::Transform left_pose (vo_pose.inverse()), right_pose (vo_pose.inverse()) ;
+            tf::Vector3 pos_l (left_pose.getOrigin()), pos_r (right_pose.getOrigin());
+            double object_length_2 = object_length / 2;
+            pos_l.setX(left_pose.getOrigin().getX() - object_length_2);
+            pos_r.setX(right_pose.getOrigin().getX() + object_length_2);
+
+            // Left VO endpoint
+            left_pose.setOrigin(pos_l);
+            left_pose.mult(vo_pose, left_pose);
+            left_pose.mult(left_pose.inverse(),vo_pose);
+
+            // Right VO endpoint
+            right_pose.setOrigin(pos_r);
+            right_pose.mult(vo_pose, right_pose);
+            right_pose.mult(right_pose.inverse(),vo_pose);
+
+            // Publish left arrow
+            vo_arrow_left.points.resize(2);
+            vo_arrow_left.points[0].x = left_pose.getOrigin().getX();
+            vo_arrow_left.points[0].y = left_pose.getOrigin().getY();
+            vo_arrow_left.points[0].z = left_pose.getOrigin().getZ();
+            vo_arrow_left.points[1].x = left.getOrigin().getX();
+            vo_arrow_left.points[1].y = left.getOrigin().getY();
+            vo_arrow_left.points[1].z = left.getOrigin().getZ();
+            vo_l_pub_.publish(vo_arrow_left);
 
 
-        // Vairable for execution
-        ros::Duration loop_rate(model_dt);
-        static tf::TransformBroadcaster br;
-        tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
-        tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
+            // Publish right arrow
+            vo_arrow_right.points.resize(2);
+            vo_arrow_right.points[0].x = right_pose.getOrigin().getX();
+            vo_arrow_right.points[0].y = right_pose.getOrigin().getY();
+            vo_arrow_right.points[0].z = right_pose.getOrigin().getZ();
+            vo_arrow_right.points[1].x = right.getOrigin().getX();
+            vo_arrow_right.points[1].y = right.getOrigin().getY();
+            vo_arrow_right.points[1].z = right.getOrigin().getZ();
+            vo_r_pub_.publish(vo_arrow_right);
 
-        tf::Transform r_trans_ee, l_trans_ee;
-        double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
+        }
 
 
-        ROS_INFO("Execution started");
-        while(ros::ok()) {
+        // ACTION TYPE 1: Execute action from two independent learned models
+        bool decoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
+                                               double reachingThreshold, double orientationThreshold, double model_dt,
+                                               tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att,
+                                               std::string r_model_base_path, std::string l_model_base_path) {
+
+            ROS_INFO_STREAM(" Right Model Path "            << r_model_base_path);
+            ROS_INFO_STREAM(" Left Model Path "             << l_model_base_path);
+            ROS_INFO_STREAM(" Execute Learned model: phase "<< phase);
+            ROS_INFO_STREAM(" Reaching threshold "          << reachingThreshold);
+            ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
+            ROS_INFO_STREAM(" Model DT "                    << model_dt);
+
+            // Convert attractors to world frame
+            tf::Transform  right_final_target, left_final_target;
+            right_final_target.mult(task_frame, right_att);
+            left_final_target.mult(task_frame, left_att);
+
 
             // Setting Initial conditions
             if (initial_config == true){
                 r_curr_ee_pose = r_ee_pose;
                 l_curr_ee_pose = l_ee_pose;
             }
-            else{
-                r_curr_ee_pose = r_des_ee_pose;
-                l_curr_ee_pose = l_des_ee_pose;
-            }
 
-            // Publish attractors if running in simulation or with fixed values
-            r_trans_ee.setRotation(tf::Quaternion(r_curr_ee_pose.getRotation()));
-            r_trans_ee.setOrigin(tf::Vector3(r_curr_ee_pose.getOrigin()));
+            // Initialize CDS for right arm
+            CDSExecution *right_cdsRun = new CDSExecution;
+            right_cdsRun->initSimple(r_model_base_path, phase);
+            right_cdsRun->setObjectFrame(toMatrix4(task_frame));
+            right_cdsRun->setAttractorFrame(toMatrix4(right_att));
+            right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
+            right_cdsRun->setDT(model_dt);
+            right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
+            right_cdsRun->postInit();
 
-            l_trans_ee.setRotation(tf::Quaternion(l_curr_ee_pose.getRotation()));
-            l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
 
-            // To Visualize EE Frames
-            if (simulation==true){
-                int frame_viz = int(model_dt*1000);
-                if (tf_count==0 || tf_count%frame_viz==0){
-                    stringstream r_ss, l_ss;
-                    r_ss <<  "/r_ee_tf_" << tf_count;
-                    l_ss <<  "/l_ee_tf_" << tf_count;
-                    br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, r_ss.str()));
-                    br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, l_ss.str()));
-                }
-                tf_count++;
-            }
-            else{
-                br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
-                br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
-            }
+            // Initialize CDS for left arm
+            CDSExecution *left_cdsRun = new CDSExecution;
+            left_cdsRun->initSimple(l_model_base_path, phase);
+            left_cdsRun->setObjectFrame(toMatrix4(task_frame));
+            left_cdsRun->setAttractorFrame(toMatrix4(left_att));
+            left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
+            left_cdsRun->setDT(model_dt);
+            left_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
+            left_cdsRun->postInit();
 
-            br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
-            br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
-            br.sendTransform(tf::StampedTransform(task_frame, ros::Time::now(), right_robot_frame, "/task_frame"));
 
-            // Current progress variable (position/orientation error).
-            r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
-            l_pos_err = (left_final_target.getOrigin()  - l_curr_ee_pose.getOrigin()).length();
+            // Vairable for execution
+            ros::Duration loop_rate(model_dt);
+            static tf::TransformBroadcaster br;
+            tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
+            tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
 
-            //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
-            r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
-            l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
-            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
-            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << r_ori_err);
+            tf::Transform r_trans_ee, l_trans_ee;
+            double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
-            double r_att_pos_err = (right_final_target.getOrigin() - r_des_ee_pose.getOrigin()).length();
-            double r_att_ori_err = acos(abs(right_final_target.getRotation().dot(r_des_ee_pose.getRotation())));
 
-            double l_att_pos_err = (left_final_target.getOrigin() - l_des_ee_pose.getOrigin()).length();
-            double l_att_ori_err = acos(abs(left_final_target.getRotation().dot(l_des_ee_pose.getRotation())));
+            ROS_INFO("Execution started");
+            while(ros::ok()) {
 
-            ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Position Error: "    << r_att_pos_err << " Left Position Error: "    << l_att_pos_err);
-            ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Orientation Error: " << r_att_ori_err << " Left Orientation Error: " << l_att_ori_err);
-
-            // Compute Next Desired EE Pose for Right Arm
-            right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
-            toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
-            r_des_ee_pose = r_mNextRobotEEPose;
-
-            // Compute Next Desired EE Pose for Left Arm
-            left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
-            toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
-            l_des_ee_pose = l_mNextRobotEEPose;
-
-            // Make next pose the current pose for open-loop simulation
-            if (simulation==true)
-                initial_config=false;
-
-            // CHECK If orientation error is VERY low or nan because of qdiff take target orientation
-            if (r_att_ori_err < 0.005 || isnan(r_att_ori_err)) //[rad] and [m]//
-                r_des_ee_pose.setRotation(tf::Quaternion(right_final_target.getRotation()).normalize());
-
-            if (l_att_ori_err < 0.005 || isnan(l_att_ori_err)) //[rad] and [m]//
-                l_des_ee_pose.setRotation(tf::Quaternion(left_final_target.getRotation()).normalize());
-
-            //******************************//
-            //  Send the computed ee poses  //
-            //******************************//
-            if (simulation==false)
-                sendPose(r_des_ee_pose, l_des_ee_pose);
-
-            as_.publishFeedback(feedback_);
-
-            if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
-                if (phase == PHASE2){
-                    sendPose(r_curr_ee_pose, l_curr_ee_pose);
-                    break;
+                // Setting Initial conditions
+                if (initial_config == true){
+                    r_curr_ee_pose = r_ee_pose;
+                    l_curr_ee_pose = l_ee_pose;
                 }
                 else{
-                    if((r_ori_err < orientationThreshold || isnan(r_ori_err)) && (l_ori_err < orientationThreshold || isnan(l_ori_err))){
+                    r_curr_ee_pose = r_des_ee_pose;
+                    l_curr_ee_pose = l_des_ee_pose;
+                }
+
+                // Publish attractors if running in simulation or with fixed values
+                r_trans_ee.setRotation(tf::Quaternion(r_curr_ee_pose.getRotation()));
+                r_trans_ee.setOrigin(tf::Vector3(r_curr_ee_pose.getOrigin()));
+
+                l_trans_ee.setRotation(tf::Quaternion(l_curr_ee_pose.getRotation()));
+                l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
+
+                // To Visualize EE Frames
+                if (simulation==true){
+                    int frame_viz = int(model_dt*1000);
+                    if (tf_count==0 || tf_count%frame_viz==0){
+                        stringstream r_ss, l_ss;
+                        r_ss <<  "/r_ee_tf_" << tf_count;
+                        l_ss <<  "/l_ee_tf_" << tf_count;
+                        br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, r_ss.str()));
+                        br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, l_ss.str()));
+                    }
+                    tf_count++;
+                }
+                else{
+                    br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
+                    br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
+                }
+
+                br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
+                br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+                br.sendTransform(tf::StampedTransform(task_frame, ros::Time::now(), right_robot_frame, "/task_frame"));
+
+                // Current progress variable (position/orientation error).
+                r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
+                l_pos_err = (left_final_target.getOrigin()  - l_curr_ee_pose.getOrigin()).length();
+
+                //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
+                r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
+                l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
+                ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
+                ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << r_ori_err);
+
+                double r_att_pos_err = (right_final_target.getOrigin() - r_des_ee_pose.getOrigin()).length();
+                double r_att_ori_err = acos(abs(right_final_target.getRotation().dot(r_des_ee_pose.getRotation())));
+
+                double l_att_pos_err = (left_final_target.getOrigin() - l_des_ee_pose.getOrigin()).length();
+                double l_att_ori_err = acos(abs(left_final_target.getRotation().dot(l_des_ee_pose.getRotation())));
+
+                ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Position Error: "    << r_att_pos_err << " Left Position Error: "    << l_att_pos_err);
+                ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Orientation Error: " << r_att_ori_err << " Left Orientation Error: " << l_att_ori_err);
+
+                // Compute Next Desired EE Pose for Right Arm
+                right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
+                toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
+                r_des_ee_pose = r_mNextRobotEEPose;
+
+                // Compute Next Desired EE Pose for Left Arm
+                left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
+                toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
+                l_des_ee_pose = l_mNextRobotEEPose;
+
+                // Make next pose the current pose for open-loop simulation
+                if (simulation==true)
+                    initial_config=false;
+
+                // CHECK If orientation error is VERY low or nan because of qdiff take target orientation
+                if (r_att_ori_err < 0.005 || isnan(r_att_ori_err)) //[rad] and [m]//
+                    r_des_ee_pose.setRotation(tf::Quaternion(right_final_target.getRotation()).normalize());
+
+                if (l_att_ori_err < 0.005 || isnan(l_att_ori_err)) //[rad] and [m]//
+                    l_des_ee_pose.setRotation(tf::Quaternion(left_final_target.getRotation()).normalize());
+
+                //******************************//
+                //  Send the computed ee poses  //
+                //******************************//
+                if (simulation==false)
+                    sendPose(r_des_ee_pose, l_des_ee_pose);
+
+                as_.publishFeedback(feedback_);
+
+                if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
+                    if (phase == PHASE_PEEL){
                         sendPose(r_curr_ee_pose, l_curr_ee_pose);
                         break;
                     }
+                    else{
+                        if((r_ori_err < orientationThreshold || isnan(r_ori_err)) && (l_ori_err < orientationThreshold || isnan(l_ori_err))){
+                            sendPose(r_curr_ee_pose, l_curr_ee_pose);
+                            break;
+                        }
+                    }
+
+
                 }
 
-
+                //            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
+                //                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
+                //                    break;
+                //                }
+                loop_rate.sleep();
             }
+            delete right_cdsRun;
+            delete left_cdsRun;
 
-//            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
-//                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
-//                    break;
-//                }
-            loop_rate.sleep();
-        }
-        delete right_cdsRun;
-        delete left_cdsRun;
-        return ros::ok();
-    }
-
-    // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
-    bool coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt){
-
-        // Convert attractors to world frame
-        tf::Transform  right_final_target, left_final_target, virtual_object, real_object;
-        right_final_target.mult(task_frame, right_att);
-        left_final_target.mult(task_frame, left_att);
-
-        // Compute Real object frame from desired left/right attractors
-        compute_object_pose(left_final_target, right_final_target, real_object);
-        double object_length (left_final_target.getOrigin().distance(right_final_target.getOrigin()));
-
-        // State Variables for Virtial Object Dynamical System
-        Eigen::Vector3d real_object_velocity;
-        real_object_velocity.setZero();
-
-        // Setting Initial conditions
-        r_curr_ee_pose = r_ee_pose;
-        l_curr_ee_pose = l_ee_pose;
-
-
-        // Initialize Virtual Object Dynamical System
-        bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-        vo_dsRun->init(dt,1.0,0.5,800.0,200.0,200.0);
-        vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
-        vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
-        vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
-        vo_dsRun->initializeVirtualObject();
-
-        // Vairable for execution
-        ros::Duration loop_rate(dt);
-        static tf::TransformBroadcaster br;
-        tf::Transform r_trans_ee, l_trans_ee;
-        double object_err;
-
-
-        // Before Starting a Reach Bias the FT-Sensors!
-        netft_rdt_driver::String_cmd srv;
-        srv.request.cmd  = "bias";
-        srv.response.res = "";
-        if (hand_ft_client.call(srv))
-        {
-          ROS_INFO_STREAM("net_ft res: " << srv.response.res);
-        }else{
-          ROS_ERROR("Failed to call netft bias service for hand");
+            if(phase ==  PHASE_REACH_TO_PEEL) {
+                // Hack! If phase is "reach", find the table right after reaching
+                if (bWaitForForces_right_arm)	{
+                    bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.35, 0.05, 5);
+                    return x_r_arm;
+                }
+                if (bWaitForForces_left_arm)	{
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.35, 0.05, 5);
+                    return x_l_arm;
+                }
+            } else if (phase == PHASE_PEEL){
+                // Hack! wait for zero force before getting ready to recieve further commands.
+                // This is to avoid dragging the dough.
+                sendAndWaitForNormalForce(0, L_ARM_ID);
+                return ros::ok();
+            } else {
+                return ros::ok();
+            }
         }
 
-        if (tool_ft_client.call(srv))
-        {
-          ROS_INFO_STREAM("net_ft res: " << srv.response.res);
-        }else{
-          ROS_ERROR("Failed to call netft bias service for tool");
-        }
+        // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
+        bool coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt){
 
+            // Convert attractors to world frame
+            tf::Transform  right_final_target, left_final_target, virtual_object, real_object;
+            right_final_target.mult(task_frame, right_att);
+            left_final_target.mult(task_frame, left_att);
 
-        while(ros::ok()) {
+            // Compute Real object frame from desired left/right attractors
+            compute_object_pose(left_final_target, right_final_target, real_object);
+            double object_length (left_final_target.getOrigin().distance(right_final_target.getOrigin()));
 
-            // View attractors
-            br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
-            br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
-            br.sendTransform(tf::StampedTransform(real_object, ros::Time::now(), right_robot_frame, "/real_object"));
+            // State Variables for Virtial Object Dynamical System
+            Eigen::Vector3d real_object_velocity;
+            real_object_velocity.setZero();
 
-            // View real object
-            publish_ro_rviz(real_object, object_length);
-
-            // Set Current Object State (From Object Pose Tracking/Predicting Module)
-            vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
-
-            // Set Predicted Intercept Positions (From Intercept Point Estimation Module)
-            vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
-
-            // Update Current robot end-effector poses (From Fwd Kinematics)
+            // Setting Initial conditions
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
 
-            // Set Current ee States
+
+            // Initialize Virtual Object Dynamical System
+            bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
+            vo_dsRun->init(dt,1.0,0.5,800.0,200.0,200.0);
+            vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
+            vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
             vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
+            vo_dsRun->initializeVirtualObject();
 
-            // Update VO DS
-            vo_dsRun->update();
-
-            // Get New Virtual Object Pose
-            vo_dsRun->getVirtualObjectPose(virtual_object);
-
-            // Get Desired ee States
-            vo_dsRun->getNextEEStates(l_des_ee_pose,r_des_ee_pose);
+            // Vairable for execution
+            ros::Duration loop_rate(dt);
+            static tf::TransformBroadcaster br;
+            tf::Transform r_trans_ee, l_trans_ee;
+            double object_err;
 
 
-            //******************************//
-            //  Send the computed ee poses  //
-            //******************************//
-            sendPose(r_des_ee_pose, l_des_ee_pose);
+            // Before Starting a Reach Bias the FT-Sensors!
+            netft_rdt_driver::String_cmd srv;
+            srv.request.cmd  = "bias";
+            srv.response.res = "";
+            if (hand_ft_client.call(srv))
+            {
+                ROS_INFO_STREAM("net_ft res: " << srv.response.res);
+            }else{
+                ROS_ERROR("Failed to call netft bias service for hand");
+            }
 
-            // Visualize desired end-effector poses
-            r_trans_ee.setRotation(tf::Quaternion(r_des_ee_pose.getRotation()));
-            r_trans_ee.setOrigin(tf::Vector3(r_des_ee_pose.getOrigin()));
+            if (tool_ft_client.call(srv))
+            {
+                ROS_INFO_STREAM("net_ft res: " << srv.response.res);
+            }else{
+                ROS_ERROR("Failed to call netft bias service for tool");
+            }
 
-            l_trans_ee.setRotation(tf::Quaternion(l_des_ee_pose.getRotation()));
-            l_trans_ee.setOrigin(tf::Vector3(l_des_ee_pose.getOrigin()));
 
-            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_des_ee"));
-            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_des_ee"));
+            while(ros::ok()) {
 
-            //View virtual object
-            publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
-            br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
+                // View attractors
+                br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
+                br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+                br.sendTransform(tf::StampedTransform(real_object, ros::Time::now(), right_robot_frame, "/real_object"));
 
-            // Open Loop Hack
-            // r_curr_ee_pose = r_des_ee_pose;
-            // l_curr_ee_pose = l_des_ee_pose;
+                // View real object
+                publish_ro_rviz(real_object, object_length);
 
-            // Current progress variable (position)
-            object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();  
-            reachingThreshold = 0.017;
-            ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
+                // Set Current Object State (From Object Pose Tracking/Predicting Module)
+                vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
 
-            as_.publishFeedback(feedback_);
+                // Set Predicted Intercept Positions (From Intercept Point Estimation Module)
+                vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
 
-            // // Only Check for Position Error
-            if(object_err < reachingThreshold ) {
+                // Update Current robot end-effector poses (From Fwd Kinematics)
+                r_curr_ee_pose = r_ee_pose;
+                l_curr_ee_pose = l_ee_pose;
+
+                // Set Current ee States
+                vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
+
+                // Update VO DS
+                vo_dsRun->update();
+
+                // Get New Virtual Object Pose
+                vo_dsRun->getVirtualObjectPose(virtual_object);
+
+                // Get Desired ee States
+                vo_dsRun->getNextEEStates(l_des_ee_pose,r_des_ee_pose);
+
+
+                //******************************//
+                //  Send the computed ee poses  //
+                //******************************//
+                sendPose(r_des_ee_pose, l_des_ee_pose);
+
+                // Visualize desired end-effector poses
+                r_trans_ee.setRotation(tf::Quaternion(r_des_ee_pose.getRotation()));
+                r_trans_ee.setOrigin(tf::Vector3(r_des_ee_pose.getOrigin()));
+
+                l_trans_ee.setRotation(tf::Quaternion(l_des_ee_pose.getRotation()));
+                l_trans_ee.setOrigin(tf::Vector3(l_des_ee_pose.getOrigin()));
+
+                br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_des_ee"));
+                br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_des_ee"));
+
+                //View virtual object
+                publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
+                br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
+
+                // Open Loop Hack
+                // r_curr_ee_pose = r_des_ee_pose;
+                // l_curr_ee_pose = l_des_ee_pose;
+
+                // Current progress variable (position)
+                object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();
+                reachingThreshold = 0.017;
+                ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
+
+                as_.publishFeedback(feedback_);
+
+                // // Only Check for Position Error
+                if(object_err < reachingThreshold ) {
                     sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
                 }
 
 
-            loop_rate.sleep();
-        }
-        delete vo_dsRun;
-        return ros::ok();
-    }
-
-
-    // ACTION TYPE 3: Go to Targets in Cartesian Space
-    bool decoupled_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
-
-        // Convert attractors to world frame
-        tf::Transform  right_final_target, left_final_target, virtual_object;
-        right_final_target.mult(task_frame, right_att);
-        left_final_target.mult(task_frame, left_att);
-
-        // Setting Initial conditions
-        if (initial_config == true){
-            r_curr_ee_pose = r_ee_pose;
-            l_curr_ee_pose = l_ee_pose;
-        }
-
-//        * how to use
-
-//           CDDynamics *testDyn;
-//           testDyn = new CDDynamics(dim, dt, wn);
-
-//           testDyn->SetVelocityLimits(velLimits);
-//           testDyn->SetState(initial);
-//           testDyn->SetTarget(target);
-
-
-//           start loop
-//               // if new target is set
-//               testDyn->SetTarget(target);
-
-//               // update dynamics
-//               testDyn->Update();
-
-//               // get state
-//               testDyn->GetState(state);
-//           end loop
-
-
-    }
-
-
-public:
-
-    BimanualActionServer(std::string name) :
-        as_(nh_, name, boost::bind(&BimanualActionServer::executeCB, this, _1), false),
-        action_name_(name)
-    {
-        r_ee_ft.resize(6);
-        l_ee_ft.resize(6);
-        as_.start();
-    }
-
-
-    ~BimanualActionServer(void)
-    {
-    }
-
-    // Select which mode to use from launch file. Fixed numbers for LASA/BOXY robot or the Vision tracking.
-    void initialize() {
-        std::string ad;
-        ros::NodeHandle _nh("~");
-
-        // Read Parameters from Launch File
-        _nh.getParam("right_robot_frame", right_robot_frame);
-        _nh.getParam("left_robot_frame", left_robot_frame);        
-        _nh.getParam("right_model_base_path", r_base_path);
-        _nh.getParam("left_model_base_path", l_base_path);
-        _nh.getParam("simulation", simulation);
-        _nh.getParam("model_dt", model_dt);
-        _nh.getParam("reachingThreshold", reachingThreshold);
-        _nh.getParam("orientationThreshold", orientationThreshold);
-        _nh.getParam("r_topic_ns", r_topic_ns);
-        _nh.getParam("l_topic_ns", l_topic_ns);
-
-
-        std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_cmd_pose, r_ss_cmd_ft;
-        r_ss_state_pose << "/" << r_topic_ns << "/joint_to_cart/est_ee_pose";
-        r_ss_state_ft   << "/hand/ft_sensor/netft_data";
-        r_ss_cmd_pose   << "/" << r_topic_ns << "/cart_to_joint/des_ee_pose";
-        r_ss_cmd_ft     << "/" << r_topic_ns << "/cart_to_joint/des_ee_ft";
-
-        R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
-        R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
-        R_EE_CMD_POSE_TOPIC	  = r_ss_cmd_pose.str();
-        R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
-
-
-        // ROS TOPICS for right arm controllers
-        r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, r_eeStateCallback);
-        r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, r_ftStateCallback);
-
-        r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
-        r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
-
-
-        std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_cmd_pose, l_ss_cmd_ft;
-        l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
-        l_ss_state_ft   << "/tool/ft_sensor/netft_data";
-        l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
-        l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
-
-        L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
-        L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
-        L_EE_CMD_POSE_TOPIC	  = l_ss_cmd_pose.str();
-        L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
-
-
-        r_curr_ee_ft.resize(6);
-        l_curr_ee_ft.resize(6);
-
-        // ROS TOPICS for left arm controllers
-        l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, l_eeStateCallback);
-        l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, l_ftStateCallback);
-        l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
-        l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
-
-
-        ROS_INFO_STREAM("Right (BHand-Zucchini) FT Sensor: " << R_EE_STATE_FT_TOPIC);
-        ROS_INFO_STREAM("Left (Peel-Tool) FT Sensor: " << L_EE_STATE_FT_TOPIC);
-
-
-        // Service Clients for FT/Sensor Biasing
-        hand_ft_client = nh_.serviceClient<netft_rdt_driver::String_cmd>("/hand/ft_sensor/bias_cmd");
-        tool_ft_client = nh_.serviceClient<netft_rdt_driver::String_cmd>("/tool/ft_sensor/bias_cmd");
-
-
-        // Getting left and right robot base frame
-        tf::TransformListener listener;
-        try {
-            listener.waitForTransform(right_robot_frame, "/world_frame", ros::Time(0), ros::Duration(10.0) );
-            listener.lookupTransform(right_robot_frame, "/world_frame", ros::Time(0), right_arm_base);
-        } catch (tf::TransformException ex) {
-            ROS_ERROR("%s",ex.what());
-        }
-        try {
-            listener.waitForTransform(left_robot_frame, right_robot_frame, ros::Time(0), ros::Duration(10.0) );
-            listener.lookupTransform(left_robot_frame, right_robot_frame, ros::Time(0), left_arm_base);
-        } catch (tf::TransformException ex) {
-            ROS_ERROR("%s",ex.what());
+                loop_rate.sleep();
+            }
+            delete vo_dsRun;
+            return ros::ok();
         }
 
 
-        // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
-        ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);
-        vo_pub_   = nh_.advertise<visualization_msgs::Marker>("virtual_object", 1);
-        vo_l_pub_ = nh_.advertise<visualization_msgs::Marker>("left_vo", 1);
-        vo_r_pub_ = nh_.advertise<visualization_msgs::Marker>("right_vo", 1);
+        // ACTION TYPE 3: Go to Targets in Cartesian Space
+        bool decoupled_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
 
-        // Real object marker settings
-        ro_marker.header.frame_id = right_robot_frame;
-        ro_marker.action = visualization_msgs::Marker::ADD;
-        ro_marker.ns = "basic_shapes";
-        ro_marker.id = 0;
-        ro_marker.type = visualization_msgs::Marker::CUBE;
+            // Convert attractors to world frame
+            tf::Transform  right_final_target, left_final_target, virtual_object;
+            right_final_target.mult(task_frame, right_att);
+            left_final_target.mult(task_frame, left_att);
 
-        ro_marker.color.r = 0.0f;
-        ro_marker.color.g = 0.0f;
-        ro_marker.color.b = 1.0f;
-        ro_marker.color.a = 0.6f;
+            // Setting Initial conditions
+            if (initial_config == true){
+                r_curr_ee_pose = r_ee_pose;
+                l_curr_ee_pose = l_ee_pose;
+            }
 
-        // Virtual object marker settings
-        vo_marker.header.frame_id = right_robot_frame;
-        vo_marker.action = visualization_msgs::Marker::ADD;
-        vo_marker.ns = "basic_shapes";
-        vo_marker.id = 1;
-        vo_marker.type = visualization_msgs::Marker::CUBE;
-        vo_marker.color.r = 0.0f;
-        vo_marker.color.g = 1.0f;
-        vo_marker.color.b = 0.0f;
-        vo_marker.color.a = 0.6f;
+            //        * how to use
 
-        vo_arrow_left.header.frame_id = right_robot_frame;
-        vo_arrow_left.action = visualization_msgs::Marker::ADD;
-        vo_arrow_left.ns = "basic_shapes";
-        vo_arrow_left.id = 2;
-        vo_arrow_left.type = visualization_msgs::Marker::ARROW;
-        vo_arrow_left.color.r = 1.0f;
-        vo_arrow_left.color.g = 0.0f;
-        vo_arrow_left.color.b = 0.0f;
-        vo_arrow_left.color.a = 0.6f;
-        vo_arrow_left.scale.x = 0.005;
-        vo_arrow_left.scale.y = 0.01;
-        vo_arrow_left.scale.z = 0.01;
+            //           CDDynamics *testDyn;
+            //           testDyn = new CDDynamics(dim, dt, wn);
 
-        vo_arrow_right.header.frame_id = right_robot_frame;
-        vo_arrow_right.action = visualization_msgs::Marker::ADD;
-        vo_arrow_right.ns = "basic_shapes";
-        vo_arrow_right.id = 3;
-        vo_arrow_right.type = visualization_msgs::Marker::ARROW;
-        vo_arrow_right.color.r = 1.0f;
-        vo_arrow_right.color.g = 0.0f;
-        vo_arrow_right.color.b = 0.0f;
-        vo_arrow_right.color.a = 0.6f;
-        vo_arrow_right.scale.x = 0.005;
-        vo_arrow_right.scale.y = 0.01;
-        vo_arrow_right.scale.z = 0.01;
+            //           testDyn->SetVelocityLimits(velLimits);
+            //           testDyn->SetState(initial);
+            //           testDyn->SetTarget(target);
 
 
-    }
+            //           start loop
+            //               // if new target is set
+            //               testDyn->SetTarget(target);
 
-    void executeCB(const bimanual_action_planners::PLAN2CTRLGoalConstPtr &goal)
-    {
+            //               // update dynamics
+            //               testDyn->Update();
 
-        std::string desired_action = goal->action_type;
-        ROS_INFO_STREAM( "Desired Action is " << desired_action);
+            //               // get state
+            //               testDyn->GetState(state);
+            //           end loop
 
-        isOkay = false;
-        ros::Rate r(10);
-        ROS_INFO("Waiting for EE pose/ft topic...");
-        while(ros::ok() && (!isOkay)) {
-            r.sleep();
-        }
-        if(!ros::ok()) {
-            result_.success = 0;
-            ROS_INFO("%s: Failed", action_name_.c_str());
-            as_.setAborted(result_);
-            return;
+
         }
 
-        // initialize action progress as null
-        feedback_.progress = 0;
-        bool success = false;
+
+        public:
+
+        BimanualActionServer(std::string name) :
+            as_(nh_, name, boost::bind(&BimanualActionServer::executeCB, this, _1), false),
+            action_name_(name)
+        {
+            r_ee_ft.resize(6);
+            l_ee_ft.resize(6);
+            as_.start();
+        }
 
 
-        // Setup transforms for task-space control
-        tf::Transform task_frame, right_att, left_att;
-        // Set transform for task frame
-        task_frame.setRotation(tf::Quaternion(goal->task_frame.rotation.x,goal->task_frame.rotation.y,
-                                             goal->task_frame.rotation.z,goal->task_frame.rotation.w));
-        task_frame.setOrigin(tf::Vector3(goal->task_frame.translation.x, goal->task_frame.translation.y,
-                                        goal->task_frame.translation.z));
+        ~BimanualActionServer(void)
+        {
+        }
 
-        // Set transform for right arm attractor
-        right_att.setRotation(tf::Quaternion(goal->right_attractor_frame.rotation.x,goal->right_attractor_frame.rotation.y,
-                                               goal->right_attractor_frame.rotation.z,goal->right_attractor_frame.rotation.w));
-        right_att.setOrigin(tf::Vector3(goal->right_attractor_frame.translation.x, goal->right_attractor_frame.translation.y,
-                                          goal->right_attractor_frame.translation.z));
+        // Select which mode to use from launch file. Fixed numbers for LASA/BOXY robot or the Vision tracking.
+        void initialize() {
+            std::string ad;
+            ros::NodeHandle _nh("~");
 
-        // Set transform for left arm attractor
-        left_att.setRotation(tf::Quaternion(goal->left_attractor_frame.rotation.x,goal->left_attractor_frame.rotation.y,
-                                               goal->left_attractor_frame.rotation.z,goal->left_attractor_frame.rotation.w));
-        left_att.setOrigin(tf::Vector3(goal->left_attractor_frame.translation.x, goal->left_attractor_frame.translation.y,
-                                          goal->left_attractor_frame.translation.z));
+            // Read Parameters from Launch File
+            _nh.getParam("right_robot_frame", right_robot_frame);
+            _nh.getParam("left_robot_frame", left_robot_frame);
+            _nh.getParam("right_model_base_path", r_base_path);
+            _nh.getParam("left_model_base_path", l_base_path);
+            _nh.getParam("simulation", simulation);
+            _nh.getParam("model_dt", model_dt);
+            _nh.getParam("reachingThreshold", reachingThreshold);
+            _nh.getParam("orientationThreshold", orientationThreshold);
+            _nh.getParam("r_topic_ns", r_topic_ns);
+            _nh.getParam("l_topic_ns", l_topic_ns);
+            _nh.getParam("wait_for_force_right", bWaitForForces_right_arm);
+            _nh.getParam("wait_for_force_left", bWaitForForces_left_arm);
+
+            if(!_nh.getParam("wait_for_force", bWaitForForces_right_arm)) {
+                ROS_INFO_STREAM("Set the Waiting for forces flag");
+                bWaitForForces_right_arm = true;
+            }
+
+            if(!_nh.getParam("wait_for_force", bWaitForForces_left_arm)) {
+                ROS_INFO_STREAM("Set the Waiting for forces flag");
+                bWaitForForces_left_arm = true;
+            }
+
+            std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_cmd_pose, r_ss_cmd_ft;
+            r_ss_state_pose << "/" << r_topic_ns << "/joint_to_cart/est_ee_pose";
+            r_ss_state_ft   << "/hand/ft_sensor/netft_data";
+            r_ss_cmd_pose   << "/" << r_topic_ns << "/cart_to_joint/des_ee_pose";
+            r_ss_cmd_ft     << "/" << r_topic_ns << "/cart_to_joint/des_ee_ft";
+
+            R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
+            R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
+            R_EE_CMD_POSE_TOPIC	  = r_ss_cmd_pose.str();
+            R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
 
 
-        ////////////////////////////////////////////////////
-        /////----- EXECUTE REQUESTED ACTION TYPE ------/////
-        ////////////////////////////////////////////////////
+            // ROS TOPICS for right arm controllers
+            r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, r_eeStateCallback);
+            r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, r_ftStateCallback);
 
-        //---> ACTION TYPE 1: Use two independent decoupled learned models to execute the action
-        if(goal->action_type=="DECOUPLED_LEARNED_MODEL"){
-            TaskPhase phase;
-            if(goal->action_name == "phase1") {
-                phase = PHASE1;
-            } else if(goal->action_name == "phase2") {
-                phase = PHASE2;
-            } else {
-                ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
+            r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
+            r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
+
+
+            std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_cmd_pose, l_ss_cmd_ft;
+            l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
+            l_ss_state_ft   << "/tool/ft_sensor/netft_data";
+            l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
+            l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
+
+            L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
+            L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
+            L_EE_CMD_POSE_TOPIC	  = l_ss_cmd_pose.str();
+            L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
+
+
+            r_curr_ee_ft.resize(6);
+            l_curr_ee_ft.resize(6);
+
+            // ROS TOPICS for left arm controllers
+            l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, l_eeStateCallback);
+            l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, l_ftStateCallback);
+            l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
+            l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
+
+
+            ROS_INFO_STREAM("Right (BHand-Zucchini) FT Sensor: " << R_EE_STATE_FT_TOPIC);
+            ROS_INFO_STREAM("Left (Peel-Tool) FT Sensor: " << L_EE_STATE_FT_TOPIC);
+
+
+            // Service Clients for FT/Sensor Biasing
+            hand_ft_client = nh_.serviceClient<netft_rdt_driver::String_cmd>("/hand/ft_sensor/bias_cmd");
+            tool_ft_client = nh_.serviceClient<netft_rdt_driver::String_cmd>("/tool/ft_sensor/bias_cmd");
+
+
+            // Getting left and right robot base frame
+            tf::TransformListener listener;
+            try {
+                listener.waitForTransform(right_robot_frame, "/world_frame", ros::Time(0), ros::Duration(10.0) );
+                listener.lookupTransform(right_robot_frame, "/world_frame", ros::Time(0), right_arm_base);
+            } catch (tf::TransformException ex) {
+                ROS_ERROR("%s",ex.what());
+            }
+            try {
+                listener.waitForTransform(left_robot_frame, right_robot_frame, ros::Time(0), ros::Duration(10.0) );
+                listener.lookupTransform(left_robot_frame, right_robot_frame, ros::Time(0), left_arm_base);
+            } catch (tf::TransformException ex) {
+                ROS_ERROR("%s",ex.what());
+            }
+
+
+            // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
+            ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);
+            vo_pub_   = nh_.advertise<visualization_msgs::Marker>("virtual_object", 1);
+            vo_l_pub_ = nh_.advertise<visualization_msgs::Marker>("left_vo", 1);
+            vo_r_pub_ = nh_.advertise<visualization_msgs::Marker>("right_vo", 1);
+
+            // Real object marker settings
+            ro_marker.header.frame_id = right_robot_frame;
+            ro_marker.action = visualization_msgs::Marker::ADD;
+            ro_marker.ns = "basic_shapes";
+            ro_marker.id = 0;
+            ro_marker.type = visualization_msgs::Marker::CUBE;
+
+            ro_marker.color.r = 0.0f;
+            ro_marker.color.g = 0.0f;
+            ro_marker.color.b = 1.0f;
+            ro_marker.color.a = 0.6f;
+
+            // Virtual object marker settings
+            vo_marker.header.frame_id = right_robot_frame;
+            vo_marker.action = visualization_msgs::Marker::ADD;
+            vo_marker.ns = "basic_shapes";
+            vo_marker.id = 1;
+            vo_marker.type = visualization_msgs::Marker::CUBE;
+            vo_marker.color.r = 0.0f;
+            vo_marker.color.g = 1.0f;
+            vo_marker.color.b = 0.0f;
+            vo_marker.color.a = 0.6f;
+
+            vo_arrow_left.header.frame_id = right_robot_frame;
+            vo_arrow_left.action = visualization_msgs::Marker::ADD;
+            vo_arrow_left.ns = "basic_shapes";
+            vo_arrow_left.id = 2;
+            vo_arrow_left.type = visualization_msgs::Marker::ARROW;
+            vo_arrow_left.color.r = 1.0f;
+            vo_arrow_left.color.g = 0.0f;
+            vo_arrow_left.color.b = 0.0f;
+            vo_arrow_left.color.a = 0.6f;
+            vo_arrow_left.scale.x = 0.005;
+            vo_arrow_left.scale.y = 0.01;
+            vo_arrow_left.scale.z = 0.01;
+
+            vo_arrow_right.header.frame_id = right_robot_frame;
+            vo_arrow_right.action = visualization_msgs::Marker::ADD;
+            vo_arrow_right.ns = "basic_shapes";
+            vo_arrow_right.id = 3;
+            vo_arrow_right.type = visualization_msgs::Marker::ARROW;
+            vo_arrow_right.color.r = 1.0f;
+            vo_arrow_right.color.g = 0.0f;
+            vo_arrow_right.color.b = 0.0f;
+            vo_arrow_right.color.a = 0.6f;
+            vo_arrow_right.scale.x = 0.005;
+            vo_arrow_right.scale.y = 0.01;
+            vo_arrow_right.scale.z = 0.01;
+
+
+        }
+
+        void executeCB(const bimanual_action_planners::PLAN2CTRLGoalConstPtr &goal)
+        {
+
+            std::string desired_action = goal->action_type;
+            ROS_INFO_STREAM( "Desired Action is " << desired_action);
+
+            isOkay = false;
+            ros::Rate r(10);
+            ROS_INFO("Waiting for EE pose/ft topic...");
+            while(ros::ok() && (!isOkay)) {
+                r.sleep();
+            }
+            if(!ros::ok()) {
                 result_.success = 0;
+                ROS_INFO("%s: Failed", action_name_.c_str());
                 as_.setAborted(result_);
                 return;
             }
 
-            CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
-            CDSController::DynamicsType slaveType = CDSController::UTHETA;
+            // initialize action progress as null
+            feedback_.progress = 0;
+            bool success = false;
 
 
+            // Setup transforms for task-space control
+            tf::Transform task_frame, right_att, left_att;
+            // Set transform for task frame
+            task_frame.setRotation(tf::Quaternion(goal->task_frame.rotation.x,goal->task_frame.rotation.y,
+                                                  goal->task_frame.rotation.z,goal->task_frame.rotation.w));
+            task_frame.setOrigin(tf::Vector3(goal->task_frame.translation.x, goal->task_frame.translation.y,
+                                             goal->task_frame.translation.z));
 
-            // Execute action from learned action model
-            success = decoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-                                              model_dt, task_frame, right_att, left_att, r_base_path, l_base_path);
+            // Set transform for right arm attractor
+            right_att.setRotation(tf::Quaternion(goal->right_attractor_frame.rotation.x,goal->right_attractor_frame.rotation.y,
+                                                 goal->right_attractor_frame.rotation.z,goal->right_attractor_frame.rotation.w));
+            right_att.setOrigin(tf::Vector3(goal->right_attractor_frame.translation.x, goal->right_attractor_frame.translation.y,
+                                            goal->right_attractor_frame.translation.z));
+
+            // Set transform for left arm attractor
+            left_att.setRotation(tf::Quaternion(goal->left_attractor_frame.rotation.x,goal->left_attractor_frame.rotation.y,
+                                                goal->left_attractor_frame.rotation.z,goal->left_attractor_frame.rotation.w));
+            left_att.setOrigin(tf::Vector3(goal->left_attractor_frame.translation.x, goal->left_attractor_frame.translation.y,
+                                           goal->left_attractor_frame.translation.z));
+
+
+            ////////////////////////////////////////////////////
+            /////----- EXECUTE REQUESTED ACTION TYPE ------/////
+            ////////////////////////////////////////////////////
+
+            //---> ACTION TYPE 1: Use two independent decoupled learned models to execute the action
+            if(goal->action_type=="DECOUPLED_LEARNED_MODEL"){
+                TaskPhase phase;
+                if(goal->action_name == "phase1") {
+                    phase = PHASE_REACH_TO_PEEL;
+                } else if(goal->action_name == "phase2") {
+                    phase = PHASE_PEEL;
+                } else {
+                    ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
+                    result_.success = 0;
+                    as_.setAborted(result_);
+                    return;
+                }
+
+                CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
+                CDSController::DynamicsType slaveType = CDSController::UTHETA;
+
+                // Execute action from learned action model
+                success = decoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
+                                                            model_dt, task_frame, right_att, left_att, r_base_path, l_base_path);
+            }
+
+            //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
+            if(goal->action_type=="BIMANUAL_REACH")
+                success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, 0.002);
+
+            //---> ACTION TYPE 3: Use coupled learned models to execute the action
+            if(goal->action_type=="BIMANUAL_GOTO_CART")
+                success = decoupled_goto_cart_execution(task_frame, right_att, left_att);
+
+            result_.success = success;
+            if(success)
+            {
+                ROS_INFO("%s: Succeeded", action_name_.c_str());
+                as_.setSucceeded(result_);
+            } else {
+                ROS_INFO("%s: Failed", action_name_.c_str());
+                as_.setAborted(result_);
+            }
+
         }
-
-        //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
-        if(goal->action_type=="BIMANUAL_REACH")
-            success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, 0.002);
-
-        //---> ACTION TYPE 3: Use coupled learned models to execute the action
-        if(goal->action_type=="BIMANUAL_GOTO_CART")
-            success = decoupled_goto_cart_execution(task_frame, right_att, left_att);
+    };
 
 
-        result_.success = success;
-        if(success)
-        {
-            ROS_INFO("%s: Succeeded", action_name_.c_str());
-            as_.setSucceeded(result_);
-        } else {
-            ROS_INFO("%s: Failed", action_name_.c_str());
-            as_.setAborted(result_);
-        }
+    int main(int argc, char** argv) {
 
+        ros::init(argc, argv, "bimanual_plan2ctrl");
+        ROS_INFO("Initializing Server");
+        BimanualActionServer action_execution(ros::this_node::getName());
+        action_execution.initialize();
+        ros::spin();
+        return 0;
     }
-};
-
-
-int main(int argc, char** argv) {
-
-    ros::init(argc, argv, "bimanual_plan2ctrl");
-    ROS_INFO("Initializing Server");
-    BimanualActionServer action_execution(ros::this_node::getName());
-    action_execution.initialize();
-    ros::spin();
-    return 0;
-}
