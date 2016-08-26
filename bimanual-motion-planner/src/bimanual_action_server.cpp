@@ -465,13 +465,19 @@ protected:
 
             as_.publishFeedback(feedback_);
 
-
             if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
-                if (phase == PHASE2)
+                if (phase == PHASE2){
+                    sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
-                else
-                    if((r_ori_err < orientationThreshold || isnan(r_ori_err)) && (l_ori_err < orientationThreshold || isnan(l_ori_err)))
+                }
+                else{
+                    if((r_ori_err < orientationThreshold || isnan(r_ori_err)) && (l_ori_err < orientationThreshold || isnan(l_ori_err))){
+                        sendPose(r_curr_ee_pose, l_curr_ee_pose);
                         break;
+                    }
+                }
+
+
             }
 
 //            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
@@ -505,9 +511,10 @@ protected:
         r_curr_ee_pose = r_ee_pose;
         l_curr_ee_pose = l_ee_pose;
 
+
         // Initialize Virtual Object Dynamical System
         bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-        vo_dsRun->init(dt,0.5,0.5,800.0,400.0,400.0);
+        vo_dsRun->init(dt,1.0,1.0,800.0,300.0,300.0);
         vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
         vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
         vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
@@ -577,15 +584,24 @@ protected:
 
             // Current progress variable (position)
             object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();  
-            reachingThreshold = 0.017;
-            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err); 
+            reachingThreshold = 0.016;
+            ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
 
             as_.publishFeedback(feedback_);
 
             // // Only Check for Position Error
-            if(object_err < reachingThreshold) {
+            if(object_err < reachingThreshold ) {
+                    sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
                 }
+//            else{
+//                if (abs(object_err - reachingThreshold) < 0.005){
+//                    sendPose(r_curr_ee_pose, l_curr_ee_pose);
+//                    break;
+//                 }
+//            }
+
+
 
             loop_rate.sleep();
         }
@@ -594,13 +610,41 @@ protected:
     }
 
 
-    // ACTION TYPE 3: Execute collision avoidance between master/slave arm with virtual object dynamical system
-    bool collision_avoidance_vo_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
+    // ACTION TYPE 3: Go to Targets in Cartesian Space
+    bool decoupled_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
 
         // Convert attractors to world frame
         tf::Transform  right_final_target, left_final_target, virtual_object;
         right_final_target.mult(task_frame, right_att);
         left_final_target.mult(task_frame, left_att);
+
+        // Setting Initial conditions
+        if (initial_config == true){
+            r_curr_ee_pose = r_ee_pose;
+            l_curr_ee_pose = l_ee_pose;
+        }
+
+//        * how to use
+
+//           CDDynamics *testDyn;
+//           testDyn = new CDDynamics(dim, dt, wn);
+
+//           testDyn->SetVelocityLimits(velLimits);
+//           testDyn->SetState(initial);
+//           testDyn->SetTarget(target);
+
+
+//           start loop
+//               // if new target is set
+//               testDyn->SetTarget(target);
+
+//               // update dynamics
+//               testDyn->Update();
+
+//               // get state
+//               testDyn->GetState(state);
+//           end loop
+
 
     }
 
@@ -825,11 +869,11 @@ public:
 
         //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
         if(goal->action_type=="BIMANUAL_REACH")
-            success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, dt);
+            success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, 0.002);
 
         //---> ACTION TYPE 3: Use coupled learned models to execute the action
-        if(goal->action_type=="COLL_AVOID_VO")
-            success = collision_avoidance_vo_execution(task_frame, right_att, left_att);
+        if(goal->action_type=="BIMANUAL_GOTO_CART")
+            success = decoupled_goto_cart_execution(task_frame, right_att, left_att);
 
 
         result_.success = success;
