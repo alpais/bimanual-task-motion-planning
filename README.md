@@ -63,10 +63,13 @@ To run a test with the Virtual Object Dynamical System:
 $ rosrun bimanual_action_planners virtual_object_test.py
 ```
 
-To run the peeling task demo:
+To run the ***peeling task demo***:
 ```
 $ rosrun bimanual_action_planners peeling_demo.py
 ```
+
+You will need the whole Perception Module for detecting the Zucchini and computing its observable features,
+Follow the instructions in [kinect-process-scene](https://github.com/nbfigueroa/kinect-process-scene)
 
 ---
 ###*Simulation* of a Bi-manual reaching motions:
