@@ -5,8 +5,8 @@ BimanualActionServer::BimanualActionServer(std::string name) :
     action_name_(name), tf_count(0), reachingThreshold (0.01), orientationThreshold (0.1),
     model_dt (0.002), dt (0.002), initial_config(true)
 {
-    r_ee_ft.resize(6);
-    l_ee_ft.resize(6);
+    r_curr_ee_ft.resize(6);
+    l_curr_ee_ft.resize(6);
     as_.start();
 
 }
@@ -219,19 +219,29 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     /////----- EXECUTE REQUESTED ACTION TYPE ------/////
     ////////////////////////////////////////////////////
 
+
+
+    TaskPhase phase;
+    if(goal->action_name == "phase0"){
+        phase = PHASE_INIT_REACH;
+    }
+    else if(goal->action_name   == "phase1") {
+        phase = PHASE_REACH_TO_PEEL;
+    } else if(goal->action_name == "phase2") {
+        phase = PHASE_PEEL;
+    } else if(goal->action_name == "phase3") {
+        phase = PHASE_ROTATE;
+    } else if(goal->action_name == "phase4") {
+        phase = PHASE_RETRACT;
+    } else {
+        ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
+        result_.success = 0;
+        as_.setAborted(result_);
+        return;
+    }
+
     //---> ACTION TYPE 1/3: Use two independent uncoupled/two coupled learned models to execute the action
     if(goal->action_type=="UNCOUPLED_LEARNED_MODEL" || goal->action_type=="COUPLED_LEARNED_MODEL"){
-        TaskPhase phase;
-        if(goal->action_name == "phase1") {
-            phase = PHASE_REACH_TO_PEEL;
-        } else if(goal->action_name == "phase2") {
-            phase = PHASE_PEEL;
-        } else {
-            ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
-            result_.success = 0;
-            as_.setAborted(result_);
-            return;
-        }
 
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
         CDSController::DynamicsType slaveType = CDSController::UTHETA;
@@ -248,7 +258,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
     //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
     if(goal->action_type=="BIMANUAL_REACH")
-        success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, DT);
+        success = coordinated_bimanual_ds_execution(phase, task_frame, right_att, left_att, DT);
 
 
     //---> ACTION TYPE 4: Use coupled learned models to execute the action

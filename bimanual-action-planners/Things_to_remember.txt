@@ -36,16 +36,19 @@ From World_frame to Task_Frame
 
 Right Init Attractor:
 From Task_frame to Hand_ft
-- Translation: [-0.152, 0.102, 0.275]
-- Rotation: in Quaternion [0.715, 0.609, -0.166, 0.300]            
+- Translation: [-0.138, 0.100, 0.308]
+- Rotation: in Quaternion [0.775, 0.521, -0.157, 0.320]
+            in RPY (radian) [2.722, 0.616, 1.049]
+            in RPY (degree) [155.953, 35.316, 60.084]
+          
 
 
 Left Init Attractor:            
 From Task_frame to Tool_ft
-- Translation: [-0.098, -0.296, 0.194]
-- Rotation: in Quaternion [0.049, 0.827, 0.557, -0.052]
-            in RPY (radian) [1.957, -0.141, 3.118]
-            in RPY (degree) [112.148, -8.088, 178.645]
+- Translation: [-0.124, -0.323, 0.224]
+- Rotation: in Quaternion [0.066, 0.882, 0.465, -0.047]
+            in RPY (radian) [2.176, -0.144, 3.068]
+            in RPY (degree) [124.689, -8.243, 175.766]
 
 
 

@@ -57,6 +57,8 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
     tf::Transform r_trans_ee, l_trans_ee;
     double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
+    // Before Starting a Reach Bias the FT-Sensors!
+    biasFtSensors();
 
     ROS_INFO("Execution started");
     while(ros::ok()) {
@@ -158,8 +160,6 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
                     break;
                 }
             }
-
-
         }
 
         loop_rate.sleep();
@@ -167,22 +167,5 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
     delete right_cdsRun;
     delete left_cdsRun;
 
-    //            if(phase ==  PHASE_REACH_TO_PEEL) {
-    //                // Hack! If phase is "reach", find the table right after reaching
-    //                if (bWaitForForces_right_arm)	{
-    //                    bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.35, 0.05, 5);
-    //                    return x_r_arm;
-    //                }
-    //                if (bWaitForForces_left_arm)	{
-    //                    bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.35, 0.05, 5);
-    //                    return x_l_arm;
-    //                }
-    //            } else if (phase == PHASE_PEEL){
-    //                // Hack! wait for zero force before getting ready to recieve further commands.
-    //                // This is to avoid dragging the dough.
-    //                sendAndWaitForNormalForce(0, L_ARM_ID);
-    //                return ros::ok();
-    //            } else {
-    //                return ros::ok();
-    //            }
+    return ros::ok();
 }

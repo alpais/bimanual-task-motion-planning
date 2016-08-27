@@ -1,6 +1,6 @@
 #include "bimanual_action_server.h"
 
-bool BimanualActionServer::coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt){
+bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt){
 
     // Convert attractors to world frame
     tf::Transform  right_final_target, left_final_target, virtual_object, real_object;
@@ -36,22 +36,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(tf::Transform task_
 
 
     // Before Starting a Reach Bias the FT-Sensors!
-    netft_rdt_driver::String_cmd srv;
-    srv.request.cmd  = "bias";
-    srv.response.res = "";
-    if (hand_ft_client.call(srv))
-    {
-        ROS_INFO_STREAM("net_ft res: " << srv.response.res);
-    }else{
-        ROS_ERROR("Failed to call netft bias service for hand");
-    }
-
-    if (tool_ft_client.call(srv))
-    {
-        ROS_INFO_STREAM("net_ft res: " << srv.response.res);
-    }else{
-        ROS_ERROR("Failed to call netft bias service for tool");
-    }
+    biasFtSensors();
 
 
     while(ros::ok()) {
@@ -106,10 +91,6 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(tf::Transform task_
         publish_vo_rviz(virtual_object, object_length, r_curr_ee_pose, l_curr_ee_pose);
         br.sendTransform(tf::StampedTransform(virtual_object, ros::Time::now(), right_robot_frame, "/virtual_object"));
 
-        // Open Loop Hack
-        // r_curr_ee_pose = r_des_ee_pose;
-        // l_curr_ee_pose = l_des_ee_pose;
-
         // Current progress variable (position)
         object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();
         reachingThreshold = 0.017;
@@ -119,15 +100,29 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(tf::Transform task_
 
         // // Only Check for Position Error
         if(object_err < reachingThreshold ) {
-            sendPose(r_curr_ee_pose, l_curr_ee_pose);
+
+            ROS_INFO_STREAM("VIRTUAL OBJECT HAS CONVERGED!!");
+//            sendPose(r_curr_ee_pose, l_curr_ee_pose);
+
+            if(phase ==  PHASE_INIT_REACH) {
+                ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");
+                if (bWaitForForces_right_arm)	{
+                    bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.07, 0.05, 7);
+                    return x_r_arm;
+                }
+            }else if(phase ==  PHASE_RETRACT){
+                ROS_INFO_STREAM("In PHASE_INIT_RETRACT.. biasing ft sensors...");
+                biasFtSensors();
+            }
             break;
         }
-
 
         loop_rate.sleep();
     }
     delete vo_dsRun;
+
     return ros::ok();
+
 }
 
 

@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
 	# Reach with VO DS
 	action_type = 'BIMANUAL_REACH'  
-	result = PLAN2CTRL_client(action_type, '',  task_frame, rA_p2_attr, lA_p2_attr, 10)
+	result = PLAN2CTRL_client(action_type, 'phase4',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"
 	print result.success
 

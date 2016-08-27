@@ -63,30 +63,31 @@ if __name__ == '__main__':
 	task_frame.rotation.w = 1
 
 
-	# Phase 1 Right Arm Attractor in Task RF
+	# Phase 0 ==== Initial Reach ===
+
+	# Phase 0 Right Arm Attractor in Task RF
 	rA_p1_attr = geometry_msgs.msg.Transform()
-	rA_p1_attr.translation.x = -0.152 
-	rA_p1_attr.translation.y = 0.102 
-	rA_p1_attr.translation.z = 0.275
-	rA_p1_attr.rotation.x    = 0.715 
-	rA_p1_attr.rotation.y    = 0.609 
-	rA_p1_attr.rotation.z    = -0.166             
-	rA_p1_attr.rotation.w    = 0.300
+	rA_p1_attr.translation.x = -0.138
+	rA_p1_attr.translation.y = 0.080 
+	rA_p1_attr.translation.z = 0.308
+	rA_p1_attr.rotation.x    = 0.775 
+	rA_p1_attr.rotation.y    = 0.521 
+	rA_p1_attr.rotation.z    = -0.157             
+	rA_p1_attr.rotation.w    = 0.320
 
-
-
-	# Phase 1 Left Arm Attractor in Task RF
+	# Phase 0 Left Arm Attractor in Task RF
 	lA_p1_attr = geometry_msgs.msg.Transform()	      
-	lA_p1_attr.translation.x = -0.098 
-	lA_p1_attr.translation.y = -0.296  
+	lA_p1_attr.translation.x = -0.128 
+	lA_p1_attr.translation.y = -0.336  
 	lA_p1_attr.translation.z = 0.194
 	lA_p1_attr.rotation.x    = 0.049  
 	lA_p1_attr.rotation.y    = 0.827 
 	lA_p1_attr.rotation.z    = 0.557 
 	lA_p1_attr.rotation.w    = -0.052
 
+	# Phase 4 ==== Retract ===
 
-	# Phase 2 Right Arm Attractor in Task RF
+	# Phase 4 Right Arm Attractor in Task RF
 	rA_p2_attr = geometry_msgs.msg.Transform()
 	rA_p2_attr.translation.x = -0.104
 	rA_p2_attr.translation.y = 0.498 	
@@ -97,15 +98,16 @@ if __name__ == '__main__':
 	rA_p2_attr.rotation.w    = 0.348 
 
 
-	# Phase 2 Left Arm Attractor in Task RF
+	# Phase 4 Left Arm Attractor in Task RF
 	lA_p2_attr = geometry_msgs.msg.Transform()
 	lA_p2_attr.translation.x = -0.078 
 	lA_p2_attr.translation.y = -0.434 	
-	lA_p2_attr.translation.z = 0.394
+	lA_p2_attr.translation.z = 0.504
 	lA_p2_attr.rotation.x    = 0.112 
 	lA_p2_attr.rotation.y    = 0.949 
 	lA_p2_attr.rotation.z    = 0.293 
 	lA_p2_attr.rotation.w    = -0.037
+
 
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
@@ -113,7 +115,7 @@ if __name__ == '__main__':
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	action_type = 'UNCOUPLED_LEARNED_MODEL'  
 
-	result = PLAN2CTRL_client(action_type, 'phase1', task_frame, rA_p1_attr, lA_p1_attr, 10)
+	result = PLAN2CTRL_client(action_type, 'phase0', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success
 	
@@ -121,7 +123,7 @@ if __name__ == '__main__':
 	raw_input('Press Enter to Run REACH Task with Uncoupled Models')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="	
 
-	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
+	result = PLAN2CTRL_client(action_type, 'phase4',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"
 	print result.success
 

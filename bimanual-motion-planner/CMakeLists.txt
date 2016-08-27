@@ -123,12 +123,12 @@ target_link_libraries(bimanual_action_server_node
 #)
 
 ## Declare a cpp executable
-add_executable(bimanual_motion_planner  src/bimanual_motion_planner.cpp)
-#add_executable(decoupled_motion_planner  src/decoupled_motion_planner.cpp)
-#add_executable(coordinated_motion_planner  src/coordinated_motion_planner.cpp)
+#add_executable(bimanual_motion_planner  src/tests/bimanual_motion_planner.cpp)
+#add_executable(decoupled_motion_planner  src/tests/decoupled_motion_planner.cpp)
+#add_executable(coordinated_motion_planner  src/tests/coordinated_motion_planner.cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(bimanual_motion_planner   ${catkin_LIBRARIES} )
+#target_link_libraries(bimanual_motion_planner   ${catkin_LIBRARIES} )
 #target_link_libraries(decoupled_motion_planner   ${catkin_LIBRARIES} )
 #target_link_libraries(coordinated_motion_planner   ${catkin_LIBRARIES} )
 

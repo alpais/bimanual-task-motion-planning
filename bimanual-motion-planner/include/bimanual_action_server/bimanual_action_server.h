@@ -62,8 +62,11 @@ protected:
 
     // Task phases
     enum TaskPhase {
-        PHASE_REACH_TO_PEEL = 1,
-        PHASE_PEEL = 2
+        PHASE_INIT_REACH     = 0,
+        PHASE_REACH_TO_PEEL  = 1,
+        PHASE_PEEL           = 2,
+        PHASE_ROTATE         = 3,
+        PHASE_RETRACT        = 4,
     };
 
 
@@ -76,7 +79,7 @@ protected:
 
     // Right/Left EE states/cmds/topics
     tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
-    Eigen::VectorXd r_ee_ft, r_curr_ee_ft, l_ee_ft, l_curr_ee_ft;
+    Eigen::VectorXd  r_curr_ee_ft, l_curr_ee_ft;
     string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
     string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC;
     string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC;
@@ -139,6 +142,10 @@ protected:
     // Send desired EE_pose to robot/joint_ctrls.
     void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_);
 
+    void sendPoseLeft(const tf::Pose& l_pose_);
+
+    void sendPoseRight(const tf::Pose& r_pose_);
+
     // Send desired EE_ft to robot/joint_ctrls.
     void sendNormalForce(double fz, int arm_id);
 
@@ -146,6 +153,8 @@ protected:
     //************************************//
     // FUNCTIONS USED FOR FORCE CONTROL  //
     //***********************************//
+
+    void biasFtSensors();
 
     // This will block until the desired force is achieved!
     void sendAndWaitForNormalForce(double fz, int arm_id);
@@ -179,7 +188,7 @@ protected:
                                            std::string l_model_base_path);
 
     // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
-    bool coordinated_bimanual_ds_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt);
+    bool coordinated_bimanual_ds_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt);
 
 
     // ACTION TYPE 3: Execute bimanual reach with virtual object dynamical system

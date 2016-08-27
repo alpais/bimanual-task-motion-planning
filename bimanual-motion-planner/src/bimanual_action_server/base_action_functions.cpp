@@ -47,17 +47,15 @@ void BimanualActionServer::l_ftStateCallback(const geometry_msgs::WrenchStampedC
 
 // Send desired EE_pose to robot/joint_ctrls.
 void BimanualActionServer::sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
-    geometry_msgs::PoseStamped r_msg, l_msg;
 
-    // Populate right ee message
-    r_msg.pose.position.x     = r_pose_.getOrigin().x();
-    r_msg.pose.position.y     = r_pose_.getOrigin().y();
-    r_msg.pose.position.z     = r_pose_.getOrigin().z();
+    sendPoseRight(r_pose_);
+    sendPoseLeft(l_pose_);
 
-    r_msg.pose.orientation.x  = r_pose_.getRotation().x();
-    r_msg.pose.orientation.y  = r_pose_.getRotation().y();
-    r_msg.pose.orientation.z  = r_pose_.getRotation().z();
-    r_msg.pose.orientation.w  = r_pose_.getRotation().w();
+}
+
+
+void BimanualActionServer::sendPoseLeft(const tf::Pose& l_pose_) {
+    geometry_msgs::PoseStamped  l_msg;
 
     // Populate left ee message
     l_msg.pose.position.x     = l_pose_.getOrigin().x() + left_arm_base.getOrigin().getX();
@@ -69,9 +67,25 @@ void BimanualActionServer::sendPose(const tf::Pose& r_pose_, const tf::Pose& l_p
     l_msg.pose.orientation.z  = l_pose_.getRotation().z();
     l_msg.pose.orientation.w  = l_pose_.getRotation().w();
 
-    // Send right and left ee commands
-    r_pub_.publish(r_msg);
+    // Send left ee commands
     l_pub_.publish(l_msg);
+}
+
+void BimanualActionServer::sendPoseRight(const tf::Pose& r_pose_) {
+    geometry_msgs::PoseStamped r_msg;
+
+    // Populate right ee message
+    r_msg.pose.position.x     = r_pose_.getOrigin().x();
+    r_msg.pose.position.y     = r_pose_.getOrigin().y();
+    r_msg.pose.position.z     = r_pose_.getOrigin().z();
+
+    r_msg.pose.orientation.x  = r_pose_.getRotation().x();
+    r_msg.pose.orientation.y  = r_pose_.getRotation().y();
+    r_msg.pose.orientation.z  = r_pose_.getRotation().z();
+    r_msg.pose.orientation.w  = r_pose_.getRotation().w();
+
+    // Send right ee commands
+    r_pub_.publish(r_msg);
 }
 
 
