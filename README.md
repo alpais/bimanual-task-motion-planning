@@ -32,7 +32,7 @@ $ rosrun kuka_fri_bridge run_lwr.sh right
 ```
 $ rosrun kuka_fri_bridge run_lwr.sh left
 ```
-follow instructions on [kuka_bridge](ahttps://github.com/nbfigueroa/kuka_interface_packages) to set control mode for each robot. (joint impedance control, control = 1)
+follow instructions on [kuka_bridge](https://github.com/nbfigueroa/kuka_interface_packages) to set control mode for each robot. (joint impedance control, control = 1)
 
 #####Visualization and sensor bringup (ft sensors)
 ```
