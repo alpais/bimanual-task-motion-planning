@@ -68,13 +68,16 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
     // Figure out if it is the right arm or the left arm
     tf::Pose arm_pose;
     if (arm_id == R_ARM_ID){
-        arm_pose = r_curr_ee_pose;
+        arm_pose.setOrigin(r_ee_pose.getOrigin());
+        arm_pose.setRotation(r_ee_pose.getRotation());
     }
     else{
-        arm_pose = l_curr_ee_pose;
+        arm_pose.setOrigin(l_ee_pose.getOrigin());
+        arm_pose.setRotation(l_ee_pose.getRotation());
     }
 
     double startz = arm_pose.getOrigin().z();
+    ROS_INFO_STREAM("Start Z:" << startz);
 
     msg_pose.pose.position.x = arm_pose.getOrigin().x();
     msg_pose.pose.position.y = arm_pose.getOrigin().y();
@@ -97,7 +100,16 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
             ee_ft = l_curr_ee_ft;
         }
 
-        ROS_INFO_STREAM("Current force Z:" << ee_ft[2] << " and distance Z: " << fabs(arm_pose.getOrigin().z()-startz));
+        if (arm_id == R_ARM_ID){
+            arm_pose.setOrigin(r_ee_pose.getOrigin());
+            arm_pose.setRotation(r_ee_pose.getRotation());
+        }
+        else{
+            arm_pose.setOrigin(l_ee_pose.getOrigin());
+            arm_pose.setRotation(l_ee_pose.getRotation());
+        }
+
+        ROS_INFO_STREAM("Current force Z:" << ee_ft[2] << " and Z: " << fabs(arm_pose.getOrigin().z()-startz));
 
         // Go down until force reaches the threshold
         if(fabs(ee_ft[2]) > thr_force) {
@@ -105,7 +117,7 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
         }
         if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
             ROS_INFO("Max distance reached");
-            return false;
+            break;
         }
         thread_rate.sleep();
         feedback_.progress = ee_ft[2];
@@ -126,7 +138,8 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
         l_pub_.publish(msg_pose);
     }
 
-    sendAndWaitForNormalForce(0, arm_id);
+    if(!simulation)
+        sendAndWaitForNormalForce(0, arm_id);
 
     return true;
 }

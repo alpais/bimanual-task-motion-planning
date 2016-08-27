@@ -105,7 +105,7 @@ protected:
 
     // Simulation/execution variables
     volatile bool isOkay;
-    bool initial_config, simulation;
+    bool initial_config, simulation, just_visualize;
     int tf_count;
     double reachingThreshold, orientationThreshold, model_dt, dt; //Defaults: [m],[rad],[s]
 

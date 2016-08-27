@@ -93,7 +93,11 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
         // Current progress variable (position)
         object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();
-        reachingThreshold = 0.017;
+        if (simulation)
+            reachingThreshold = 0.02;
+        else
+            reachingThreshold = 0.017;
+
         ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
 
         as_.publishFeedback(feedback_);
@@ -102,7 +106,6 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         if(object_err < reachingThreshold ) {
 
             ROS_INFO_STREAM("VIRTUAL OBJECT HAS CONVERGED!!");
-//            sendPose(r_curr_ee_pose, l_curr_ee_pose);
 
             if(phase ==  PHASE_INIT_REACH) {
                 ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");

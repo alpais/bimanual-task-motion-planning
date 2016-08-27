@@ -27,6 +27,7 @@ void BimanualActionServer::initialize() {
     _nh.getParam("right_model_base_path", r_base_path);
     _nh.getParam("left_model_base_path", l_base_path);
     _nh.getParam("simulation", simulation);
+    _nh.getParam("just_visualize", just_visualize);
     _nh.getParam("model_dt", model_dt);
     _nh.getParam("reachingThreshold", reachingThreshold);
     _nh.getParam("orientationThreshold", orientationThreshold);
@@ -59,10 +60,11 @@ void BimanualActionServer::initialize() {
 
     // ROS TOPICS for right arm controllers
     r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::r_eeStateCallback, this);
-    r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::r_ftStateCallback, this);
-
     r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
+
+    r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::r_ftStateCallback, this);
     r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
+
 
 
     std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_cmd_pose, l_ss_cmd_ft;

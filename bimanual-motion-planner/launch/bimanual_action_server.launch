@@ -2,6 +2,7 @@
 <launch>
 
 			<arg name="simulation"               default="false"/> 
+			<arg name="just_visualize"           default="false"/> 
 			<arg name="r_arm_ns"                 default="right_arm"/> 
 			<arg name="l_arm_ns"                 default="left_arm"/>
 
@@ -12,14 +13,11 @@
 			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/>
 
 		  <node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.403 -0.426 0.013 0 0 0 1  /world_frame /task_frame  100"/>
-<!-- 		  <node pkg="tf" type="static_transform_publisher" name="right_att"  args="-0.152 0.102 0.275 0.715 0.609 -0.166 0.300   /task_frame /right_att  100"/>		  
-		  <node pkg="tf" type="static_transform_publisher" name="left_att"  args="-0.098 -0.296 0.194 0.049 0.827 0.557 -0.052  /task_frame /left_att  100"/>
- -->
 
 
 		  <node name="bimanual_plan2ctrl" pkg="bimanual_motion_planner" type="bimanual_action_server_node" output="screen" respawn="false">	  	
-<!-- 		  <node name="bimanual_plan2ctrl" pkg="bimanual_motion_planner" type="bimanual_motion_planner" output="screen" respawn="false">	  	 -->
 		  	<param name="simulation" 			 		value="$(arg simulation)" />
+		  	<param name="just_visualize" 			 	value="$(arg just_visualize)" />
 		  	<param name="right_robot_frame" 		    value="$(arg r_robot_base_frame)" />
 		  	<param name="left_robot_frame" 		     	value="$(arg l_robot_base_frame)" />
 		  	<param name="model_dt" 				 		value="0.005" />

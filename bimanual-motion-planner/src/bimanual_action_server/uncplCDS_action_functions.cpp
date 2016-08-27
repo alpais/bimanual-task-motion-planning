@@ -81,7 +81,7 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
         l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
 
         // To Visualize EE Frames
-        if (simulation==true){
+        if (just_visualize==true){
             int frame_viz = int(model_dt*1000);
             if (tf_count==0 || tf_count%frame_viz==0){
                 stringstream r_ss, l_ss;
@@ -131,7 +131,7 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
         l_des_ee_pose = l_mNextRobotEEPose;
 
         // Make next pose the current pose for open-loop simulation
-        if (simulation==true)
+        if (just_visualize==true)
             initial_config=false;
 
         // CHECK If orientation error is VERY low or nan because of qdiff take target orientation
@@ -144,7 +144,7 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
         //******************************//
         //  Send the computed ee poses  //
         //******************************//
-        if (simulation==false)
+        if (just_visualize==false)
             sendPose(r_des_ee_pose, l_des_ee_pose);
 
         as_.publishFeedback(feedback_);

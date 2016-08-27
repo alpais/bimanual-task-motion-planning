@@ -129,7 +129,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         l_des_ee_pose = l_mNextRobotEEPose;
 
         // Make next pose the current pose for open-loop simulation
-        if (simulation==true)
+        if (just_visualize==true)
             initial_config=false;
 
         // CHECK If orientation error is VERY low or nan because of qdiff take target orientation
@@ -142,7 +142,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         //******************************//
         //  Send the computed ee poses  //
         //******************************//
-        if (simulation==false)
+        if (just_visualize==false)
             sendPose(r_des_ee_pose, l_des_ee_pose);
 
         as_.publishFeedback(feedback_);
@@ -167,22 +167,4 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     delete right_cdsRun;
     delete left_cdsRun;
 
-//                if(phase ==  PHASE_REACH_TO_PEEL) {
-//                    // Hack! If phase is "reach", find the table right after reaching
-//                    if (bWaitForForces_right_arm)	{
-//                        bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.35, 0.05, 5);
-//                        return x_r_arm;
-//                    }
-//                    if (bWaitForForces_left_arm)	{
-//                        bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.35, 0.05, 5);
-//                        return x_l_arm;
-//                    }
-//                } else if (phase == PHASE_PEEL){
-//                    // Hack! wait for zero force before getting ready to recieve further commands.
-//                    // This is to avoid dragging the dough.
-//                    sendAndWaitForNormalForce(0, L_ARM_ID);
-//                    return ros::ok();
-//                } else {
-//                    return ros::ok();
-//                }
 }
