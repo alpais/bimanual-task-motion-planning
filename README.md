@@ -100,7 +100,7 @@ To run a test with the Virtual Object Dynamical System:
 $ rosrun bimanual_action_planners virtual_object_test.py
 ```
 
-
+---
 ###Demonstration Recording for Bimanual Tasks:
 
 To record/replay demonstrations you must install these packages:
