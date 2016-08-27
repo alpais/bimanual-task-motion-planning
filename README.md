@@ -68,8 +68,8 @@ To run the ***peeling task demo***:
 $ rosrun bimanual_action_planners peeling_demo.py
 ```
 
-You will need the whole Perception Module for detecting the Zucchini and computing its observable features,
-Follow the instructions in [kinect-process-scene](https://github.com/nbfigueroa/kinect-process-scene)
+You will need the whole *Perception Module* for detecting the Zucchini and computing its observable features. 
+- Follow the instructions in [kinect-process-scene](https://github.com/nbfigueroa/kinect-process-scene)
 
 ---
 ###*Simulation* of a Bi-manual reaching motions:
