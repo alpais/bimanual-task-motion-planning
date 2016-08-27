@@ -77,13 +77,13 @@ if __name__ == '__main__':
 
 	# Phase 1 Left Arm Attractor in Task RF
 	lA_p1_attr = geometry_msgs.msg.Transform()	      
-	lA_p1_attr.translation.x = -0.069
-	lA_p1_attr.translation.y = -0.246 
-	lA_p1_attr.translation.z = 0.210
-	lA_p1_attr.rotation.x    = 0.065 
-	lA_p1_attr.rotation.y    = 0.857 
-	lA_p1_attr.rotation.z    = 0.511 
-	lA_p1_attr.rotation.w    = -0.011
+	lA_p1_attr.translation.x = -0.098 
+	lA_p1_attr.translation.y = -0.296  
+	lA_p1_attr.translation.z = 0.194
+	lA_p1_attr.rotation.x    = 0.049  
+	lA_p1_attr.rotation.y    = 0.827 
+	lA_p1_attr.rotation.z    = 0.557 
+	lA_p1_attr.rotation.w    = -0.052
 
 
 	# Phase 2 Right Arm Attractor in Task RF
@@ -109,23 +109,17 @@ if __name__ == '__main__':
 
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run REACH Task with Decoupled Models')
+	raw_input('Press Enter to Run REACH Task with Uncoupled Models')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	action_type = 'DECOUPLED_LEARNED_MODEL'  
+	action_type = 'UNCOUPLED_LEARNED_MODEL'  
 
 	result = PLAN2CTRL_client(action_type, 'phase1', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success
 	
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run REACH Task with Decoupled Models')
+	raw_input('Press Enter to Run REACH Task with Uncoupled Models')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="	
- #    print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	# raw_input('Press Enter to Run RETRACT Task with Decoupled Models')
-	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	
-	#Wait a few seconds before going back
-	# rospy.sleep(1.)
 
 	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"

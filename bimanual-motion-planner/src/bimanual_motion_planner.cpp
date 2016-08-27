@@ -53,145 +53,11 @@
 #define FORCE_WAIT_TOL		9
 #define R_ARM_ID            1
 #define L_ARM_ID            2
-
-// Right/Left EE states/cmds/topics
-tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
-Eigen::VectorXd r_ee_ft, r_curr_ee_ft, l_ee_ft, l_curr_ee_ft;
-string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
-string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC;
-string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC;
-tf::StampedTransform right_arm_base, left_arm_base;
-
-// Simulation/execution variables
-volatile bool isOkay;
-bool initial_config = true, simulation;
-int tf_count(0);
-double reachingThreshold (0.01), orientationThreshold (0.1), model_dt (0.002), dt (0.002); //Defaults: [m],[rad],[s]
-
-// Visualization variables for Bimanual DS Action
-uint32_t   shape = visualization_msgs::Marker::CUBE;
-uint32_t   arrow = visualization_msgs::Marker::ARROW;
-visualization_msgs::Marker ro_marker;
-visualization_msgs::Marker vo_marker;
-visualization_msgs::Marker vo_arrow_left;
-visualization_msgs::Marker vo_arrow_right;
-
-// Variables for Bimanual DS
-#define WN_CART_PLANNER   (70.0)
-
-
-//************************************//
-// FUNCTIONS USED BY ANY ACTION TYPE  //
-//***********************************//
-
-// Callback for the current right end effector pose
-void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
-    const geometry_msgs::PoseStamped* data = msg.get();
-    r_ee_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
-    r_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
-    isOkay = true;
-}
-
-
-// Callback for the current right end effector force/torque
-void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
-    const geometry_msgs::WrenchStamped* data = msg.get();
-    r_curr_ee_ft[0] = data->wrench.force.x;
-    r_curr_ee_ft[1] = data->wrench.force.y;
-    r_curr_ee_ft[2] = data->wrench.force.z;
-
-    r_curr_ee_ft[3] = data->wrench.torque.x;
-    r_curr_ee_ft[4] = data->wrench.torque.y;
-    r_curr_ee_ft[5] = data->wrench.torque.z;
-
-}
-
-
-
-// Callback for the current left end effector pose
-void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
-    const geometry_msgs::PoseStamped* data = msg.get();
-    l_ee_pose.setOrigin(tf::Vector3(data->pose.position.x - left_arm_base.getOrigin().getX(),data->pose.position.y - left_arm_base.getOrigin().getY(),data->pose.position.z -  left_arm_base.getOrigin().getZ()));
-    l_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
-    isOkay = true;
-}
-
-
-// Callback for the current left end effector force/torque
-void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
-    const geometry_msgs::WrenchStamped* data = msg.get();
-    l_curr_ee_ft[0] = data->wrench.force.x;
-    l_curr_ee_ft[1] = data->wrench.force.y;
-    l_curr_ee_ft[2] = data->wrench.force.z;
-
-    l_curr_ee_ft[3] = data->wrench.torque.x;
-    l_curr_ee_ft[4] = data->wrench.torque.y;
-    l_curr_ee_ft[5] = data->wrench.torque.z;
-
-}
-
-
-MathLib::Matrix4 toMatrix4(const tf::Pose& pose) {
-    MathLib::Matrix4 mat;
-    mat.Identity();
-    tf::Matrix3x3 mat33(pose.getRotation());
-
-    mat.SetTranslation(MathLib::Vector3(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z()));
-    mat.SetOrientation(MathLib::Matrix3(mat33[0][0], mat33[0][1], mat33[0][2],
-            mat33[1][0], mat33[1][1], mat33[1][2],
-            mat33[2][0], mat33[2][1], mat33[2][2]));
-    return mat;
-}
-
-void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose) {
-    MathLib::Matrix3 m1 = mat4.GetOrientation();
-    MathLib::Vector3 v1 = m1.GetRotationAxis();
-    tf::Vector3 ax(v1(0), v1(1), v1(2));
-    tf::Quaternion q(ax, m1.GetRotationAngle());
-    pose.setRotation(q.normalize());
-    v1.Set(mat4.GetTranslation());
-    pose.setOrigin(tf::Vector3(v1(0),v1(1),v1(2)));
-}
-
-
-void compute_object_pose(const tf::Transform& right, const tf::Transform& left, tf::Transform& object){
-
-    // Compute object position (midpoint between left and right reaching points)
-    tf::Vector3 o_pos = left.getOrigin() + (right.getOrigin() - left.getOrigin())/2;
-    tf::Vector3 tmp(right.getOrigin());
-    //    tmp.setX(tmp.getX() + 0.05);
-    tmp.setX(tmp.getX() + 0.05);
-
-    // Compute object orientation (xdir: direction from right to left reaching point, ydir: y plane in world rf)
-    Eigen::Vector3d xdir (right.getOrigin().getX() - left.getOrigin().getX(), right.getOrigin().getY() - left.getOrigin().getY(), right.getOrigin().getZ() - left.getOrigin().getZ());
-
-    // Construct a plane "parallel" to the x dir of the robot base (table) and get the normal for the zdir
-    Eigen::Hyperplane<double,3> p = Eigen::Hyperplane<double,3>::Through(Eigen::Vector3d(right.getOrigin().getX(),right.getOrigin().getY(),right.getOrigin().getZ()),
-                                                                         Eigen::Vector3d(left.getOrigin().getX(),left.getOrigin().getY(),left.getOrigin().getZ()),
-                                                                         Eigen::Vector3d(tmp.getX(),tmp.getY(),tmp.getZ()));
-    p.normalize();
-    Eigen::Vector3d zdir = p.normal();
-
-    Eigen::Vector3d Rx = xdir/xdir.norm();
-    Eigen::Vector3d Rz = zdir/zdir.norm();
-    Eigen::Vector3d Ry = Rz.cross(Rx)/(Rz.cross(Rx)).norm();
-
-    Eigen::Matrix3d R;
-    R << Rx, Ry, Rz;
-    tf::Matrix3x3 tf3d;
-    tf::matrixEigenToTF(R,tf3d);
-    tf::Quaternion o_rot;
-    tf3d.getRotation(o_rot);
-
-    // Set position and orientation of object
-    object.setRotation(o_rot);
-    object.setOrigin(o_pos);
-
-}
-
+#define DT                  0.002
 
 class BimanualActionServer
 {
+
 protected:
 
     // Task phases
@@ -206,6 +72,14 @@ protected:
     ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_;
     ros::Publisher  r_pub_, r_pub_ft_, l_pub_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_;
     string right_robot_frame, left_robot_frame;
+
+    // Right/Left EE states/cmds/topics
+    tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
+    Eigen::VectorXd r_ee_ft, r_curr_ee_ft, l_ee_ft, l_curr_ee_ft;
+    string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
+    string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC;
+    string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC;
+    tf::StampedTransform right_arm_base, left_arm_base;
 
     // Service Clients
     ros::ServiceClient hand_ft_client;
@@ -224,6 +98,80 @@ protected:
     geometry_msgs::PoseStamped msg_pose;
     bool bWaitForForces_left_arm;
     bool bWaitForForces_right_arm;
+
+    // Simulation/execution variables
+    volatile bool isOkay;
+    bool initial_config, simulation;
+    int tf_count;
+    double reachingThreshold, orientationThreshold, model_dt, dt; //Defaults: [m],[rad],[s]
+
+    // Visualization variables for Bimanual DS Action
+    uint32_t   shape = visualization_msgs::Marker::CUBE;
+    uint32_t   arrow = visualization_msgs::Marker::ARROW;
+    visualization_msgs::Marker ro_marker;
+    visualization_msgs::Marker vo_marker;
+    visualization_msgs::Marker vo_arrow_left;
+    visualization_msgs::Marker vo_arrow_right;
+
+
+    MathLib::Matrix4 toMatrix4(const tf::Pose& pose) {
+        MathLib::Matrix4 mat;
+        mat.Identity();
+        tf::Matrix3x3 mat33(pose.getRotation());
+
+        mat.SetTranslation(MathLib::Vector3(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z()));
+        mat.SetOrientation(MathLib::Matrix3(mat33[0][0], mat33[0][1], mat33[0][2],
+                mat33[1][0], mat33[1][1], mat33[1][2],
+                mat33[2][0], mat33[2][1], mat33[2][2]));
+        return mat;
+    }
+
+    void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose) {
+        MathLib::Matrix3 m1 = mat4.GetOrientation();
+        MathLib::Vector3 v1 = m1.GetRotationAxis();
+        tf::Vector3 ax(v1(0), v1(1), v1(2));
+        tf::Quaternion q(ax, m1.GetRotationAngle());
+        pose.setRotation(q.normalize());
+        v1.Set(mat4.GetTranslation());
+        pose.setOrigin(tf::Vector3(v1(0),v1(1),v1(2)));
+    }
+
+
+    void compute_object_pose(const tf::Transform& right, const tf::Transform& left, tf::Transform& object){
+
+        // Compute object position (midpoint between left and right reaching points)
+        tf::Vector3 o_pos = left.getOrigin() + (right.getOrigin() - left.getOrigin())/2;
+        tf::Vector3 tmp(right.getOrigin());
+        //    tmp.setX(tmp.getX() + 0.05);
+        tmp.setX(tmp.getX() + 0.05);
+
+        // Compute object orientation (xdir: direction from right to left reaching point, ydir: y plane in world rf)
+        Eigen::Vector3d xdir (right.getOrigin().getX() - left.getOrigin().getX(), right.getOrigin().getY() - left.getOrigin().getY(), right.getOrigin().getZ() - left.getOrigin().getZ());
+
+        // Construct a plane "parallel" to the x dir of the robot base (table) and get the normal for the zdir
+        Eigen::Hyperplane<double,3> p = Eigen::Hyperplane<double,3>::Through(Eigen::Vector3d(right.getOrigin().getX(),right.getOrigin().getY(),right.getOrigin().getZ()),
+                                                                             Eigen::Vector3d(left.getOrigin().getX(),left.getOrigin().getY(),left.getOrigin().getZ()),
+                                                                             Eigen::Vector3d(tmp.getX(),tmp.getY(),tmp.getZ()));
+        p.normalize();
+        Eigen::Vector3d zdir = p.normal();
+
+        Eigen::Vector3d Rx = xdir/xdir.norm();
+        Eigen::Vector3d Rz = zdir/zdir.norm();
+        Eigen::Vector3d Ry = Rz.cross(Rx)/(Rz.cross(Rx)).norm();
+
+        Eigen::Matrix3d R;
+        R << Rx, Ry, Rz;
+        tf::Matrix3x3 tf3d;
+        tf::matrixEigenToTF(R,tf3d);
+        tf::Quaternion o_rot;
+        tf3d.getRotation(o_rot);
+
+        // Set position and orientation of object
+        object.setRotation(o_rot);
+        object.setOrigin(o_pos);
+
+    }
+
 
     // Send desired EE_pose to robot/joint_ctrls.
     void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
@@ -305,76 +253,77 @@ protected:
                 wait.sleep();
             }
         }
-}
-        bool find_object_by_contact(int arm_id, double min_height, double vertical_speed, double thr_force) {
-            double rate = 200;
-            thr_force = fabs(thr_force);
-            ros::Rate thread_rate(rate);
-            Eigen::VectorXd ee_ft;
-            ee_ft.resize(6);
+    }
+
+    bool find_object_by_contact(int arm_id, double min_height, double vertical_speed, double thr_force) {
+        double rate = 200;
+        thr_force = fabs(thr_force);
+        ros::Rate thread_rate(rate);
+        Eigen::VectorXd ee_ft;
+        ee_ft.resize(6);
 
 
-            // Figure out if it is the right arm or the left arm
-            tf::Pose arm_pose;
-            if (arm_id == R_ARM_ID){
-                arm_pose = r_ee_pose;
-            }
-            else{
-                arm_pose = l_ee_pose;
-            }
+        // Figure out if it is the right arm or the left arm
+        tf::Pose arm_pose;
+        if (arm_id == R_ARM_ID){
+            arm_pose = r_ee_pose;
+        }
+        else{
+            arm_pose = l_ee_pose;
+        }
 
-            double startz = arm_pose.getOrigin().z();
+        double startz = arm_pose.getOrigin().z();
 
-            msg_pose.pose.position.x = arm_pose.getOrigin().x();
-            msg_pose.pose.position.y = arm_pose.getOrigin().y();
-            msg_pose.pose.position.z = startz;
-            msg_pose.pose.orientation.x = arm_pose.getRotation().x();
-            msg_pose.pose.orientation.y = arm_pose.getRotation().y();
-            msg_pose.pose.orientation.z = arm_pose.getRotation().z();
-            msg_pose.pose.orientation.w = arm_pose.getRotation().w();
+        msg_pose.pose.position.x = arm_pose.getOrigin().x();
+        msg_pose.pose.position.y = arm_pose.getOrigin().y();
+        msg_pose.pose.position.z = startz;
+        msg_pose.pose.orientation.x = arm_pose.getRotation().x();
+        msg_pose.pose.orientation.y = arm_pose.getRotation().y();
+        msg_pose.pose.orientation.z = arm_pose.getRotation().z();
+        msg_pose.pose.orientation.w = arm_pose.getRotation().w();
 
-            ROS_INFO_STREAM("Finding table up to max dist. "<<min_height<<" with vertical speed "<<vertical_speed<<" and threshold force "<<thr_force<<"N.");
-            while(ros::ok()) {
-                msg_pose.pose.position.z = msg_pose.pose.position.z - vertical_speed/rate;
-
-                if (arm_id == R_ARM_ID){
-                    r_pub_.publish(msg_pose);
-                    ee_ft = r_ee_ft;
-                }
-                else{
-                    l_pub_.publish(msg_pose);
-                    ee_ft = l_ee_ft;
-                }
-                // Go down until force reaches the threshold
-                if(fabs(ee_ft[2]) > thr_force) {
-                    break;
-                }
-                if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
-                    ROS_INFO("Max distance reached");
-                    return false;
-                }
-                thread_rate.sleep();
-                feedback_.progress = ee_ft[2];
-                as_.publishFeedback(feedback_);
-            }
-            if(!ros::ok()) {
-                return false;
-            }
-            tf::Vector3 table(arm_pose.getOrigin());
-            ROS_INFO_STREAM("Table found at height "<<table[2]);
-            msg_pose.pose.position.z = table[2];
+        ROS_INFO_STREAM("Finding table up to max dist. "<<min_height<<" with vertical speed "<<vertical_speed<<" and threshold force "<<thr_force<<"N.");
+        while(ros::ok()) {
+            msg_pose.pose.position.z = msg_pose.pose.position.z - vertical_speed/rate;
 
             if (arm_id == R_ARM_ID){
                 r_pub_.publish(msg_pose);
+                ee_ft = r_ee_ft;
             }
             else{
                 l_pub_.publish(msg_pose);
+                ee_ft = l_ee_ft;
             }
-
-            sendAndWaitForNormalForce(0, arm_id);
-
-            return true;
+            // Go down until force reaches the threshold
+            if(fabs(ee_ft[2]) > thr_force) {
+                break;
+            }
+            if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
+                ROS_INFO("Max distance reached");
+                return false;
+            }
+            thread_rate.sleep();
+            feedback_.progress = ee_ft[2];
+            as_.publishFeedback(feedback_);
         }
+        if(!ros::ok()) {
+            return false;
+        }
+        tf::Vector3 table(arm_pose.getOrigin());
+        ROS_INFO_STREAM("Table found at height "<<table[2]);
+        msg_pose.pose.position.z = table[2];
+
+        if (arm_id == R_ARM_ID){
+            r_pub_.publish(msg_pose);
+        }
+        else{
+            l_pub_.publish(msg_pose);
+        }
+
+        sendAndWaitForNormalForce(0, arm_id);
+
+        return true;
+    }
 
 
         // Publish real object shape for VO bimanual DS
@@ -622,10 +571,6 @@ protected:
 
                 }
 
-                //            if(r_pos_err < reachingThreshold && (r_ori_err < orientationThreshold || isnan(r_ori_err)))
-                //                if(l_pos_err < reachingThreshold && (l_ori_err < orientationThreshold || isnan(l_ori_err))) {
-                //                    break;
-                //                }
                 loop_rate.sleep();
             }
             delete right_cdsRun;
@@ -674,7 +619,7 @@ protected:
 
             // Initialize Virtual Object Dynamical System
             bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-            vo_dsRun->init(dt,1.0,0.5,800.0,200.0,200.0);
+            vo_dsRun->init(dt,1.0,0.0,800.0,300.0,300.0);
             vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
             vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
             vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
@@ -786,8 +731,8 @@ protected:
         // ACTION TYPE 3: Go to Targets in Cartesian Space
         bool decoupled_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att){
 
-            // Convert attractors to world frame
-            tf::Transform  right_final_target, left_final_target, virtual_object;
+            // Convert attractors to world frame (right robot base frame)
+            tf::Transform  right_final_target, left_final_target;
             right_final_target.mult(task_frame, right_att);
             left_final_target.mult(task_frame, left_att);
 
@@ -826,7 +771,8 @@ protected:
 
         BimanualActionServer(std::string name) :
             as_(nh_, name, boost::bind(&BimanualActionServer::executeCB, this, _1), false),
-            action_name_(name)
+            action_name_(name), tf_count(0), reachingThreshold (0.01), orientationThreshold (0.1),
+            model_dt (0.002), dt (0.002), initial_config(true)
         {
             r_ee_ft.resize(6);
             l_ee_ft.resize(6);
@@ -880,8 +826,8 @@ protected:
 
 
             // ROS TOPICS for right arm controllers
-            r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, r_eeStateCallback);
-            r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, r_ftStateCallback);
+            r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::r_eeStateCallback, this);
+            r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::r_ftStateCallback, this);
 
             r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
             r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
@@ -903,8 +849,8 @@ protected:
             l_curr_ee_ft.resize(6);
 
             // ROS TOPICS for left arm controllers
-            l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, l_eeStateCallback);
-            l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, l_ftStateCallback);
+            l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::l_eeStateCallback, this);
+            l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::l_ftStateCallback, this);
             l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
             l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
 
@@ -1065,7 +1011,7 @@ protected:
 
             //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
             if(goal->action_type=="BIMANUAL_REACH")
-                success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, 0.002);
+                success = coordinated_bimanual_ds_execution(task_frame, right_att, left_att, DT);
 
             //---> ACTION TYPE 3: Use coupled learned models to execute the action
             if(goal->action_type=="BIMANUAL_GOTO_CART")
@@ -1082,6 +1028,57 @@ protected:
             }
 
         }
+
+
+
+        //************************************//
+        // FUNCTIONS USED BY ANY ACTION TYPE  //
+        //***********************************//
+
+        // Callback for the current right end effector pose
+        void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
+            const geometry_msgs::PoseStamped* data = msg.get();
+            r_ee_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+            r_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+            isOkay = true;
+        }
+
+
+        // Callback for the current right end effector force/torque
+        void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
+            const geometry_msgs::WrenchStamped* data = msg.get();
+            r_curr_ee_ft[0] = data->wrench.force.x;
+            r_curr_ee_ft[1] = data->wrench.force.y;
+            r_curr_ee_ft[2] = data->wrench.force.z;
+
+            r_curr_ee_ft[3] = data->wrench.torque.x;
+            r_curr_ee_ft[4] = data->wrench.torque.y;
+            r_curr_ee_ft[5] = data->wrench.torque.z;
+
+        }
+
+        // Callback for the current left end effector pose
+        void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
+            const geometry_msgs::PoseStamped* data = msg.get();
+            l_ee_pose.setOrigin(tf::Vector3(data->pose.position.x - left_arm_base.getOrigin().getX(),data->pose.position.y - left_arm_base.getOrigin().getY(),data->pose.position.z -  left_arm_base.getOrigin().getZ()));
+            l_ee_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+            isOkay = true;
+        }
+
+
+        // Callback for the current left end effector force/torque
+        void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg) {
+            const geometry_msgs::WrenchStamped* data = msg.get();
+            l_curr_ee_ft[0] = data->wrench.force.x;
+            l_curr_ee_ft[1] = data->wrench.force.y;
+            l_curr_ee_ft[2] = data->wrench.force.z;
+
+            l_curr_ee_ft[3] = data->wrench.torque.x;
+            l_curr_ee_ft[4] = data->wrench.torque.y;
+            l_curr_ee_ft[5] = data->wrench.torque.z;
+
+        }
+
     };
 
 

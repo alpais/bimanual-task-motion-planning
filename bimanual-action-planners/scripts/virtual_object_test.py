@@ -159,16 +159,16 @@ if __name__ == '__main__':
 	print "Result:"		
 	print result.success
 
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run Bimanual PEEL')
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+	# raw_input('Press Enter to Run Bimanual PEEL')
+	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 
-	# Reach with Decoupled DS
+	# # Reach with Decoupled DS
 
-	action_type = 'BIMANUAL_REACH'  
-	result = PLAN2CTRL_client(action_type, '',  task_frame, rA_p3_attr, lA_p3_attr, 10)
-	print "Result:"
-	print result.success
+	# action_type = 'BIMANUAL_REACH'  
+	# result = PLAN2CTRL_client(action_type, '',  task_frame, rA_p3_attr, lA_p3_attr, 10)
+	# print "Result:"
+	# print result.success
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
@@ -180,7 +180,7 @@ if __name__ == '__main__':
 
 	# Reach with Decoupled DS
 	action_type = 'BIMANUAL_REACH'  
-	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
+	result = PLAN2CTRL_client(action_type, '',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"
 	print result.success
 

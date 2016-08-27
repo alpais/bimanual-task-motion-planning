@@ -5,7 +5,7 @@ project(bimanual_motion_planner)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 ##find_package(catkin REQUIRED mathlib std_tools robotlib cds_execution tf tf_conversions cmake_modules)
-find_package(catkin REQUIRED COMPONENTS mathlib std_tools robotlib cds_execution tf cmake_modules visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver)
+find_package(catkin REQUIRED COMPONENTS roscpp actionlib actionlib_msgs mathlib std_tools robotlib cds_execution tf cmake_modules visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -77,9 +77,9 @@ find_package(Eigen REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES state_transformers
-   CATKIN_DEPENDS mathlib robotlib std_tools tf
+   CATKIN_DEPENDS actionlib_msgs roscpp geometry_msgs sensor_msgs mathlib robotlib std_tools tf robotlib cds_execution tf visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver
 #  DEPENDS system_lib
 )
 
@@ -91,16 +91,45 @@ catkin_package(
 ## Your package locations should be listed before other locations
 find_package(Eigen REQUIRED)
 find_package(bimanual_action_planners)
-include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${bimanual_action_planners_INCLUDE_DIRS})
+include_directories(
+    include/bimanual_action_server
+    ${catkin_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIRS}
+    ${bimanual_action_planners_INCLUDE_DIRS}
+)
+
+## Declare a C++ library
+add_library(bimanual_action_server
+    src/bimanual_action_server/bimanual_action_server.cpp
+    src/bimanual_action_server/base_action_functions.cpp
+    src/bimanual_action_server/force_ctrl_functions.cpp
+    src/bimanual_action_server/uncplCDS_action_functions.cpp
+    src/bimanual_action_server/cplCDS_action_functions.cpp
+    src/bimanual_action_server/voDS_action_functions.cpp
+    src/bimanual_action_server/bimanual_gotocart_functions.cpp)
+target_link_libraries(bimanual_action_server
+   ${catkin_LIBRARIES})
+
+## Declare a C++ Executable
+add_executable(bimanual_action_server_node src/bimanual_action_server_node.cpp)
+target_link_libraries(bimanual_action_server_node
+  bimanual_action_server
+  ${catkin_LIBRARIES}
+)
+
+#add_dependencies(
+#   bimanual_action_server
+#  ${bimanual_action_planners_EXPORTED_TARGETS}
+#)
 
 ## Declare a cpp executable
-add_executable(decoupled_motion_planner  src/decoupled_motion_planner.cpp)
-add_executable(bimanual_action_server  src/bimanual_action_server.cpp)
+add_executable(bimanual_motion_planner  src/bimanual_motion_planner.cpp)
+#add_executable(decoupled_motion_planner  src/decoupled_motion_planner.cpp)
 #add_executable(coordinated_motion_planner  src/coordinated_motion_planner.cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(decoupled_motion_planner   ${catkin_LIBRARIES} )
- target_link_libraries(bimanual_action_server   ${catkin_LIBRARIES} )
+target_link_libraries(bimanual_motion_planner   ${catkin_LIBRARIES} )
+#target_link_libraries(decoupled_motion_planner   ${catkin_LIBRARIES} )
 #target_link_libraries(coordinated_motion_planner   ${catkin_LIBRARIES} )
 
 #############

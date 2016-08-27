@@ -9,6 +9,8 @@ import actionlib
 
 # Import the messages
 import bimanual_action_planners.msg
+# from robohow_common_msgs.msg import MotionPhase
+# from robohow_common_msgs.msg import MotionModel
 import tf
 import geometry_msgs.msg
 
@@ -43,7 +45,6 @@ def PLAN2CTRL_client(action_type, phase, task_frame, right_attractor_frame, left
     return client.get_result()
 
 
-
 if __name__ == '__main__':
     try:
         # Initializes a rospy node so that the SimpleActionClient can
@@ -62,27 +63,7 @@ if __name__ == '__main__':
 	task_frame.rotation.w = 1
 
 
-	# Phase 1 Right Arm Attractor in Task RF
-	rA_p1_attr = geometry_msgs.msg.Transform()
-	rA_p1_attr.translation.x = -0.129
-	rA_p1_attr.translation.y = 0.226
-	rA_p1_attr.translation.z = 0.208
-	rA_p1_attr.rotation.x    = 0.903  
-	rA_p1_attr.rotation.y    = -0.012
-	rA_p1_attr.rotation.z    = -0.009
-	rA_p1_attr.rotation.w    = 0.430
-
-
-	# Phase 1 Left Arm Attractor in Task RF
-	lA_p1_attr = geometry_msgs.msg.Transform()	      
-	lA_p1_attr.translation.x = -0.069
-	lA_p1_attr.translation.y = -0.246 
-	lA_p1_attr.translation.z = 0.210
-	lA_p1_attr.rotation.x    = 0.065 
-	lA_p1_attr.rotation.y    = 0.857 
-	lA_p1_attr.rotation.z    = 0.511 
-	lA_p1_attr.rotation.w    = -0.011
-
+	# Phase 2 ==== Retract ===
 
 	# Phase 2 Right Arm Attractor in Task RF
 	rA_p2_attr = geometry_msgs.msg.Transform()
@@ -105,30 +86,14 @@ if __name__ == '__main__':
 	lA_p2_attr.rotation.z    = 0.293 
 	lA_p2_attr.rotation.w    = -0.037
 
-
-	print "\n\n= = = = = = = = = = = = = = = = = = = = "
-	raw_input('Run Initial Reach with Bimanual VO DS')
-	print "\n\n= = = = = = = = = = = = = = = = = = = = "
-
-	# Reach with Coordinated DS
-	action_type = 'BIMANUAL_REACH'  
-	result = PLAN2CTRL_client(action_type, '', task_frame, rA_p1_attr, lA_p1_attr, 10)
-	print "Result:"		
-	print result.success
-
-
-
-	# #Wait a few seconds before going back
-	# rospy.sleep(1.)
-
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run Bimanual Task with Coordinated Reaching DS')
+	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 
 
 	# Reach with VO DS
 	action_type = 'BIMANUAL_REACH'  
-	result = PLAN2CTRL_client(action_type, 'phase2',  task_frame, rA_p2_attr, lA_p2_attr, 10)
+	result = PLAN2CTRL_client(action_type, '',  task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"
 	print result.success
 
