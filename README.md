@@ -34,9 +34,9 @@ $ rosrun kuka_fri_bridge run_lwr.sh left
 ```
 follow instructions on [kuka_bridge](ahttps://github.com/nbfigueroa/kuka_interface_packages) to set control mode for each robot. (joint impedance control, control = 1)
 
-#####Visualization and sensor bringup (ft sensors, vision)
+#####Visualization and sensor bringup (ft sensors)
 ```
-$ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true vision:=true 
+$ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true
 ```
 #####Low-level Controllers
 Cartesian-to-Joint/Joint-to-Cart Estimation
