@@ -88,7 +88,7 @@ $ roslaunch state_transformers bimanual_joint_ctrls_sim.launch
 A bimanual action server, containing different types of control methods for bimanual action, currently 1) independent CDS for each arm (no coupling) and 2) Virtual Object Dynamical System (spatial and temporal coupling)
 
 ```
-$ roslaunch bimanual_motion_planner bimanual_action_server.launch
+$ roslaunch bimanual_motion_planner bimanual_action_server.launch simulation:=true
 ```
 
 ##### Action Planning  
