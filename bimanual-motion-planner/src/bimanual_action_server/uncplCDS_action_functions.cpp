@@ -2,13 +2,11 @@
 
 bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType,
                                                              CDSController::DynamicsType slaveType, double reachingThreshold,
-                                                             double orientationThreshold, double model_dt, tf::Transform task_frame,
-                                                             tf::Transform right_att, tf::Transform left_att, std::string r_model_base_path,
-                                                             std::string l_model_base_path)
+                                                             double orientationThreshold,  tf::Transform task_frame,
+                                                             tf::Transform right_att, tf::Transform left_att)
 {
 
-    ROS_INFO_STREAM(" Right Model Path "            << r_model_base_path);
-    ROS_INFO_STREAM(" Left Model Path "             << l_model_base_path);
+    ROS_INFO_STREAM(" Model Path "                  << model_base_path);
     ROS_INFO_STREAM(" Execute Learned model: phase "<< phase);
     ROS_INFO_STREAM(" Reaching threshold "          << reachingThreshold);
     ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
@@ -21,6 +19,7 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
 
     // Setting Initial conditions
+    // (For Visualization of Trajectories)
     if (initial_config == true){
         r_curr_ee_pose = r_ee_pose;
         l_curr_ee_pose = l_ee_pose;
@@ -28,7 +27,7 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
     // Initialize CDS for right arm
     CDSExecution *right_cdsRun = new CDSExecution;
-    right_cdsRun->initSimple(r_model_base_path, phase);
+    right_cdsRun->initSimple(model_base_path, phase, R_ARM_ID);
     right_cdsRun->setObjectFrame(toMatrix4(task_frame));
     right_cdsRun->setAttractorFrame(toMatrix4(right_att));
     right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
@@ -39,7 +38,7 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
     // Initialize CDS for left arm
     CDSExecution *left_cdsRun = new CDSExecution;
-    left_cdsRun->initSimple(l_model_base_path, phase);
+    left_cdsRun->initSimple(model_base_path, phase, L_ARM_ID);
     left_cdsRun->setObjectFrame(toMatrix4(task_frame));
     left_cdsRun->setAttractorFrame(toMatrix4(left_att));
     left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
@@ -50,11 +49,8 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
     // Vairable for execution
     ros::Duration loop_rate(model_dt);
-    static tf::TransformBroadcaster br;
     tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
     tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
-
-    tf::Transform r_trans_ee, l_trans_ee;
     double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
     // Before Starting a Reach Bias the FT-Sensors!
@@ -68,38 +64,13 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
         }
-        else{
+        else{ // For visualization of trajectories
             r_curr_ee_pose = r_des_ee_pose;
             l_curr_ee_pose = l_des_ee_pose;
         }
 
         // Publish attractors if running in simulation or with fixed values
-        r_trans_ee.setRotation(tf::Quaternion(r_curr_ee_pose.getRotation()));
-        r_trans_ee.setOrigin(tf::Vector3(r_curr_ee_pose.getOrigin()));
-
-        l_trans_ee.setRotation(tf::Quaternion(l_curr_ee_pose.getRotation()));
-        l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
-
-        // To Visualize EE Frames
-        if (just_visualize==true){
-            int frame_viz = int(model_dt*1000);
-            if (tf_count==0 || tf_count%frame_viz==0){
-                stringstream r_ss, l_ss;
-                r_ss <<  "/r_ee_tf_" << tf_count;
-                l_ss <<  "/l_ee_tf_" << tf_count;
-                br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, r_ss.str()));
-                br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, l_ss.str()));
-            }
-            tf_count++;
-        }
-        else{
-            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
-            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
-        }
-
-        br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
-        br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
-        br.sendTransform(tf::StampedTransform(task_frame, ros::Time::now(), right_robot_frame, "/task_frame"));
+        publish_task_frames(r_curr_ee_pose, l_curr_ee_pose, right_final_target, left_final_target, task_frame);
 
         // Current progress variable (position/orientation error).
         r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
@@ -122,11 +93,13 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
         // Compute Next Desired EE Pose for Right Arm
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
+//        right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
         toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
         r_des_ee_pose = r_mNextRobotEEPose;
 
         // Compute Next Desired EE Pose for Left Arm
         left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
+//        left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
         l_des_ee_pose = l_mNextRobotEEPose;
 
@@ -169,3 +142,4 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
     return ros::ok();
 }
+

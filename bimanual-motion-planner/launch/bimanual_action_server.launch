@@ -9,8 +9,10 @@
 			<arg name="r_robot_base_frame"       default="/calib_right_arm_base_link"/>
 			<arg name="l_robot_base_frame"       default="/calib_left_arm_base_link"/>
 
-	        <arg name="r_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Right"/>
-			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/>
+<!-- 	        <arg name="r_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Right"/>
+			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/> -->
+			<arg name="model_path"               default="$(find bimanual_motion_planner)../bimanual-task-models/peeling_task"/>
+
 
 		  <node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.403 -0.426 0.013 0 0 0 1  /world_frame /task_frame  100"/>
 
@@ -23,8 +25,9 @@
 		  	<param name="model_dt" 				 		value="0.005" />
 		  	<param name="reachingThreshold" 	 		value="0.015" />
 		  	<param name="orientationThreshold"   		value="0.05" />
-			<param name="right_model_base_path"        	value="$(arg r_model_path)" />
-			<param name="left_model_base_path"        	value="$(arg l_model_path)" />
+<!-- 			<param name="right_model_base_path"        	value="$(arg r_model_path)" />
+			<param name="left_model_base_path"        	value="$(arg l_model_path)" /> -->
+			<param name="model_base_path"        	    value="$(arg model_path)" />
 			<param name="r_topic_ns"        		    value="$(arg r_arm_ns)" />
 			<param name="l_topic_ns"        		    value="$(arg l_arm_ns)" />
 			<param name="wait_for_force_right_arm" 		value="true"/>

@@ -1,14 +1,12 @@
 #include "bimanual_action_server.h"
 
 bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType,
-                                                             CDSController::DynamicsType slaveType, double reachingThreshold,
-                                                             double orientationThreshold, double model_dt, tf::Transform task_frame,
-                                                             tf::Transform right_att, tf::Transform left_att, std::string r_model_base_path,
-                                                             std::string l_model_base_path)
+                                                           CDSController::DynamicsType slaveType, double reachingThreshold,
+                                                           double orientationThreshold, tf::Transform task_frame,
+                                                           tf::Transform right_att, tf::Transform left_att)
 {
 
-    ROS_INFO_STREAM(" Right Model Path "            << r_model_base_path);
-    ROS_INFO_STREAM(" Left Model Path "             << l_model_base_path);
+    ROS_INFO_STREAM(" Model Path "                  << model_base_path);
     ROS_INFO_STREAM(" Execute Learned model: phase "<< phase);
     ROS_INFO_STREAM(" Reaching threshold "          << reachingThreshold);
     ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
@@ -16,11 +14,18 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     // Convert attractors to world frame
     tf::Transform  right_final_target, left_final_target;
-    right_final_target.mult(task_frame, right_att);
+    // Master Arm Just stays there
+    right_final_target = r_ee_pose;
+    // Slave Arm has Attractor on Object
     left_final_target.mult(task_frame, left_att);
+
+    // Model Task Frame
+    tf::Transform model_task_frame;
+    model_task_frame.setIdentity();
 
 
     // Setting Initial conditions
+    // (For Visualization of Trajectories)
     if (initial_config == true){
         r_curr_ee_pose = r_ee_pose;
         l_curr_ee_pose = l_ee_pose;
@@ -28,9 +33,9 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     // Initialize CDS for right arm
     CDSExecution *right_cdsRun = new CDSExecution;
-    right_cdsRun->initSimple(r_model_base_path, phase);
-    right_cdsRun->setObjectFrame(toMatrix4(task_frame));
-    right_cdsRun->setAttractorFrame(toMatrix4(right_att));
+    right_cdsRun->initSimple(model_base_path, phase, R_ARM_ID, R_ARM_ROLE);
+    right_cdsRun->setObjectFrame(toMatrix4(model_task_frame));
+    right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
     right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
     right_cdsRun->setDT(model_dt);
     right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
@@ -39,9 +44,11 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     // Initialize CDS for left arm
     CDSExecution *left_cdsRun = new CDSExecution;
-    left_cdsRun->initSimple(l_model_base_path, phase);
-    left_cdsRun->setObjectFrame(toMatrix4(task_frame));
-    left_cdsRun->setAttractorFrame(toMatrix4(left_att));
+    left_cdsRun->initSimple(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
+
+    // -> Apply Rotation (pi on Y in Origin RF)
+    left_cdsRun->setObjectFrame(toMatrix4(model_task_frame));
+    left_cdsRun->setAttractorFrame(toMatrix4(left_final_target));
     left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
     left_cdsRun->setDT(model_dt);
     left_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
@@ -50,13 +57,10 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     // Vairable for execution
     ros::Duration loop_rate(model_dt);
-    static tf::TransformBroadcaster br;
     tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
     tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
 
-    tf::Transform r_trans_ee, l_trans_ee;
     double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
-
 
     ROS_INFO("Execution started");
     while(ros::ok()) {
@@ -66,38 +70,13 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
         }
-        else{
+        else{ // For visualization of trajectories
             r_curr_ee_pose = r_des_ee_pose;
             l_curr_ee_pose = l_des_ee_pose;
         }
 
         // Publish attractors if running in simulation or with fixed values
-        r_trans_ee.setRotation(tf::Quaternion(r_curr_ee_pose.getRotation()));
-        r_trans_ee.setOrigin(tf::Vector3(r_curr_ee_pose.getOrigin()));
-
-        l_trans_ee.setRotation(tf::Quaternion(l_curr_ee_pose.getRotation()));
-        l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
-
-        // To Visualize EE Frames
-        if (simulation==true){
-            int frame_viz = int(model_dt*1000);
-            if (tf_count==0 || tf_count%frame_viz==0){
-                stringstream r_ss, l_ss;
-                r_ss <<  "/r_ee_tf_" << tf_count;
-                l_ss <<  "/l_ee_tf_" << tf_count;
-                br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, r_ss.str()));
-                br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, l_ss.str()));
-            }
-            tf_count++;
-        }
-        else{
-            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
-            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
-        }
-
-        br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
-        br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
-        br.sendTransform(tf::StampedTransform(task_frame, ros::Time::now(), right_robot_frame, "/task_frame"));
+        publish_task_frames(r_curr_ee_pose, l_curr_ee_pose, right_final_target, left_final_target, task_frame);
 
         // Current progress variable (position/orientation error).
         r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
@@ -119,14 +98,43 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Orientation Error: " << r_att_ori_err << " Left Orientation Error: " << l_att_ori_err);
 
         // Compute Next Desired EE Pose for Right Arm
-        right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
+        right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
         toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
-        r_des_ee_pose = r_mNextRobotEEPose;
+        r_des_ee_pose = r_mNextRobotEEPose;        
 
         // Compute Next Desired EE Pose for Left Arm
         left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
-        l_des_ee_pose = l_mNextRobotEEPose;
+
+//        ROS_INFO_STEAM(l_mNextRobotEEPose.getRotation().getX() << l_mNextRobotEEPose.getRotation().getY() << l_mNextRobotEEPose.getRotation().getZ() << l_mNextRobotEEPose.getRotation().getW());
+
+        // Transformation for PHASE_REACH_TO_PEEL Model
+        if (phase == PHASE_REACH_TO_PEEL){
+                tf::Transform  l_ee_rot, ee_2_rob;
+                l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
+
+                // Transform Attractor to Origin
+                l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
+
+                // -> Apply Rotation (pi on Y in Origin RF)
+                l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,1,0,0,0,-1)); //Y
+                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+//                l_ee_rot.setBasis(tf::Matrix3x3(0.965,0.25,0,-0.25,0.965,0,0,0,1)); //Z 15%
+//                l_ee_rot.setBasis(tf::Matrix3x3(0.707,0.707,0,-0.707,0.707,0,0,0,1)); //Z 45%
+//                l_ee_rot.setBasis(tf::Matrix3x3(0.866,0.5,0,-0.5,0.866,0,0,0,1)); //Z 30%
+                l_ee_rot.setBasis(tf::Matrix3x3(0.906,0.422,0,-0.422,0.906,0,0,0,1)); //Z 25%
+                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+//                l_ee_rot.setBasis(tf::Matrix3x3(1, 0, 0, 0, 0.965,-0.25, 0, 0.25, 0.965)); //X
+//                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+
+//                // -> Transform back to Robot
+
+                l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
+                l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.5) );
+        }
+        else
+            l_des_ee_pose = l_mNextRobotEEPose;
+
 
         // Make next pose the current pose for open-loop simulation
         if (just_visualize==true)

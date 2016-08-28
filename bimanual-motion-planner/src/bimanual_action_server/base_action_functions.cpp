@@ -108,6 +108,44 @@ void BimanualActionServer::sendNormalForce(double fz, int arm_id) {
 
 }
 
+void BimanualActionServer::publish_task_frames(tf::Pose &r_curr_ee_pose, tf::Pose &l_curr_ee_pose,
+                                               tf::Transform &right_final_target, tf::Transform &left_final_target,
+                                               tf::Transform &task_frame)
+{
+
+    static tf::TransformBroadcaster br;
+    tf::Transform r_trans_ee, l_trans_ee;
+    r_trans_ee.setRotation(tf::Quaternion(r_curr_ee_pose.getRotation()));
+    r_trans_ee.setOrigin(tf::Vector3(r_curr_ee_pose.getOrigin()));
+
+    l_trans_ee.setRotation(tf::Quaternion(l_curr_ee_pose.getRotation()));
+    l_trans_ee.setOrigin(tf::Vector3(l_curr_ee_pose.getOrigin()));
+
+    // To Visualize EE Frames
+    if (just_visualize==true){
+        int frame_viz = int(model_dt*1000);
+        if (tf_count==0 || tf_count%frame_viz==0){
+            stringstream r_ss, l_ss;
+            r_ss <<  "/r_ee_tf_" << tf_count;
+            l_ss <<  "/l_ee_tf_" << tf_count;
+            br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, r_ss.str()));
+            br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, l_ss.str()));
+        }
+        tf_count++;
+    }
+    else{
+        br.sendTransform(tf::StampedTransform(r_trans_ee, ros::Time::now(), right_robot_frame, "/r_ee_tf"));
+        br.sendTransform(tf::StampedTransform(l_trans_ee, ros::Time::now(), right_robot_frame, "/l_ee_tf"));
+    }
+
+    br.sendTransform(tf::StampedTransform(right_final_target, ros::Time::now(), right_robot_frame, "/right_attractor"));
+    br.sendTransform(tf::StampedTransform(left_final_target, ros::Time::now(), right_robot_frame, "/left_attractor"));
+    br.sendTransform(tf::StampedTransform(task_frame, ros::Time::now(), right_robot_frame, "/task_frame"));
+
+
+}
+
+
 
 //****************************//
 //   ---TYPE CONVERSIONS---   //

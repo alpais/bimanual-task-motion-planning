@@ -54,6 +54,8 @@
 #define R_ARM_ID            1
 #define L_ARM_ID            2
 #define DT                  0.002
+#define R_ARM_ROLE          "master"
+#define L_ARM_ROLE          "slave"
 
 class BimanualActionServer
 {
@@ -81,6 +83,7 @@ protected:
     tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
     Eigen::VectorXd  r_curr_ee_ft, l_curr_ee_ft;
     string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
+    string model_base_path;
     string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC;
     string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC;
     tf::StampedTransform right_arm_base, left_arm_base;
@@ -149,6 +152,9 @@ protected:
     // Send desired EE_ft to robot/joint_ctrls.
     void sendNormalForce(double fz, int arm_id);
 
+    void publish_task_frames(tf::Pose& r_curr_ee_pose, tf::Pose& l_curr_ee_pose, tf::Transform& right_final_target,
+                             tf::Transform& left_final_target, tf::Transform& task_frame);
+
 
     //************************************//
     // FUNCTIONS USED FOR FORCE CONTROL  //
@@ -183,9 +189,8 @@ protected:
 
     // ACTION TYPE 1: Execute action from two independent learned models
     bool uncoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
-                                           double reachingThreshold, double orientationThreshold, double model_dt, tf::Transform task_frame,
-                                           tf::Transform right_att, tf::Transform left_att, std::string r_model_base_path,
-                                           std::string l_model_base_path);
+                                           double reachingThreshold, double orientationThreshold, tf::Transform task_frame,
+                                           tf::Transform right_att, tf::Transform left_att);
 
     // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
     bool coordinated_bimanual_ds_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt);
@@ -193,9 +198,8 @@ protected:
 
     // ACTION TYPE 3: Execute bimanual reach with virtual object dynamical system
     bool coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
-                                         double reachingThreshold, double orientationThreshold, double model_dt, tf::Transform task_frame,
-                                         tf::Transform right_att, tf::Transform left_att, std::string r_model_base_path,
-                                         std::string l_model_base_path);
+                                         double reachingThreshold, double orientationThreshold,  tf::Transform task_frame,
+                                         tf::Transform right_att, tf::Transform left_att);
 
     // ACTION TYPE 4: Go to Targets in Cartesian Space
     bool bimanual_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att);

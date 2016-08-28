@@ -18,14 +18,13 @@ BimanualActionServer::~BimanualActionServer(void)
 
 
 void BimanualActionServer::initialize() {
-    std::string ad;
+
     ros::NodeHandle _nh("~");
 
     // Read Parameters from Launch File
     _nh.getParam("right_robot_frame", right_robot_frame);
     _nh.getParam("left_robot_frame", left_robot_frame);
-    _nh.getParam("right_model_base_path", r_base_path);
-    _nh.getParam("left_model_base_path", l_base_path);
+    _nh.getParam("model_base_path", model_base_path);
     _nh.getParam("simulation", simulation);
     _nh.getParam("just_visualize", just_visualize);
     _nh.getParam("model_dt", model_dt);
@@ -242,19 +241,15 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
         return;
     }
 
-    //---> ACTION TYPE 1/3: Use two independent uncoupled/two coupled learned models to execute the action
-    if(goal->action_type=="UNCOUPLED_LEARNED_MODEL" || goal->action_type=="COUPLED_LEARNED_MODEL"){
+    //---> ACTION TYPE 1: Use two independent learned models to execute the action
+    if(goal->action_type=="UNCOUPLED_LEARNED_MODEL"){
 
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
         CDSController::DynamicsType slaveType = CDSController::UTHETA;
 
         // Execute action from *uncoupled* learned action model
-        if (goal->action_type == "UNCOUPLED_LEARNED_MODEL")
-            success = uncoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-                                                        model_dt, task_frame, right_att, left_att, r_base_path, l_base_path);
-        else // Execute action from *coupled* learned action model
-            success = coupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-                                                      model_dt, task_frame, right_att, left_att, r_base_path, l_base_path);
+        success = uncoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
+                                                        task_frame, right_att, left_att);
 
     }
 
@@ -262,6 +257,17 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     if(goal->action_type=="BIMANUAL_REACH")
         success = coordinated_bimanual_ds_execution(phase, task_frame, right_att, left_att, DT);
 
+
+    //---> ACTION TYPE 3: Use two coupled learned models to execute the action
+    if(goal->action_type=="COUPLED_LEARNED_MODEL"){
+
+        CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
+        CDSController::DynamicsType slaveType = CDSController::NO_DYNAMICS;
+
+        // Execute action from *coupled* learned action model
+        success = coupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
+                                                      task_frame, right_att, left_att);
+    }
 
     //---> ACTION TYPE 4: Use coupled learned models to execute the action
     if(goal->action_type=="BIMANUAL_GOTO_CART")
