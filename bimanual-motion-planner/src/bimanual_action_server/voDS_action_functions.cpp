@@ -93,10 +93,6 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
         // Current progress variable (position)
         object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();
-        if (simulation)
-            reachingThreshold = 0.02;
-        else
-            reachingThreshold = 0.017;
 
         ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
 

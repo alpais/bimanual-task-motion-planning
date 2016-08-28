@@ -2,6 +2,7 @@
 
 # Script for testing PLN2CTRL client 
 import roslib; roslib.load_manifest('bimanual_action_planners')
+import sys
 import rospy
 import numpy
 import actionlib
@@ -11,10 +12,36 @@ import bimanual_action_planners.msg
 import tf
 import geometry_msgs.msg
 from kuka_fri_bridge.msg    import JointStateImpedance
+
  
+def query_init_attractors():
+	# Phase 0 ==== Initial Reach ===
+
+	# Phase 0 Right Arm Attractor in Task RF
+	rA_p0_attr = geometry_msgs.msg.Transform()
+	rA_p0_attr.translation.x = -0.118
+	rA_p0_attr.translation.y = 0.080 
+	rA_p0_attr.translation.z = 0.248
+	rA_p0_attr.rotation.x    = 0.775 
+	rA_p0_attr.rotation.y    = 0.521 
+	rA_p0_attr.rotation.z    = -0.157             
+	rA_p0_attr.rotation.w    = 0.320
+
+	# Phase 0 Left Arm Attractor in Task RF
+	lA_p0_attr = geometry_msgs.msg.Transform()	      
+	lA_p0_attr.translation.x = -0.128 
+	lA_p0_attr.translation.y = -0.306  
+	lA_p0_attr.translation.z = 0.104
+	lA_p0_attr.rotation.x    = 0.049  
+	lA_p0_attr.rotation.y    = 0.827 
+	lA_p0_attr.rotation.z    = 0.557 
+	lA_p0_attr.rotation.w    = -0.052
+
+	return rA_p0_attr, lA_p0_attr
 
 def query_peeling_attractors():
-	# Compute Attractors for Reach to Peel/Peel Action				
+	# Compute Attractors for Reach to Peel/Peel Action
+	# -> Read Master Robot Position and Compute Fixed Attractors				
 
 	# Phase 1 ==== Reach to Peel ===
 	lA_p1_attr = geometry_msgs.msg.Transform()
@@ -29,14 +56,67 @@ def query_peeling_attractors():
 	# Phase 2 ==== Peel ===
 	lA_p2_attr = geometry_msgs.msg.Transform()
 	lA_p2_attr.translation.x = -0.096 
-	lA_p2_attr.translation.y = -0.083  	
-	lA_p2_attr.translation.z = 0.015
+	lA_p2_attr.translation.y = -0.253  	
+	lA_p2_attr.translation.z = 0.185
 	lA_p2_attr.rotation.x    = 0.112 
 	lA_p2_attr.rotation.y    = 0.949 
 	lA_p2_attr.rotation.z    = 0.293 
 	lA_p2_attr.rotation.w    = -0.037
 
 	return lA_p1_attr,lA_p2_attr
+
+
+def query_rotate_attractors():
+	# Compute Attractors for Reach to Peel/Peel Action
+	# -> Read Master Robot Position and Compute Fixed Attractors				
+
+	# Phase 3 ==== Rotate and Reach ===
+	rA_p3_attr = geometry_msgs.msg.Transform()
+	rA_p3_attr.translation.x = -0.118
+	rA_p3_attr.translation.y = 0.080 
+	rA_p3_attr.translation.z = 0.248
+	rA_p3_attr.rotation.x    = 0.775 
+	rA_p3_attr.rotation.y    = 0.521 
+	rA_p3_attr.rotation.z    = -0.157             
+	rA_p3_attr.rotation.w    = 0.320
+
+	lA_p3_attr = geometry_msgs.msg.Transform()
+	lA_p3_attr.translation.x = -0.128 
+	lA_p3_attr.translation.y = -0.306  
+	lA_p3_attr.translation.z = 0.104
+	lA_p3_attr.rotation.x    = 0.049  
+	lA_p3_attr.rotation.y    = 0.827 
+	lA_p3_attr.rotation.z    = 0.557 
+	lA_p3_attr.rotation.w    = -0.052
+
+	return rA_p3_attr,lA_p3_attr	
+
+
+def query_retract_attractors():
+    # Phase 4 ==== Retract ===
+
+	# Phase 4 Right Arm Attractor in Task RF
+	rA_p4_attr = geometry_msgs.msg.Transform()
+	rA_p4_attr.translation.x = -0.104
+	rA_p4_attr.translation.y = 0.498 	
+	rA_p4_attr.translation.z = 0.574
+	rA_p4_attr.rotation.x    = 0.884 
+	rA_p4_attr.rotation.y    = 0.282 
+	rA_p4_attr.rotation.z    = -0.133
+	rA_p4_attr.rotation.w    = 0.348 
+
+
+	# Phase 4 Left Arm Attractor in Task RF
+	lA_p4_attr = geometry_msgs.msg.Transform()
+	lA_p4_attr.translation.x = -0.078 
+	lA_p4_attr.translation.y = -0.434 	
+	lA_p4_attr.translation.z = 0.504
+	lA_p4_attr.rotation.x    = 0.112 
+	lA_p4_attr.rotation.y    = 0.949 
+	lA_p4_attr.rotation.z    = 0.293 
+	lA_p4_attr.rotation.w    = -0.037
+	
+	return rA_p4_attr, lA_p4_attr
 
 def send_goal(action_type, phase, task_frame, right_attractor_frame, left_attractor_frame, timeout):
     print "Phase:", phase
@@ -81,41 +161,19 @@ def execute_peeling_planner():
 	raw_input('Press Enter to Run Bimanual REACH with Coordinated Reaching DS')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 
-	# Phase 0 ==== Initial Reach ===
-
-	# Phase 0 Right Arm Attractor in Task RF
-	rA_p0_attr = geometry_msgs.msg.Transform()
-	rA_p0_attr.translation.x = -0.118
-	rA_p0_attr.translation.y = 0.080 
-	rA_p0_attr.translation.z = 0.248
-	rA_p0_attr.rotation.x    = 0.775 
-	rA_p0_attr.rotation.y    = 0.521 
-	rA_p0_attr.rotation.z    = -0.157             
-	rA_p0_attr.rotation.w    = 0.320
-
-	# Phase 0 Left Arm Attractor in Task RF
-	lA_p0_attr = geometry_msgs.msg.Transform()	      
-	lA_p0_attr.translation.x = -0.128 
-	lA_p0_attr.translation.y = -0.306  
-	lA_p0_attr.translation.z = 0.104
-	lA_p0_attr.rotation.x    = 0.049  
-	lA_p0_attr.rotation.y    = 0.827 
-	lA_p0_attr.rotation.z    = 0.557 
-	lA_p0_attr.rotation.w    = -0.052
+	rA_p0_attr, lA_p0_attr = query_init_attractors()
 
 	# Reach with Coordinated DS
 	action_type = 'BIMANUAL_REACH'  
 	result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
 	print "Result:"		
 	print result.success
+	
 
-	num_peels = 0
-	max_peels = 1
-
-	while num_peels < max_peels:
+	while True:
 
 		print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
-		raw_input('Press Enter to Run Reach To Peel with Coupled CDS')
+		raw_input('Press Enter to Run Reach-To-Peel with Coupled CDS')
 		print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
 
 		lA_p1_attr,lA_p2_attr = query_peeling_attractors()
@@ -136,36 +194,29 @@ def execute_peeling_planner():
 		print "Result:"		
 		print result.success
 
-		num_peels = num_peels + 1
+		peel_var = raw_input("Do you want to peel again(any), rotate(r), or end(e)?")
+
+		if peel_var == 'r':		
+			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
+			raw_input('Press Enter to Run Bimanual ROTATE/REACH with Coordinated Reaching DS')
+			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
+
+			# Rotate Master and Retract Slave
+			rA_p3_attr,lA_p3_attr = query_rotate_attractors()
+			result = send_goal(action_type, 'phase3', task_frame, rA_p3_attr, lA_p3_attr, 10)
+			print "Result:"		
+			print result.success			
+		
+		if peel_var == 'e':
+			break
+
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 
-	# Phase 4 ==== Retract ===
-
-	# Phase 4 Right Arm Attractor in Task RF
-	rA_p4_attr = geometry_msgs.msg.Transform()
-	rA_p4_attr.translation.x = -0.104
-	rA_p4_attr.translation.y = 0.498 	
-	rA_p4_attr.translation.z = 0.574
-	rA_p4_attr.rotation.x    = 0.884 
-	rA_p4_attr.rotation.y    = 0.282 
-	rA_p4_attr.rotation.z    = -0.133
-	rA_p4_attr.rotation.w    = 0.348 
-
-
-	# Phase 4 Left Arm Attractor in Task RF
-	lA_p4_attr = geometry_msgs.msg.Transform()
-	lA_p4_attr.translation.x = -0.078 
-	lA_p4_attr.translation.y = -0.434 	
-	lA_p4_attr.translation.z = 0.504
-	lA_p4_attr.rotation.x    = 0.112 
-	lA_p4_attr.rotation.y    = 0.949 
-	lA_p4_attr.rotation.z    = 0.293 
-	lA_p4_attr.rotation.w    = -0.037
-	
 	# Reach with Decoupled DS
+	rA_p4_attr, lA_p4_attr = query_retract_attractors()
 	action_type = 'BIMANUAL_REACH'  
 	result = send_goal(action_type, 'phase4',  task_frame, rA_p4_attr, lA_p4_attr, 10)
 	print "Result:"

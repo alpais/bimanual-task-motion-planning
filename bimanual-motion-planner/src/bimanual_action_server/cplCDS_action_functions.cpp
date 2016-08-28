@@ -14,10 +14,22 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     // Convert attractors to world frame
     tf::Transform  right_final_target, left_final_target;
-    // Master Arm Just stays there
-    right_final_target = r_ee_pose;
+
+    // Master Arm Stays in the Position/Orientation for all but ROTATE/REACH
+    if (phase == PHASE_ROTATE){
+        right_final_target = r_ee_pose;
+        tf::Transform delta_rot; delta_rot.setIdentity();
+        right_final_target.mult(r_ee_pose.inverse(),right_final_target);
+        delta_rot.setBasis(tf::Matrix3x3(0.707,-0.707,0,0.707,0.707,0,0,0,1)); // Rotate around Z EE RF (45dg)
+        right_final_target.mult(delta_rot,right_final_target);
+        right_final_target.mult(r_ee_pose,right_final_target);
+    }
+    else
+        right_final_target = r_ee_pose;
+
     // Slave Arm has Attractor on Object
     left_final_target.mult(task_frame, left_att);
+
 
     // Model Task Frame
     tf::Transform model_task_frame;
@@ -86,30 +98,20 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
         l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
         ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
-        ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << r_ori_err);
+        ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
 
-        double r_att_pos_err = (right_final_target.getOrigin() - r_des_ee_pose.getOrigin()).length();
-        double r_att_ori_err = acos(abs(right_final_target.getRotation().dot(r_des_ee_pose.getRotation())));
-
-        double l_att_pos_err = (left_final_target.getOrigin() - l_des_ee_pose.getOrigin()).length();
-        double l_att_ori_err = acos(abs(left_final_target.getRotation().dot(l_des_ee_pose.getRotation())));
-
-        ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Position Error: "    << r_att_pos_err << " Left Position Error: "    << l_att_pos_err);
-        ROS_INFO_STREAM_THROTTLE(0.5,"Des-Att Right Orientation Error: " << r_att_ori_err << " Left Orientation Error: " << l_att_ori_err);
 
         // Compute Next Desired EE Pose for Right Arm
-        right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
+        right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
         toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
-        r_des_ee_pose = r_mNextRobotEEPose;        
+        r_des_ee_pose = r_mNextRobotEEPose;
 
         // Compute Next Desired EE Pose for Left Arm
         left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
-//        ROS_INFO_STEAM(l_mNextRobotEEPose.getRotation().getX() << l_mNextRobotEEPose.getRotation().getY() << l_mNextRobotEEPose.getRotation().getZ() << l_mNextRobotEEPose.getRotation().getW());
-
         // Transformation for PHASE_REACH_TO_PEEL Model
-        if (phase == PHASE_REACH_TO_PEEL){
+        if (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL){
                 tf::Transform  l_ee_rot, ee_2_rob;
                 l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
@@ -119,18 +121,16 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 // -> Apply Rotation (pi on Y in Origin RF)
                 l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,1,0,0,0,-1)); //Y
                 l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-//                l_ee_rot.setBasis(tf::Matrix3x3(0.965,0.25,0,-0.25,0.965,0,0,0,1)); //Z 15%
-//                l_ee_rot.setBasis(tf::Matrix3x3(0.707,0.707,0,-0.707,0.707,0,0,0,1)); //Z 45%
-//                l_ee_rot.setBasis(tf::Matrix3x3(0.866,0.5,0,-0.5,0.866,0,0,0,1)); //Z 30%
-                l_ee_rot.setBasis(tf::Matrix3x3(0.906,0.422,0,-0.422,0.906,0,0,0,1)); //Z 25%
+                l_ee_rot.setBasis(tf::Matrix3x3(0.906,0.422,0,-0.422,0.906,0,0,0,1)); //Z -25%
                 l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-//                l_ee_rot.setBasis(tf::Matrix3x3(1, 0, 0, 0, 0.965,-0.25, 0, 0.25, 0.965)); //X
-//                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
 
-//                // -> Transform back to Robot
-
+                // -> Transform back to Robot
                 l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
-                l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.5) );
+                l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.75) );
+
+                // Don't Care about master
+                if (r_pos_err > 0.02)
+                        r_des_ee_pose = r_curr_ee_pose;
         }
         else
             l_des_ee_pose = l_mNextRobotEEPose;
@@ -139,13 +139,6 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         // Make next pose the current pose for open-loop simulation
         if (just_visualize==true)
             initial_config=false;
-
-        // CHECK If orientation error is VERY low or nan because of qdiff take target orientation
-        if (r_att_ori_err < 0.005 || isnan(r_att_ori_err)) //[rad] and [m]//
-            r_des_ee_pose.setRotation(tf::Quaternion(right_final_target.getRotation()).normalize());
-
-        if (l_att_ori_err < 0.005 || isnan(l_att_ori_err)) //[rad] and [m]//
-            l_des_ee_pose.setRotation(tf::Quaternion(left_final_target.getRotation()).normalize());
 
         //******************************//
         //  Send the computed ee poses  //
@@ -156,18 +149,19 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         as_.publishFeedback(feedback_);
 
         if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
+            ROS_INFO_STREAM("POSITION ERROR REACHED!");
             if (phase == PHASE_PEEL){
                 sendPose(r_curr_ee_pose, l_curr_ee_pose);
                 break;
             }
-            else{
-                if((r_ori_err < orientationThreshold || isnan(r_ori_err)) && (l_ori_err < orientationThreshold || isnan(l_ori_err))){
+            else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
+                ROS_INFO_STREAM("RIGHT ORIENTATION ERROR REACHED!");
+                if((l_ori_err < orientationThreshold) || isnan(l_ori_err)){
+                    ROS_INFO_STREAM("LEFT ORIENTATION ERROR REACHED!");
                     sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
                 }
             }
-
-
         }
 
         loop_rate.sleep();
