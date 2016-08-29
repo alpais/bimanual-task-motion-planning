@@ -93,13 +93,11 @@ bool BimanualActionServer::uncoupled_learned_model_execution(TaskPhase phase, CD
 
         // Compute Next Desired EE Pose for Right Arm
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
-//        right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
         toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
         r_des_ee_pose = r_mNextRobotEEPose;
 
         // Compute Next Desired EE Pose for Left Arm
         left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
-//        left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
         l_des_ee_pose = l_mNextRobotEEPose;
 

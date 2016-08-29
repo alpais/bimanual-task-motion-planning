@@ -12,10 +12,11 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
     ROS_INFO_STREAM(" Model DT "                    << model_dt);
 
-    // Convert attractors to world frame
+
     tf::Transform  right_final_target, left_final_target;
 
-    // Master Arm Stays in the Position/Orientation for all but ROTATE/REACH
+    // Master Arm Stays in the Position/Orientation for all but ROTATE/REACH, here a give a fixed rotation value
+    // 45 degrees on the Z axis (Should be substituted by vision - no time for this now - subscribed to /zuch/feats)
     if (phase == PHASE_ROTATE){
         right_final_target = r_ee_pose;
         tf::Transform delta_rot; delta_rot.setIdentity();
@@ -27,8 +28,31 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     else
         right_final_target = r_ee_pose;
 
-    // Slave Arm has Attractor on Object
-    left_final_target.mult(task_frame, left_att);
+
+    // Slave Arm has Attractor on Object relative to a Right Hand Fixed RF
+    // (SHould be substituted by vision (i.e. compute attractors from point cloud) - no time for this now)
+    if (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL){
+        tf::Transform fixed_right_arm_rf;
+        fixed_right_arm_rf.setIdentity();
+        fixed_right_arm_rf.setRotation(tf::Quaternion(0.589, 0.691, -0.259, 0.329));
+        fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
+
+        if (phase == PHASE_REACH_TO_PEEL){
+            tf::Transform fixed_reach_to_peel_attr;
+            fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.148, -0.005, 0.247));
+            fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.549, 0.654, -0.284, 0.436));
+            left_final_target.mult(fixed_right_arm_rf,fixed_reach_to_peel_attr);
+
+        }else{
+
+            tf::Transform fixed_peel_attr;
+            fixed_peel_attr.setOrigin(tf::Vector3(-0.164, -0.025, 0.375));
+            fixed_peel_attr.setRotation(tf::Quaternion(-0.503, 0.650, -0.307, 0.480));
+            left_final_target.mult(fixed_right_arm_rf,fixed_peel_attr);
+        }
+    }
+    else
+        left_final_target.mult(task_frame, left_att);
 
 
     // Model Task Frame
@@ -111,7 +135,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
         // Transformation for PHASE_REACH_TO_PEEL Model
-        if (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL){
+        if (phase == PHASE_REACH_TO_PEEL){
                 tf::Transform  l_ee_rot, ee_2_rob;
                 l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
@@ -119,10 +143,18 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
 
                 // -> Apply Rotation (pi on Y in Origin RF)
-                l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,1,0,0,0,-1)); //Y
+                l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,-1,0,0,0,1)); //z (pi)
                 l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-                l_ee_rot.setBasis(tf::Matrix3x3(0.906,0.422,0,-0.422,0.906,0,0,0,1)); //Z -25%
+                //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
+//                l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
+                l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,-0.1736,0.98480,0,-0.98480,-0.1736)); //x (-100 dg)
                 l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+
+                // Old attractor
+//                l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,1,0,0,0,-1)); //Y (pi)
+//                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+//                                l_ee_rot.setBasis(tf::Matrix3x3(0.906,0.422,0,-0.422,0.906,0,0,0,1)); //Z -25%
+//                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
 
                 // -> Transform back to Robot
                 l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
