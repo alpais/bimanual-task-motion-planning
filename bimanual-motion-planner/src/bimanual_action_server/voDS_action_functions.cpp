@@ -106,7 +106,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
             if(phase ==  PHASE_INIT_REACH) {
                 ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");
                 if (bWaitForForces_right_arm)	{
-                    bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.07, 0.05, 7);
+                    bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.07, 0.05, 5);
                     return x_r_arm;
                 }
             }else if(phase ==  PHASE_RETRACT){

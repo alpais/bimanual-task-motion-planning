@@ -21,7 +21,7 @@ def query_init_attractors():
 	rA_p0_attr = geometry_msgs.msg.Transform()
 	rA_p0_attr.translation.x = -0.118
 	rA_p0_attr.translation.y = 0.080 
-	rA_p0_attr.translation.z = 0.248
+	rA_p0_attr.translation.z = 0.268
 	rA_p0_attr.rotation.x    = 0.775 
 	rA_p0_attr.rotation.y    = 0.521 
 	rA_p0_attr.rotation.z    = -0.157             
@@ -29,14 +29,13 @@ def query_init_attractors():
 
 	# Phase 0 Left Arm Attractor in Task RF
 	lA_p0_attr = geometry_msgs.msg.Transform()	      
-	lA_p0_attr.translation.x = -0.066   
-	lA_p0_attr.translation.y = -0.326  
-	lA_p0_attr.translation.z = 0.077
-	lA_p0_attr.rotation.x    = 0.063  
-	lA_p0_attr.rotation.y    = 0.844 
-	lA_p0_attr.rotation.z    = 0.528 
-	lA_p0_attr.rotation.w    = -0.067
-
+	lA_p0_attr.translation.x = -0.115    
+	lA_p0_attr.translation.y = -0.326   
+	lA_p0_attr.translation.z = 0.115
+	lA_p0_attr.rotation.x    = 0.078 
+	lA_p0_attr.rotation.y    = 0.793  
+	lA_p0_attr.rotation.z    = 0.600  
+	lA_p0_attr.rotation.w    = -0.075
 
 	return rA_p0_attr, lA_p0_attr
 

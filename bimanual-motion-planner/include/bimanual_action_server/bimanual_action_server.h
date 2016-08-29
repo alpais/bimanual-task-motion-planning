@@ -50,7 +50,7 @@
 #include "netft_rdt_driver/String_cmd.h"
 
 #define MAX_PEELING_FORCE	15
-#define FORCE_WAIT_TOL		9
+#define FORCE_WAIT_TOL		7
 #define R_ARM_ID            1
 #define L_ARM_ID            2
 #define DT                  0.002

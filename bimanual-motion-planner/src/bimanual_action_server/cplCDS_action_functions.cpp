@@ -35,20 +35,27 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     if (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL){
         tf::Transform fixed_right_arm_rf;
         fixed_right_arm_rf.setIdentity();
-        fixed_right_arm_rf.setRotation(tf::Quaternion(0.589, 0.691, -0.259, 0.329));
+        fixed_right_arm_rf.setRotation(tf::Quaternion(0.807, 0.467, -0.145, 0.332));
         fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
 
         if (phase == PHASE_REACH_TO_PEEL){
             tf::Transform fixed_reach_to_peel_attr;
-            fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.148, -0.005, 0.247));
-            fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.549, 0.654, -0.284, 0.436));
+
+            //- Translation: [-0.130, 0.073, 0.238]
+            //- Rotation: in Quaternion [-0.333, 0.753, -0.453, 0.342]
+
+            fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.130, 0.073, 0.238));
+            fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342));
             left_final_target.mult(fixed_right_arm_rf,fixed_reach_to_peel_attr);
 
         }else{
 
+            //- Translation: [-0.155, 0.066, 0.367]
+            //- Rotation: in Quaternion [-0.297, 0.738, -0.492, 0.354]
+
             tf::Transform fixed_peel_attr;
-            fixed_peel_attr.setOrigin(tf::Vector3(-0.164, -0.025, 0.375));
-            fixed_peel_attr.setRotation(tf::Quaternion(-0.503, 0.650, -0.307, 0.480));
+            fixed_peel_attr.setOrigin(tf::Vector3(-0.155, 0.066, 0.367));
+            fixed_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342));
             left_final_target.mult(fixed_right_arm_rf,fixed_peel_attr);
         }
     }
@@ -143,19 +150,14 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 // Transform Attractor to Origin
                 l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
 
-                // -> Apply Rotation (pi on Y in Origin RF)
+                // -> Apply Rotation (pi on Z in Origin RF)
                 l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,-1,0,0,0,1)); //z (pi)
                 l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-                //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
-//                l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
-                l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,-0.1736,0.98480,0,-0.98480,-0.1736)); //x (-100 dg)
-                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
 
-                // Old attractor
-//                l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,1,0,0,0,-1)); //Y (pi)
-//                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-//                                l_ee_rot.setBasis(tf::Matrix3x3(0.906,0.422,0,-0.422,0.906,0,0,0,1)); //Z -25%
-//                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+                // -> Apply Rotation (pi on X in Origin RF)
+                //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
+                l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
+                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
 
                 // -> Transform back to Robot
                 l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
