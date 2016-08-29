@@ -22,6 +22,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         tf::Transform delta_rot; delta_rot.setIdentity();
         right_final_target.mult(r_ee_pose.inverse(),right_final_target);
         delta_rot.setBasis(tf::Matrix3x3(0.707,-0.707,0,0.707,0.707,0,0,0,1)); // Rotate around Z EE RF (45dg)
+        delta_rot.setBasis(tf::Matrix3x3(0.866,-0.5,0,0.5,0.866,0,0,0,1)); // Rotate around Z EE RF (30dg)
         right_final_target.mult(delta_rot,right_final_target);
         right_final_target.mult(r_ee_pose,right_final_target);
     }
