@@ -82,13 +82,13 @@ def query_rotate_attractors():
 	rA_p3_attr.rotation.w    = 0.320
 
 	lA_p3_attr = geometry_msgs.msg.Transform()
-	lA_p3_attr.translation.x = -0.128 
-	lA_p3_attr.translation.y = -0.306  
-	lA_p3_attr.translation.z = 0.104
-	lA_p3_attr.rotation.x    = 0.049  
-	lA_p3_attr.rotation.y    = 0.827 
-	lA_p3_attr.rotation.z    = 0.557 
-	lA_p3_attr.rotation.w    = -0.052
+	lA_p3_attr.translation.x = -0.075 
+	lA_p3_attr.translation.y = -0.351   
+	lA_p3_attr.translation.z = 0.058
+	lA_p3_attr.rotation.x    = 0.066 
+	lA_p3_attr.rotation.y    = 0.851  
+	lA_p3_attr.rotation.z    = 0.518  
+	lA_p3_attr.rotation.w    = -0.051
 
 	return rA_p3_attr,lA_p3_attr	
 
