@@ -35,12 +35,12 @@ void BimanualActionServer::initialize() {
     _nh.getParam("wait_for_force_right", bWaitForForces_right_arm);
     _nh.getParam("wait_for_force_left", bWaitForForces_left_arm);
 
-    if(!_nh.getParam("wait_for_force", bWaitForForces_right_arm)) {
+    if(!_nh.getParam("wait_for_force_right", bWaitForForces_right_arm)) {
         ROS_INFO_STREAM("Set the Waiting for forces flag");
         bWaitForForces_right_arm = true;
     }
 
-    if(!_nh.getParam("wait_for_force", bWaitForForces_left_arm)) {
+    if(!_nh.getParam("wait_for_force_left", bWaitForForces_left_arm)) {
         ROS_INFO_STREAM("Set the Waiting for forces flag");
         bWaitForForces_left_arm = true;
     }

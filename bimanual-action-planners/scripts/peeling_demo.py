@@ -20,21 +20,21 @@ def query_init_attractors():
 	# Phase 0 Right Arm Attractor in Task RF
 	rA_p0_attr = geometry_msgs.msg.Transform()
 	rA_p0_attr.translation.x = -0.118
-	rA_p0_attr.translation.y = 0.080 
-	rA_p0_attr.translation.z = 0.268
-	rA_p0_attr.rotation.x    = 0.775 
-	rA_p0_attr.rotation.y    = 0.521 
+	rA_p0_attr.translation.y =  0.080 
+	rA_p0_attr.translation.z =  0.268
+	rA_p0_attr.rotation.x    =  0.775 
+	rA_p0_attr.rotation.y    =  0.521 
 	rA_p0_attr.rotation.z    = -0.157             
-	rA_p0_attr.rotation.w    = 0.320
+	rA_p0_attr.rotation.w    =  0.320
 
 	# Phase 0 Left Arm Attractor in Task RF
 	lA_p0_attr = geometry_msgs.msg.Transform()	      
 	lA_p0_attr.translation.x = -0.115    
 	lA_p0_attr.translation.y = -0.326   
-	lA_p0_attr.translation.z = 0.115
-	lA_p0_attr.rotation.x    = 0.078 
-	lA_p0_attr.rotation.y    = 0.793  
-	lA_p0_attr.rotation.z    = 0.600  
+	lA_p0_attr.translation.z =  0.115
+	lA_p0_attr.rotation.x    =  0.078 
+	lA_p0_attr.rotation.y    =  0.793  
+	lA_p0_attr.rotation.z    =  0.600  
 	lA_p0_attr.rotation.w    = -0.075
 
 	return rA_p0_attr, lA_p0_attr
@@ -47,20 +47,20 @@ def query_peeling_attractors():
 	lA_p1_attr = geometry_msgs.msg.Transform()
 	lA_p1_attr.translation.x = -0.115
 	lA_p1_attr.translation.y = -0.10 
-	lA_p1_attr.translation.z = 0.287
-	lA_p1_attr.rotation.x    = 0.112 
-	lA_p1_attr.rotation.y    = 0.949 
-	lA_p1_attr.rotation.z    = 0.293 
+	lA_p1_attr.translation.z =  0.287
+	lA_p1_attr.rotation.x    =  0.112 
+	lA_p1_attr.rotation.y    =  0.949 
+	lA_p1_attr.rotation.z    =  0.293 
 	lA_p1_attr.rotation.w    = -0.037
 
 	# Phase 2 ==== Peel ===
 	lA_p2_attr = geometry_msgs.msg.Transform()
 	lA_p2_attr.translation.x = -0.096 
 	lA_p2_attr.translation.y = -0.253  	
-	lA_p2_attr.translation.z = 0.185
-	lA_p2_attr.rotation.x    = 0.112 
-	lA_p2_attr.rotation.y    = 0.949 
-	lA_p2_attr.rotation.z    = 0.293 
+	lA_p2_attr.translation.z =  0.185
+	lA_p2_attr.rotation.x    =  0.112 
+	lA_p2_attr.rotation.y    =  0.949 
+	lA_p2_attr.rotation.z    =  0.293 
 	lA_p2_attr.rotation.w    = -0.037
 
 	return lA_p1_attr,lA_p2_attr
@@ -73,20 +73,20 @@ def query_rotate_attractors():
 	# Phase 3 ==== Rotate and Reach ===
 	rA_p3_attr = geometry_msgs.msg.Transform()
 	rA_p3_attr.translation.x = -0.118
-	rA_p3_attr.translation.y = 0.080 
-	rA_p3_attr.translation.z = 0.248
-	rA_p3_attr.rotation.x    = 0.775 
-	rA_p3_attr.rotation.y    = 0.521 
+	rA_p3_attr.translation.y =  0.080 
+	rA_p3_attr.translation.z =  0.248
+	rA_p3_attr.rotation.x    =  0.775 
+	rA_p3_attr.rotation.y    =  0.521 
 	rA_p3_attr.rotation.z    = -0.157             
-	rA_p3_attr.rotation.w    = 0.320
+	rA_p3_attr.rotation.w    =  0.320
 
 	lA_p3_attr = geometry_msgs.msg.Transform()
 	lA_p3_attr.translation.x = -0.075 
 	lA_p3_attr.translation.y = -0.351   
-	lA_p3_attr.translation.z = 0.058
-	lA_p3_attr.rotation.x    = 0.066 
-	lA_p3_attr.rotation.y    = 0.851  
-	lA_p3_attr.rotation.z    = 0.518  
+	lA_p3_attr.translation.z =  0.115
+	lA_p3_attr.rotation.x    =  0.066 
+	lA_p3_attr.rotation.y    =  0.851  
+	lA_p3_attr.rotation.z    =  0.518  
 	lA_p3_attr.rotation.w    = -0.051
 
 	return rA_p3_attr,lA_p3_attr	
@@ -98,22 +98,22 @@ def query_retract_attractors():
 	# Phase 4 Right Arm Attractor in Task RF
 	rA_p4_attr = geometry_msgs.msg.Transform()
 	rA_p4_attr.translation.x = -0.104
-	rA_p4_attr.translation.y = 0.498 	
-	rA_p4_attr.translation.z = 0.574
-	rA_p4_attr.rotation.x    = 0.884 
-	rA_p4_attr.rotation.y    = 0.282 
+	rA_p4_attr.translation.y =  0.498 	
+	rA_p4_attr.translation.z =  0.574
+	rA_p4_attr.rotation.x    =  0.884 
+	rA_p4_attr.rotation.y    =  0.282 
 	rA_p4_attr.rotation.z    = -0.133
-	rA_p4_attr.rotation.w    = 0.348 
+	rA_p4_attr.rotation.w    =  0.348 
 
 
 	# Phase 4 Left Arm Attractor in Task RF
 	lA_p4_attr = geometry_msgs.msg.Transform()
 	lA_p4_attr.translation.x = -0.078 
 	lA_p4_attr.translation.y = -0.434 	
-	lA_p4_attr.translation.z = 0.504
-	lA_p4_attr.rotation.x    = 0.112 
-	lA_p4_attr.rotation.y    = 0.949 
-	lA_p4_attr.rotation.z    = 0.293 
+	lA_p4_attr.translation.z =  0.504
+	lA_p4_attr.rotation.x    =  0.112 
+	lA_p4_attr.rotation.y    =  0.949 
+	lA_p4_attr.rotation.z    =  0.293 
 	lA_p4_attr.rotation.w    = -0.037
 	
 	return rA_p4_attr, lA_p4_attr

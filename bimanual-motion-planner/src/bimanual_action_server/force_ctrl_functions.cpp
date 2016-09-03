@@ -87,7 +87,7 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
     msg_pose.pose.orientation.z = arm_pose.getRotation().z();
     msg_pose.pose.orientation.w = arm_pose.getRotation().w();
 
-    ROS_INFO_STREAM("Finding table up to max dist. "<< min_height <<" with vertical speed "<< vertical_speed <<" and threshold force "<<thr_force<<"N.");
+    ROS_INFO_STREAM("Finding object up to max dist. "<< min_height <<" with vertical speed "<< vertical_speed <<" and threshold force "<<thr_force<<"N.");
     while(ros::ok()) {
         msg_pose.pose.position.z = msg_pose.pose.position.z - vertical_speed/rate;
 
@@ -109,10 +109,11 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
             arm_pose.setRotation(l_ee_pose.getRotation());
         }
 
-        ROS_INFO_STREAM("Current force Z:" << ee_ft[2] << " and Z: " << fabs(arm_pose.getOrigin().z()-startz));
+        ROS_INFO_STREAM("Current force Z:" << ee_ft[2] << " and Z pos: " << fabs(arm_pose.getOrigin().z()-startz));
 
         // Go down until force reaches the threshold
         if(fabs(ee_ft[2]) > thr_force) {
+            ROS_INFO("MAX Force applied");
             break;
         }
         if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
@@ -127,9 +128,9 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
         return false;
     }
 
-    tf::Vector3 table(arm_pose.getOrigin());
-    ROS_INFO_STREAM("Table found at height " << table[2]);
-    msg_pose.pose.position.z = table[2];
+    tf::Vector3 obj_to_touch(arm_pose.getOrigin());
+    ROS_INFO_STREAM("Object for arm " << arm_id << " found at height " << obj_to_touch[2]);
+    msg_pose.pose.position.z = obj_to_touch[2];
 
     if (arm_id == R_ARM_ID){
         r_pub_.publish(msg_pose);
@@ -138,8 +139,8 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
         l_pub_.publish(msg_pose);
     }
 
-    if(!simulation)
-        sendAndWaitForNormalForce(0, arm_id);
+//    if(!simulation)
+//        sendAndWaitForNormalForce(0, arm_id);
 
     return true;
 }

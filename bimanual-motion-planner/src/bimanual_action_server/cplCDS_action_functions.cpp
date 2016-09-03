@@ -144,28 +144,28 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         // Transformation for PHASE_REACH_TO_PEEL Model
         if (phase == PHASE_REACH_TO_PEEL){
-                tf::Transform  l_ee_rot, ee_2_rob;
-                l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
+            tf::Transform  l_ee_rot, ee_2_rob;
+            l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
-                // Transform Attractor to Origin
-                l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
+            // Transform Attractor to Origin
+            l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
 
-                // -> Apply Rotation (pi on Z in Origin RF)
-                l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,-1,0,0,0,1)); //z (pi)
-                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+            // -> Apply Rotation (pi on Z in Origin RF)
+            l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,-1,0,0,0,1)); //z (pi)
+            l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
 
-                // -> Apply Rotation (pi on X in Origin RF)
-                //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
-                l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
-                l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+            // -> Apply Rotation (pi on X in Origin RF)
+            //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
+            l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
+            l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
 
-                // -> Transform back to Robot
-                l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
-                l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.75) );
+            // -> Transform back to Robot
+            l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
+            l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.75) );
 
-                // Don't Care about master
-                if (r_pos_err > 0.02)
-                        r_des_ee_pose = r_curr_ee_pose;
+            // Don't Care about master
+            if (r_pos_err > 0.02)
+                r_des_ee_pose = r_curr_ee_pose;
         }
         else
             l_des_ee_pose = l_mNextRobotEEPose;
@@ -184,23 +184,40 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         as_.publishFeedback(feedback_);
 
         if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
-            ROS_INFO_STREAM("POSITION ERROR REACHED!");
+
+            ROS_INFO_STREAM("POSITION DYNAMICS CONVERGED!");
+
+            if (phase == PHASE_REACH_TO_PEEL){
+                ROS_INFO_STREAM("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
+                //sendPose(r_curr_ee_pose, l_curr_ee_pose);
+                if (bWaitForForces_left_arm)	{
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.07, 0.01, 3);
+                    return x_l_arm;
+                }
+                ROS_INFO("Finished Finding Object LOOP");
+                break;
+            }
+
             if (phase == PHASE_PEEL){
                 sendPose(r_curr_ee_pose, l_curr_ee_pose);
                 break;
             }
+
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
-                ROS_INFO_STREAM("RIGHT ORIENTATION ERROR REACHED!");
+                ROS_INFO_STREAM("RIGHT ORIENTATION DYN CONVERGED!");
                 if((l_ori_err < orientationThreshold) || isnan(l_ori_err)){
-                    ROS_INFO_STREAM("LEFT ORIENTATION ERROR REACHED!");
+                    ROS_INFO_STREAM("LEFT ORIENTATION DYN CONVERGED!");
                     sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
                 }
             }
+            //            break;
         }
 
+        ROS_INFO("SLEEEPING NOW");
         loop_rate.sleep();
     }
+    ROS_INFO("OUT OF LOOP CDS");
     delete right_cdsRun;
     delete left_cdsRun;
 
