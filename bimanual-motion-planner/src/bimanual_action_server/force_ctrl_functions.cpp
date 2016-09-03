@@ -95,7 +95,12 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
 
     ROS_INFO_STREAM("Finding object up to max dist. "<< min_height <<" with vertical speed "<< vertical_speed <<" and threshold force "<<thr_force<<"N.");
     while(ros::ok()) {
-        msg_pose.pose.position.z = msg_pose.pose.position.z - vertical_speed/rate;
+        msg_pose.pose.position.z -= vertical_speed/rate;
+
+        if (arm_id == L_ARM_ID)
+        {
+            msg_pose.pose.position.y += vertical_speed/rate;
+        }
 
         if (arm_id == R_ARM_ID){
             r_pub_.publish(msg_pose);
