@@ -65,6 +65,11 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
     Eigen::VectorXd ee_ft;
     ee_ft.resize(6);
 
+    int left_arm = arm_id == L_ARM_ID;
+    double offset_X = left_arm ? left_arm_base.getOrigin().getX() : 0;
+    double offset_Y = left_arm ? left_arm_base.getOrigin().getY() : 0;
+    double offset_Z = left_arm ? left_arm_base.getOrigin().getZ() : 0;
+
     // Figure out if it is the right arm or the left arm
     tf::Pose arm_pose;
     if (arm_id == R_ARM_ID){
@@ -76,12 +81,13 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
         arm_pose.setRotation(l_ee_pose.getRotation());
     }
 
+
     double startz = arm_pose.getOrigin().z();
     ROS_INFO_STREAM("Start Z:" << startz);
 
-    msg_pose.pose.position.x = arm_pose.getOrigin().x();
-    msg_pose.pose.position.y = arm_pose.getOrigin().y();
-    msg_pose.pose.position.z = startz;
+    msg_pose.pose.position.x = arm_pose.getOrigin().x() + offset_X;
+    msg_pose.pose.position.y = arm_pose.getOrigin().y() + offset_Y;
+    msg_pose.pose.position.z = arm_pose.getOrigin().z() + offset_Z;
     msg_pose.pose.orientation.x = arm_pose.getRotation().x();
     msg_pose.pose.orientation.y = arm_pose.getRotation().y();
     msg_pose.pose.orientation.z = arm_pose.getRotation().z();
