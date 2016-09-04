@@ -65,6 +65,7 @@ Receive images creates point cloud
 
 Zucchini segmentation
 -> roslaunch process_table_scene bimanual_scene.launch
+!!! press 'r' twice to see the zucchini and the table
 
 Object Features
 -> rosrun object_feature_generator feature_generator_node
