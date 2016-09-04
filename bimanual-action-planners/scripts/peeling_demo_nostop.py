@@ -13,9 +13,18 @@ from select import select
 import bimanual_action_planners.msg
 import tf
 import geometry_msgs.msg
+import subprocess
 from kuka_fri_bridge.msg    import JointStateImpedance
 
- 
+robot_active = 0;
+kinect_active = 1;
+
+def query_zucchini_feature(axis):
+    p = subprocess.Popen(["bash", "-c", "rostopic echo -n 1 /zucchini/feats/wrench/force/" + axis + " | head -n 1"], stdout=subprocess.PIPE)
+    out = p.communicate()
+    (out, _) = out
+    return float(out)
+
 def query_init_attractors():
     # Phase 0 ==== Initial Reach ===
 
@@ -163,47 +172,86 @@ def execute_peeling_planner():
     raw_input('Press Enter to Run Bimanual REACH with Coordinated Reaching DS')
     print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 
+    global robot_active
+    global kinect_active
+
     rA_p0_attr, lA_p0_attr = query_init_attractors()
 
     # Reach with Coordinated DS
-    action_type = 'BIMANUAL_REACH'  
-    result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
+    if robot_active:
+        action_type = 'BIMANUAL_REACH'  
+        result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
     
     lA_p1_attr,lA_p2_attr = query_peeling_attractors()
 
     for run in range(1,4):
 
-        for peel in range(1,5):
+        for peel in range(1,6):
 
             # Reach To Peel with Coupled CDS
-            action_type = 'COUPLED_LEARNED_MODEL'  
-            result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p1_attr, 10)
+            if robot_active:
+                action_type = 'COUPLED_LEARNED_MODEL'  
+                result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p1_attr, 10)
 
             # Reach To Peel with Coupled CDS
-            action_type = 'COUPLED_LEARNED_MODEL'  
-            result = send_goal(action_type, 'phase2', task_frame, rA_p0_attr, lA_p2_attr, 10)
+            if robot_active:
+                action_type = 'COUPLED_LEARNED_MODEL'  
+                result = send_goal(action_type, 'phase2', task_frame, rA_p0_attr, lA_p2_attr, 10)
 
-            print "Press any key to rotate..."
-            timeout = 3
-            rlist, wlist, xlist = select([sys.stdin], [], [], timeout)
+            rotate = 0;
+            if kinect_active:
+                x = query_zucchini_feature("x")
+                y = query_zucchini_feature("y")
+                z = query_zucchini_feature("z")
+                print "Zucchini features:"
+                print "x:", x
+                print "y:", y
+                print "z:", z
 
+                # decide if rotation should occur:
+                if x > 90 and y > 90 and z > 50:
+                    rotate = 1;
+                
+                print " - based on features => rotate=", rotate
 
-            if rlist:
-                sys.stdin.read(1)
-                break
+                if peel <= 2 and rotate == 1:
+                    print " - less than 2 peeling actions took place => no rotation"
+                    rotate = 0
+
+                if peel >= 5 and rotate == 0:
+                    print " - more than 5 peeling actions took place => rotate"
+                    rotate = 1
+
+                print "Final decision: rotate =", rotate
+
             else:
-                print "Continue..."
+
+                timeout = 3
+                print "Press ENTER in the next", timeout, "seconds to rotate..."
+                rlist, wlist, xlist = select([sys.stdin], [], [], timeout)
+
+                if rlist:
+                    print "Rotating..."
+                    sys.stdin.read(1)
+                    rotate = 1
+                else:
+                    print "Continue to peel..."
+
+            if rotate:
+                break
 
         if run != 3:
             print "Rotating..."
             # Rotate Master and Retract Slave
-            rA_p3_attr,lA_p3_attr = query_rotate_attractors()
-            result = send_goal(action_type, 'phase3', task_frame, rA_p3_attr, lA_p3_attr, 10)
+            if robot_active:
+                rA_p3_attr,lA_p3_attr = query_rotate_attractors()
+                result = send_goal(action_type, 'phase3', task_frame, rA_p3_attr, lA_p3_attr, 10)
     
     # Reach with Decoupled DS
     rA_p4_attr, lA_p4_attr = query_retract_attractors()
-    action_type = 'BIMANUAL_REACH'  
-    result = send_goal(action_type, 'phase4',  task_frame, rA_p4_attr, lA_p4_attr, 10)
+    if robot_active:
+        action_type = 'BIMANUAL_REACH'  
+        result = send_goal(action_type, 'phase4',  task_frame, rA_p4_attr, lA_p4_attr, 10)
 
 
 
