@@ -2,10 +2,14 @@ passwords (lasapc18 + beast): olivejuice
 password lasapc39: lasarobots
 
 
+====================
+
 Beast
 
 -> roscore
 
+
+====================
 
 lasapc18
 
@@ -15,6 +19,7 @@ control 1
 
 -> roslaunch kinect2_bridge kinect2_bridge.launch
 
+====================
 
 lasapc39
 
@@ -22,26 +27,39 @@ lasapc39
 pg down pg down
 control 1
 
+====================
 
 *BEAST (Motion/Action)*
 
 Visualizer + FT Sensors + Robot
 -> roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true
 
+====================
 
 State-Tranformers
 -> roslaunch state_transformers bimanual_joint_ctrls_real.launch 
 
+====================
 
 Action Server
 -> roslaunch bimanual_motion_planner bimanual_action_server.launch
+
+!!! To visualize the trail of the RF in simulation (usefull for seeing the dynamics with both position and orientation change)
+
+-> roslaunch bimanual_motion_planner bimanual_action_server.launch simulation:=true just_visualize:=true
+
+
+====================
 
 Action Planner
 -> rosrun bimanual_action_planners virtual_object_test.py (VO)
 
 -> rosrun bimanual_action_planners decoupled_test.py
 
+====================
+
 *BEAST (Kinect)*
+
 Receive images creates point cloud
 -> rosrun kinect2_receiver publisher_node
 

@@ -106,6 +106,11 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
+    double z_force_correction = 0;
+    double z_desired_force = 8;
+    double z_force_correction_max = 0.05; // 1cm
+    double z_force_correction_delta = 0.001; // 1 mm
+
     ROS_INFO("Execution started");
     while(ros::ok()) {
 
@@ -113,6 +118,12 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         if (initial_config == true){
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
+            if (phase == PHASE_PEEL) {
+                // trick the CDS to think there's no correction
+                tf::Vector3& origin = l_curr_ee_pose.getOrigin();
+                origin[2] += z_force_correction;
+                l_curr_ee_pose.setOrigin(origin);
+            }
         }
         else{ // For visualization of trajectories
             r_curr_ee_pose = r_des_ee_pose;
@@ -171,6 +182,23 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             l_des_ee_pose = l_mNextRobotEEPose;
 
 
+        if (phase == PHASE_PEEL){
+            // TODO Check the force first
+
+            Eigen::VectorXd ee_ft;
+            ee_ft.resize(6);
+            ee_ft = l_curr_ee_ft;
+
+            double z_crt_force = ee_ft[2];
+            if (z_crt_force < z_desired_force && z_force_correction <= z_force_correction_max){
+                z_force_correction += z_force_correction_delta;
+            }
+//            l_des_ee_pose.setOrigin().z(z_force_correction);
+            tf::Vector3& origin = l_des_ee_pose.getOrigin();
+            origin[2] -= z_force_correction;
+            l_des_ee_pose.setOrigin(origin);
+        }
+
         // Make next pose the current pose for open-loop simulation
         if (just_visualize==true)
             initial_config=false;
@@ -191,7 +219,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 ROS_INFO_STREAM("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
                 //sendPose(r_curr_ee_pose, l_curr_ee_pose);
                 if (bWaitForForces_left_arm)	{
-                    bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.07, 0.01, 3);
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.07, 0.01, 8);
                     return x_l_arm;
                 }
                 ROS_INFO("Finished Finding Object LOOP");
@@ -222,3 +250,5 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     delete left_cdsRun;
 
 }
+
+

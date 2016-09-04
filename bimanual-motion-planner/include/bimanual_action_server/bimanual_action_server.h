@@ -69,6 +69,7 @@ protected:
         PHASE_PEEL           = 2,
         PHASE_ROTATE         = 3,
         PHASE_RETRACT        = 4,
+//        PHASE_PEEL_WITH_FORCE= 5,
     };
 
 
