@@ -16,8 +16,8 @@ import geometry_msgs.msg
 import subprocess
 from kuka_fri_bridge.msg    import JointStateImpedance
 
-robot_active = 0;
-kinect_active = 1;
+robot_active = 1;
+kinect_active = 0;
 
 def query_zucchini_feature(axis):
     p = subprocess.Popen(["bash", "-c", "rostopic echo -n 1 /zucchini/feats/wrench/force/" + axis + " | head -n 1"], stdout=subprocess.PIPE)
@@ -181,6 +181,8 @@ def execute_peeling_planner():
     if robot_active:
         action_type = 'BIMANUAL_REACH'  
         result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
+
+    #return;
     
     lA_p1_attr,lA_p2_attr = query_peeling_attractors()
 
@@ -209,7 +211,8 @@ def execute_peeling_planner():
                 print "z:", z
 
                 # decide if rotation should occur:
-                if x > 90 and y > 90 and z > 50:
+                # if x > 90 and y > 90 and z > 50:
+                if y > 120:
                     rotate = 1;
                 
                 print " - based on features => rotate=", rotate

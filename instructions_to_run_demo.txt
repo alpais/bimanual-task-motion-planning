@@ -1,6 +1,3 @@
-passwords (lasapc18 + beast): olivejuice
-password lasapc39: lasarobots
-
 
 ====================
 
@@ -65,7 +62,11 @@ Receive images creates point cloud
 
 Zucchini segmentation
 -> roslaunch process_table_scene bimanual_scene.launch
+
 !!! press 'r' twice to see the zucchini and the table
+
+!!! after shutting down always do
+-> killall -9 filter_tabletop_scene
 
 Object Features
 -> rosrun object_feature_generator feature_generator_node
@@ -143,3 +144,5 @@ pose:
     w: 0.318918488267
 
 
+rosrun tf static_transform_publisher 0 0 0 0 0 -1.56 /left_arm/des_ee_tf /new_attr 10
+rosrun tf static_transform_publisher 0 0 0 0 0 -1.56 /left_attractor /new_attr 10
