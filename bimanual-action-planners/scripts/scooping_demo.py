@@ -18,24 +18,24 @@ def query_init_attractors():
 	# Phase 0 ==== Initial Reach ===
 
 	# Phase 0 Right Arm Attractor in Task RF
-	lA_p0_attr = geometry_msgs.msg.Transform()
-	lA_p0_attr.translation.x =  0.0555
-	lA_p0_attr.translation.y = -0.0789
-	lA_p0_attr.translation.z =  0.2675
-	lA_p0_attr.rotation.x    =  0.9463
-	lA_p0_attr.rotation.y    = -0.0400
-	lA_p0_attr.rotation.z    =  0.0389            
-	lA_p0_attr.rotation.w    = -0.3185
-
+	rA_p0_attr = geometry_msgs.msg.Transform()
+	rA_p0_attr.translation.x = -0.296
+	rA_p0_attr.translation.y =  0.197
+	rA_p0_attr.translation.z =  0.345
+	rA_p0_attr.rotation.x    =  0.358
+	rA_p0_attr.rotation.y    =  0.010
+	rA_p0_attr.rotation.z    =  0.166
+	rA_p0_attr.rotation.w    =  0.919
+ 
 	# Phase 0 Left Arm Attractor in Task RF
-	rA_p0_attr = geometry_msgs.msg.Transform()	      
-	rA_p0_attr.translation.x =  0.1031    
-	rA_p0_attr.translation.y = -0.8065  
-	rA_p0_attr.translation.z =  0.5188
-	rA_p0_attr.rotation.x    =  0.1210 
-	rA_p0_attr.rotation.y    =  0.6247 
-	rA_p0_attr.rotation.z    = -0.7691 
-	rA_p0_attr.rotation.w    = -0.0598
+	lA_p0_attr = geometry_msgs.msg.Transform()
+	lA_p0_attr.translation.x =  0.026
+	lA_p0_attr.translation.y = -0.553
+	lA_p0_attr.translation.z =  0.612
+	lA_p0_attr.rotation.x    =  0.113
+	lA_p0_attr.rotation.y    =  0.919
+	lA_p0_attr.rotation.z    =  0.376
+	lA_p0_attr.rotation.w    = -0.036
 
 	return rA_p0_attr, lA_p0_attr
 
