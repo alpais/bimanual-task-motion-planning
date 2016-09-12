@@ -1,0 +1,10 @@
+Right Arm
+=========
+name: ['right_arm_0_joint', 'right_arm_1_joint', 'right_arm_2_joint', 'right_arm_3_joint', 'right_arm_4_joint', 'right_arm_5_joint', 'right_arm_6_joint']
+position: [0.3972587287425995, 0.8868041038513184, 0.20790353417396545, -1.4087488651275635, 2.1793220043182373, 1.488296389579773, 2.2083287239074707]
+
+Left Arm 
+========
+name: ['left_arm_0_joint', 'left_arm_1_joint', 'left_arm_2_joint', 'left_arm_3_joint', 'left_arm_4_joint', 'left_arm_5_joint', 'left_arm_6_joint']
+position: [0.5730246901512146, 0.7742331027984619, -1.6307579278945923, -1.3443472385406494, 0.31480950117111206, 1.2196934223175049, 0.9303215146064758]
+
