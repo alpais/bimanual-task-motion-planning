@@ -9,10 +9,7 @@
 			<arg name="r_robot_base_frame"       default="/calib_right_arm_base_link"/>
 			<arg name="l_robot_base_frame"       default="/calib_left_arm_base_link"/>
 
-<!-- 	        <arg name="r_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Right"/>
-			<arg name="l_model_path"             default="$(find bimanual_motion_planner)../bimanual-task-models/test_task/Left"/> -->
 			<arg name="model_path"               default="$(find bimanual_motion_planner)../bimanual-task-models/peeling_task"/>
-
 
 		  <node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.403 -0.426 0.013 0 0 0 1  /world_frame /task_frame  100"/>
 
