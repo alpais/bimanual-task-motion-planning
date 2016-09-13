@@ -13,11 +13,17 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     ROS_INFO_STREAM(" Model DT "                    << model_dt);
 
 
+    // ======================================================================================================
+    // ========= Computing the target of the right and left arms for each action wrt the given attractors ===
+    // ======================================================================================================
+
     tf::Transform  right_final_target, left_final_target;
 
-    // Master Arm Stays in the Position/Orientation for all but ROTATE/REACH, here a give a fixed rotation value
-    // 45 degrees on the Z axis (Should be substituted by vision - no time for this now - subscribed to /zuch/feats)
-    if (phase == PHASE_ROTATE){
+    // ============ Right Arm ==========
+    // During the Peeling task the Master Arm Stays in the Position/Orientation for all but ROTATE/REACH,
+    // here a give a fixed rotation value of 45 degrees on the Z axis
+    // (Should be substituted by vision - no time for this now - subscribed to /zuch/feats)
+    if (task_id == PEELING_TASK_ID && phase == PHASE_ROTATE){
         right_final_target = r_ee_pose;
         tf::Transform delta_rot; delta_rot.setIdentity();
         right_final_target.mult(r_ee_pose.inverse(),right_final_target);
@@ -25,17 +31,24 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         delta_rot.setBasis(tf::Matrix3x3(0.866,-0.5,0,0.5,0.866,0,0,0,1)); // Rotate around Z EE RF (30dg)
         right_final_target.mult(delta_rot,right_final_target);
         right_final_target.mult(r_ee_pose,right_final_target);
+    } else if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
+        right_final_target.mult(task_frame, right_att);
     }
     else
         right_final_target = r_ee_pose;
 
+    // In the Scooping task the Master Arm maintains its position just in the scooping phase
+    // In depart it goes away few cm >> see Att in the python script
+    // In Trash it goes away even more
 
-    // Slave Arm has Attractor on Object relative to a Right Hand Fixed RF
-    // (SHould be substituted by vision (i.e. compute attractors from point cloud) - no time for this now)
-    if (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL){
+    // ============= Left Arm relative to the master arm ===========
+    // Slave Arm has Attractor on Object relative to a Right Fixed RF
+    // (Should be substituted by vision (i.e. compute attractors from point cloud) - no time for this now)
+    //  >>>>> Peeling TASK <<<<<
+    if (task_id == PEELING_TASK_ID && (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL)){
         tf::Transform fixed_right_arm_rf;
         fixed_right_arm_rf.setIdentity();
-        fixed_right_arm_rf.setRotation(tf::Quaternion(0.807, 0.467, -0.145, 0.332));
+        fixed_right_arm_rf.setRotation(tf::Quaternion(0.807, 0.467, -0.145, 0.332)); // so we set fixed attractors instead of taking them from the script? which are also fixed btw????
         fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
 
         if (phase == PHASE_REACH_TO_PEEL){
@@ -47,8 +60,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.130, 0.073, 0.238));
             fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342));
             left_final_target.mult(fixed_right_arm_rf,fixed_reach_to_peel_attr);
-
-        }else{
+        } else if(phase == PHASE_PEEL){
 
             //- Translation: [-0.155, 0.066, 0.367]
             //- Rotation: in Quaternion [-0.297, 0.738, -0.492, 0.354]
@@ -57,11 +69,24 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             fixed_peel_attr.setOrigin(tf::Vector3(-0.155, 0.066, 0.367));
             fixed_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342));
             left_final_target.mult(fixed_right_arm_rf,fixed_peel_attr);
-        }
-    }
-    else
-        left_final_target.mult(task_frame, left_att);
 
+        }
+        // >>>>> Scooping TASK <<<<
+    }else if(task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
+        // Transform the attractor given in task frame relative to the right arm frame
+/*        tf::Transform att_in_right_arm_rf;
+        att_in_right_arm_rf.setIdentity();
+        att_in_right_arm_rf.mult(right_final_target, left_att);
+*/        // set target of the left arm to the right arm frame
+        //left_final_target.mult(att_in_right_arm_rf, )
+    }
+    // >>>> in general >> Set the target of the left arm relative to the task frame
+    else
+        left_final_target.mult(task_frame, left_att); // final target in world
+
+    // ======================================================================================================
+    // ========= Initialize CDS models
+    // ======================================================================================================
 
     // Model Task Frame
     tf::Transform model_task_frame;
@@ -99,7 +124,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     left_cdsRun->postInit();
 
 
-    // Vairable for execution
+    // Variable for execution
     ros::Duration loop_rate(model_dt);
     tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
     tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
@@ -111,6 +136,10 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     double z_force_correction_max = 0.05; // 1cm
     double z_force_correction_delta = 0.001; // 1 mm
 
+    // ======================================================================================================
+    // ========= Real time loop
+    // ======================================================================================================
+
     ROS_INFO("Execution started");
     while(ros::ok()) {
 
@@ -118,7 +147,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         if (initial_config == true){
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
-            if (phase == PHASE_PEEL) {
+            if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL) {
                 // trick the CDS to think there's no correction
                 tf::Vector3& origin = l_curr_ee_pose.getOrigin();
                 origin[2] += z_force_correction;
@@ -154,7 +183,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
         // Transformation for PHASE_REACH_TO_PEEL Model
-        if (phase == PHASE_REACH_TO_PEEL){
+        if (task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL){
             tf::Transform  l_ee_rot, ee_2_rob;
             l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
@@ -182,7 +211,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             l_des_ee_pose = l_mNextRobotEEPose;
 
 
-        if (phase == PHASE_PEEL){
+        if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
             // TODO Check the force first
 
             Eigen::VectorXd ee_ft;
@@ -193,7 +222,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             if (z_crt_force < z_desired_force && z_force_correction <= z_force_correction_max){
                 z_force_correction += z_force_correction_delta;
             }
-//            l_des_ee_pose.setOrigin().z(z_force_correction);
+            //            l_des_ee_pose.setOrigin().z(z_force_correction);
             tf::Vector3& origin = l_des_ee_pose.getOrigin();
             origin[2] -= z_force_correction;
             l_des_ee_pose.setOrigin(origin);
@@ -226,7 +255,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 break;
             }
 
-            if (phase == PHASE_PEEL){
+            if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
                 sendPose(r_curr_ee_pose, l_curr_ee_pose);
                 break;
             }

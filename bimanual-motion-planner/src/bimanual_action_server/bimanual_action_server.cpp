@@ -34,8 +34,9 @@ void BimanualActionServer::initialize() {
     _nh.getParam("l_topic_ns", l_topic_ns);
     _nh.getParam("wait_for_force_right", bWaitForForces_right_arm);
     _nh.getParam("wait_for_force_left", bWaitForForces_left_arm);
+    _nh.getParam("task_id", task_id);
 
-    if(!_nh.getParam("wait_for_force_right", bWaitForForces_right_arm)) {
+    if(!_nh.getParam("wait_for_force_right", bWaitForForces_right_arm) && task_id == PEELING_TASK_ID) {
         ROS_INFO_STREAM("Set the Waiting for forces flag");
         bWaitForForces_right_arm = true;
     }
@@ -220,37 +221,55 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     /////----- EXECUTE REQUESTED ACTION TYPE ------/////
     ////////////////////////////////////////////////////
 
-
-
     TaskPhase phase;
-    if(goal->action_name == "phase0"){
-        phase = PHASE_INIT_REACH;
+    if (task_id == PEELING_TASK_ID){
+        if(goal->action_name == "phase0"){
+            phase = PHASE_INIT_REACH;
+        }
+        else if(goal->action_name   == "phase1") {
+            phase = PHASE_REACH_TO_PEEL;
+        } else if(goal->action_name == "phase2") {
+            phase = PHASE_PEEL;
+        } else if(goal->action_name == "phase3") {
+            phase = PHASE_ROTATE;
+        } else if(goal->action_name == "phase4") {
+            phase = PHASE_RETRACT;
+        } else {
+            ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
+            result_.success = 0;
+            as_.setAborted(result_);
+            return;
+        }
     }
-    else if(goal->action_name   == "phase1") {
-        phase = PHASE_REACH_TO_PEEL;
-    } else if(goal->action_name == "phase2") {
-        phase = PHASE_PEEL;
-    } else if(goal->action_name == "phase3") {
-        phase = PHASE_ROTATE;
-    } else if(goal->action_name == "phase4") {
-        phase = PHASE_RETRACT;
-    } else {
-        ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
-        result_.success = 0;
-        as_.setAborted(result_);
-        return;
-    }
+    else{
+        if(goal->action_name == "phase0"){
+            phase = PHASE_SCOOP_INIT_REACH;
+        }
+        else if(goal->action_name   == "phase1") {
+            phase = PHASE_SCOOP_REACH_TO_SCOOP;
+        } else if(goal->action_name == "phase2") {
+            phase = PHASE_SCOOP_SCOOP;
+        } else if(goal->action_name == "phase3") {
+            phase = PHASE_SCOOP_DEPART;
+        } else if(goal->action_name == "phase4") {
+            phase = PHASE_SCOOP_TRASH;
+        } else if(goal->action_name == "phase5") {
+            phase = PHASE_SCOOP_RETRACT;
+        } else {
+            ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
+            result_.success = 0;
+            as_.setAborted(result_);
+            return;
+        }
 
+    }
     //---> ACTION TYPE 1: Use two independent learned models to execute the action
     if(goal->action_type=="UNCOUPLED_LEARNED_MODEL"){
-
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
         CDSController::DynamicsType slaveType = CDSController::UTHETA;
-
         // Execute action from *uncoupled* learned action model
         success = uncoupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-                                                        task_frame, right_att, left_att);
-
+                                                    task_frame, right_att, left_att);
     }
 
     //---> ACTION TYPE 2: Use the virtual object dynamical system to execute a bimanual reach
@@ -260,19 +279,16 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
     //---> ACTION TYPE 3: Use two coupled learned models to execute the action
     if(goal->action_type=="COUPLED_LEARNED_MODEL"){
-
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
         CDSController::DynamicsType slaveType = CDSController::NO_DYNAMICS;
-
         // Execute action from *coupled* learned action model
         success = coupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
-                                                      task_frame, right_att, left_att);
+                                                  task_frame, right_att, left_att);
     }
 
     //---> ACTION TYPE 4: Use coupled learned models to execute the action
     if(goal->action_type=="BIMANUAL_GOTO_CART")
         success = bimanual_goto_cart_execution(task_frame, right_att, left_att);
-
     result_.success = success;
     if(success)
     {

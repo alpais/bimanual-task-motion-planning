@@ -49,7 +49,6 @@
 //-- FT Sensors Stuff --//
 #include "netft_rdt_driver/String_cmd.h"
 
-#define MAX_PEELING_FORCE	15
 #define FORCE_WAIT_TOL		7
 #define R_ARM_ID            1
 #define L_ARM_ID            2
@@ -57,21 +56,41 @@
 #define R_ARM_ROLE          "master"
 #define L_ARM_ROLE          "slave"
 
+#define PEELING_TASK_ID     1
+#define SCOOPING_TASK_ID    2
+
+// Peeling parametrization >> should come from launch file
+#define MAX_PEELING_FORCE		15	// [N]
+#define MAX_PEELING_SEARCH_HEIGHT 	0.07 	// 7 cm 
+#define MAX_PEELING_VERTICAL_SPEED	0.01 	// the max speed to use when going down to search for contact
+#define MAX_PEELING_CONTACT_FORCE	5	// max force to use to establish contact on an object
+// Scooping parametrization
+
+
+// Define active task >> In the future read this from file
+// #define CRT_TASK_SCOOPING
+// #define CRT_TASK_PEELING
+
 class BimanualActionServer
 {
 
 protected:
 
-    // Task phases
     enum TaskPhase {
-        PHASE_INIT_REACH     = 0,
-        PHASE_REACH_TO_PEEL  = 1,
-        PHASE_PEEL           = 2,
-        PHASE_ROTATE         = 3,
-        PHASE_RETRACT        = 4,
-//        PHASE_PEEL_WITH_FORCE= 5,
+        // PEELING Task phases
+        PHASE_INIT_REACH            =  0,
+        PHASE_REACH_TO_PEEL         =  1,
+        PHASE_PEEL                  =  2,
+        PHASE_ROTATE                =  3,
+        PHASE_RETRACT               =  4,
+        // SCOOPING Task phases
+        PHASE_SCOOP_INIT_REACH      =  5,
+        PHASE_SCOOP_REACH_TO_SCOOP  =  6,
+        PHASE_SCOOP_SCOOP           =  7,
+        PHASE_SCOOP_DEPART          =  8,
+        PHASE_SCOOP_TRASH           =  9,
+        PHASE_SCOOP_RETRACT         = 10,
     };
-
 
     ros::NodeHandle nh_;
 
@@ -112,6 +131,7 @@ protected:
     bool initial_config, simulation, just_visualize;
     int tf_count;
     double reachingThreshold, orientationThreshold, model_dt, dt; //Defaults: [m],[rad],[s]
+    double task_id;
 
     // Visualization variables for Bimanual DS Action
     visualization_msgs::Marker ro_marker;
