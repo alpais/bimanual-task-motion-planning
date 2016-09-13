@@ -72,9 +72,9 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         }
         // >>>>> Scooping TASK <<<<
-    }else if(task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
+/*    }else if(task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
         // Transform the attractor given in task frame relative to the right arm frame
-/*        tf::Transform att_in_right_arm_rf;
+        tf::Transform att_in_right_arm_rf;
         att_in_right_arm_rf.setIdentity();
         att_in_right_arm_rf.mult(right_final_target, left_att);
 */        // set target of the left arm to the right arm frame
@@ -183,7 +183,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
         // Transformation for PHASE_REACH_TO_PEEL Model
-        if (task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL){
+        if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL) || (task_id = SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
             tf::Transform  l_ee_rot, ee_2_rob;
             l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
