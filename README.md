@@ -46,11 +46,11 @@ $ roslaunch state_transformers bimanual_joint_ctrls_real.launch
 
 #####Cartesian Trajectory Generator
 A bimanual action server, containing different types of control methods for bimanual actions, currently: 
-- Independent CDS for each arm (no coupling) 
+- Coupled CDS for each arm. The models can be found in bimanual-task-models and they are task and action specific.
 - Virtual Object Dynamical System (spatial and temporal coupling)
 
 ```
-$ roslaunch bimanual_motion_planner bimanual_action_server.launch
+$ roslaunch bimanual_motion_planner peeling_bimanual_action_server.launch
 ```
 
 ##### Action Planning  

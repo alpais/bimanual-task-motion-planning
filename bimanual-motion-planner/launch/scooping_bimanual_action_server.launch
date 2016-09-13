@@ -9,7 +9,7 @@
 			<arg name="r_robot_base_frame"       default="/calib_right_arm_base_link"/>
 			<arg name="l_robot_base_frame"       default="/calib_left_arm_base_link"/>
 
-			<arg name="model_path"               default="$(find bimanual_motion_planner)../bimanual-task-models/peeling_task"/>
+			<arg name="model_path"               default="$(find bimanual_motion_planner)../bimanual-task-models/scooping_task"/>
 
 		  <node pkg="tf" type="static_transform_publisher" name="task_frame" args="-0.403 -0.426 0.013 0 0 0 1  /world_frame /task_frame  100"/>
 
@@ -25,9 +25,9 @@
 			<param name="model_base_path"        	    value="$(arg model_path)" />
 			<param name="r_topic_ns"        		    value="$(arg r_arm_ns)" />
 			<param name="l_topic_ns"        		    value="$(arg l_arm_ns)" />
-			<param name="wait_for_force_right_arm" 		value="false"/>
+			<param name="wait_for_force_right_arm" 		value="true"/>
 			<param name="wait_for_force_left_arm" 		value="true"/>
-			<param name="task_id"						value="1"/>
+			<param name="task_id"						value="2"/>
 		  </node>
 
 
