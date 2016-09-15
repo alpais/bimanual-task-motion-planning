@@ -80,6 +80,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         // To determine ATT run  >> rosrun tf tf_echo /TOOL_ft /Hand_ft
         if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
             tf::Transform fixed_reach_to_scoop_att;
+            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(0.117, 0.079, 0.232)); // from tf echo
             fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.8925, -0.1301, 0.2192, 0.3720)); // Tf transform * Rx(pi/2)
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
         } else if (phase == PHASE_SCOOP_SCOOP){
