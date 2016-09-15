@@ -48,7 +48,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     if (task_id == PEELING_TASK_ID && (phase == PHASE_REACH_TO_PEEL || phase == PHASE_PEEL)){
         tf::Transform fixed_right_arm_rf;
         fixed_right_arm_rf.setIdentity();
-        fixed_right_arm_rf.setRotation(tf::Quaternion(0.807, 0.467, -0.145, 0.332)); // so we set fixed attractors instead of taking them from the script? which are also fixed btw????
+        fixed_right_arm_rf.setRotation(tf::Quaternion(0.807, 0.467, -0.145, 0.332));
         fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
 
         if (phase == PHASE_REACH_TO_PEEL){
@@ -72,16 +72,24 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         }
         // >>>>> Scooping TASK <<<<
-/*    }else if(task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
-        // Transform the attractor given in task frame relative to the right arm frame
-        tf::Transform att_in_right_arm_rf;
-        att_in_right_arm_rf.setIdentity();
-        att_in_right_arm_rf.mult(right_final_target, left_att);
-*/        // set target of the left arm to the right arm frame
-        //left_final_target.mult(att_in_right_arm_rf, )
+    } else if(task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_SCOOP) ){
+        tf::Transform fixed_right_arm_rf;
+        fixed_right_arm_rf.setIdentity();
+        fixed_right_arm_rf.setRotation(tf::Quaternion(0.8821, 0.3088, 0.0049, 0.3557));
+        fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
+        // To determine ATT run  >> rosrun tf tf_echo /TOOL_ft /Hand_ft
+        if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
+            tf::Transform fixed_reach_to_scoop_att;
+            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.8925, -0.1301, 0.2192, 0.3720)); // Tf transform * Rx(pi/2)
+            left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
+        } else if (phase == PHASE_SCOOP_SCOOP){
+            tf::Transform fixed_scoop_att;
+            fixed_scoop_att.setOrigin(tf::Vector3(0.027, -0.043, 0.241));
+            fixed_scoop_att.setRotation(tf::Quaternion(0.8925, -0.1301, 0.2192, 0.3720));
+            left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
+        }
     }
-    // >>>> in general >> Set the target of the left arm relative to the task frame
-    else
+    else // >> Set the target of the left arm relative to the task frame
         left_final_target.mult(task_frame, left_att); // final target in world
 
     // ======================================================================================================
@@ -116,11 +124,17 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     left_cdsRun->initSimple(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
 
     // -> Apply Rotation (pi on Y in Origin RF)
+    // The following two lines are correct only if the left arm moves wrt the right arm
     left_cdsRun->setObjectFrame(toMatrix4(model_task_frame));
     left_cdsRun->setAttractorFrame(toMatrix4(left_final_target));
+
+    // otherwise use the following initialization wrt the task frame
+    //    left_cdsRun->setObjectFrame(toMatrix4(task_frame));
+    //    left_cdsRun->setAttractorFrame(toMatrix4(left_att));
+
     left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
     left_cdsRun->setDT(model_dt);
-    left_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
+    left_cdsRun->setMotionParameters(1,1,1,reachingThreshold, masterType, slaveType);
     left_cdsRun->postInit();
 
 
@@ -255,7 +269,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 break;
             }
 
-            if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
+            if ((task_id == PEELING_TASK_ID && phase == PHASE_PEEL) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
                 sendPose(r_curr_ee_pose, l_curr_ee_pose);
                 break;
             }

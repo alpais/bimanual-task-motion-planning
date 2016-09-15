@@ -180,7 +180,7 @@ def send_goal(action_type, phase, task_frame, right_attractor_frame, left_attrac
     # Prints out the result of executing the action
     return client.get_result()
 
-def execute_peeling_planner():
+def execute_scooping_planner():
 	
 	#Task Frame in world
 	task_frame = geometry_msgs.msg.Transform()
@@ -283,7 +283,7 @@ if __name__ == '__main__':
         client.wait_for_server()
 
 		#Execute Action Planner for Peeling Task
-        execute_peeling_planner()
+        execute_scooping_planner()
 
     except rospy.ROSInterruptException:
         print "program interrupted before completion"

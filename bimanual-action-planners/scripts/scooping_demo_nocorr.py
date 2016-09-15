@@ -59,6 +59,10 @@ def query_scooping_attractors():
 	lA_p1_attr.translation.x = -0.0899
 	lA_p1_attr.translation.y = -0.2583
 	lA_p1_attr.translation.z =  0.4334
+#	lA_p1_attr.rotation.x    =  0.113
+#	lA_p1_attr.rotation.y    =  0.919
+#	lA_p1_attr.rotation.z    =  0.376
+#	lA_p1_attr.rotation.w    = -0.036
 	lA_p1_attr.rotation.x    =  0.4191
 	lA_p1_attr.rotation.y    = -0.5443
 	lA_p1_attr.rotation.z    =  0.5011
@@ -178,7 +182,7 @@ def send_goal(action_type, phase, task_frame, right_attractor_frame, left_attrac
     # Prints out the result of executing the action
     return client.get_result()
 
-def execute_peeling_planner():
+def execute_scooping_planner():
 	
 	#Task Frame in world
 	task_frame = geometry_msgs.msg.Transform()
@@ -211,7 +215,7 @@ def execute_peeling_planner():
 
 		lA_p1_attr,lA_p2_attr = query_scooping_attractors()
 
-		# Reach To Peel with Coupled CDS
+		# Reach To Scoop with Coupled CDS
 		action_type = 'COUPLED_LEARNED_MODEL'  
 		result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p1_attr, 10)
 		print "Result:"		
@@ -221,7 +225,7 @@ def execute_peeling_planner():
 		raw_input('Press Enter To Scoop with Coupled CDS')
 		print "\n\n= = = = = = = = = = = = = = = = = = ="
 
-		# Reach To Peel with Coupled CDS
+		# Reach To Scoop with Coupled CDS
 		action_type = 'COUPLED_LEARNED_MODEL'  
 		result = send_goal(action_type, 'phase2', task_frame, rA_p0_attr, lA_p2_attr, 10)
 		print "Result:"		
@@ -280,8 +284,8 @@ if __name__ == '__main__':
         print "waiting for server"
         client.wait_for_server()
 
-		#Execute Action Planner for Peeling Task
-        execute_peeling_planner()
+		#Execute Action Planner for Scooping Task
+        execute_scooping_planner()
 
     except rospy.ROSInterruptException:
         print "program interrupted before completion"

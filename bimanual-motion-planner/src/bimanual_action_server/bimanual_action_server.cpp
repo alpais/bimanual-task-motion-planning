@@ -221,6 +221,8 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     /////----- EXECUTE REQUESTED ACTION TYPE ------/////
     ////////////////////////////////////////////////////
 
+    task_id = SCOOPING_TASK_ID; // Apparently this value gets overwritten at each call of the action server. First time it works, second time it becomes 1
+
     TaskPhase phase;
     if (task_id == PEELING_TASK_ID){
         if(goal->action_name == "phase0"){
