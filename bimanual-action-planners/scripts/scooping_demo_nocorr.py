@@ -17,36 +17,27 @@ from kuka_fri_bridge.msg    import JointStateImpedance
 def query_init_attractors():
 	# Phase 0 ==== Initial Reach ===
 
-	# Phase 0 Right Arm Attractor in Task RF
-#	rA_p0_attr = geometry_msgs.msg.Transform()
-#	rA_p0_attr.translation.x = -0.296
-#	rA_p0_attr.translation.y =  0.197
-#	rA_p0_attr.translation.z =  0.345
-#	rA_p0_attr.rotation.x    =  0.358
-#	rA_p0_attr.rotation.y    =  0.010
-#	rA_p0_attr.rotation.z    =  0.166
-#	rA_p0_attr.rotation.w    =  0.919
-
 	# Phase 0 Right Arm Attractor in Task RF >> Right Arm reaches directly in the good pose
 	rA_p0_attr = geometry_msgs.msg.Transform()
-	rA_p0_attr.translation.x = -0.1782
-	rA_p0_attr.translation.y = -0.0482
-	rA_p0_attr.translation.z =  0.2901
-	rA_p0_attr.rotation.x    =  0.8821
-	rA_p0_attr.rotation.y    =  0.3088
-	rA_p0_attr.rotation.z    =  0.0049
-	rA_p0_attr.rotation.w    =  0.3557
+	rA_p0_attr.translation.x = -0.060 
+	rA_p0_attr.translation.y = -0.113 
+	rA_p0_attr.translation.z =  0.247
+	rA_p0_attr.rotation.x    =  0.275 
+	rA_p0_attr.rotation.y    = -0.123 
+	rA_p0_attr.rotation.z    =  0.264
+	rA_p0_attr.rotation.w    =  0.916
 
- 
+
 	# Phase 0 Left Arm Attractor in Task RF
 	lA_p0_attr = geometry_msgs.msg.Transform()
-	lA_p0_attr.translation.x =  0.026
-	lA_p0_attr.translation.y = -0.553
-	lA_p0_attr.translation.z =  0.612
-	lA_p0_attr.rotation.x    =  0.113
-	lA_p0_attr.rotation.y    =  0.919
-	lA_p0_attr.rotation.z    =  0.376
-	lA_p0_attr.rotation.w    = -0.036
+	lA_p0_attr.translation.x = -0.040 
+	lA_p0_attr.translation.y = -0.382 
+	lA_p0_attr.translation.z =  0.494
+	lA_p0_attr.rotation.x    =  0.639 
+	lA_p0_attr.rotation.y    = -0.468 
+	lA_p0_attr.rotation.z    = -0.435
+	lA_p0_attr.rotation.w    = -0.429
+
 
 	return rA_p0_attr, lA_p0_attr
 
@@ -63,10 +54,10 @@ def query_scooping_attractors():
 #	lA_p1_attr.rotation.y    =  0.919
 #	lA_p1_attr.rotation.z    =  0.376
 #	lA_p1_attr.rotation.w    = -0.036
-	lA_p1_attr.rotation.x    =  0.4191
-	lA_p1_attr.rotation.y    = -0.5443
-	lA_p1_attr.rotation.z    =  0.5011
-	lA_p1_attr.rotation.w    =  0.5263
+	lA_p1_attr.rotation.x    =  0.4691
+	lA_p1_attr.rotation.y    =  0.4511
+	lA_p1_attr.rotation.z    =  0.5763
+	lA_p1_attr.rotation.w    =  0.4943
 
 	# Phase 2 ==== Scoop ===
 	lA_p2_attr = geometry_msgs.msg.Transform()

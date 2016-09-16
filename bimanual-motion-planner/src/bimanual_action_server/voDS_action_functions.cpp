@@ -113,6 +113,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
                 ROS_INFO_STREAM("In PHASE_INIT_RETRACT.. biasing ft sensors...");
                 biasFtSensors();
             }
+            sendPose(r_curr_ee_pose, l_curr_ee_pose);
             break;
         }
 

@@ -18,25 +18,29 @@ def query_init_attractors():
 	# Phase 0 ==== Initial Reach ===
 
 	# Phase 0 Right Arm Attractor in Task RF
-#	rA_p0_attr = geometry_msgs.msg.Transform()
-#	rA_p0_attr.translation.x = -0.296
-#	rA_p0_attr.translation.y =  0.197
-#	rA_p0_attr.translation.z =  0.345
-#	rA_p0_attr.rotation.x    =  0.358
-#	rA_p0_attr.rotation.y    =  0.010
-#	rA_p0_attr.rotation.z    =  0.166
-#	rA_p0_attr.rotation.w    =  0.919
+	rA_p0_attr = geometry_msgs.msg.Transform()
+	rA_p0_attr.translation.x = -0.296
+	rA_p0_attr.translation.y =  0.197
+	rA_p0_attr.translation.z =  0.345
+	rA_p0_attr.rotation.x    =  0.358
+	rA_p0_attr.rotation.y    =  0.010
+	rA_p0_attr.rotation.z    =  0.166
+	rA_p0_attr.rotation.w    =  0.919
 
 	# Phase 0 Right Arm Attractor in Task RF >> Right Arm reaches directly in the good pose
-	rA_p0_attr = geometry_msgs.msg.Transform()
-	rA_p0_attr.translation.x = -0.1782
-	rA_p0_attr.translation.y = -0.0482
-	rA_p0_attr.translation.z =  0.2901
-	rA_p0_attr.rotation.x    =  0.8821
-	rA_p0_attr.rotation.y    =  0.3088
-	rA_p0_attr.rotation.z    =  0.0049
-	rA_p0_attr.rotation.w    =  0.3557
+#	rA_p0_attr = geometry_msgs.msg.Transform()
+#	rA_p0_attr.translation.x = -0.1782
+#	rA_p0_attr.translation.y = -0.0482
+#	rA_p0_attr.translation.z =  0.2901
+#	rA_p0_attr.rotation.x    =  0.4054
+#	rA_p0_attr.rotation.y    =  0.8421
+#	rA_p0_attr.rotation.z    =  0.2550
+#	rA_p0_attr.rotation.w    =  0.2481
 
+#	rA_p0_attr.rotation.x    =  0.8821
+#	rA_p0_attr.rotation.y    =  0.3088
+#	rA_p0_attr.rotation.z    =  0.0049
+#	rA_p0_attr.rotation.w    =  0.3557
  
 	# Phase 0 Left Arm Attractor in Task RF
 	lA_p0_attr = geometry_msgs.msg.Transform()

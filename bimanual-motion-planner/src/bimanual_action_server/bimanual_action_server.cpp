@@ -282,7 +282,8 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     //---> ACTION TYPE 3: Use two coupled learned models to execute the action
     if(goal->action_type=="COUPLED_LEARNED_MODEL"){
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
-        CDSController::DynamicsType slaveType = CDSController::NO_DYNAMICS;
+//        CDSController::DynamicsType slaveType = CDSController::NO_DYNAMICS;
+        CDSController::DynamicsType slaveType = CDSController::UTHETA;
         // Execute action from *coupled* learned action model
         success = coupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
                                                   task_frame, right_att, left_att);

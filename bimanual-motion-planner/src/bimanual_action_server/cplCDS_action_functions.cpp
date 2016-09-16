@@ -41,6 +41,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     // In depart it goes away few cm >> see Att in the python script
     // In Trash it goes away even more
 
+    double dheight = 0.10;
     // ============= Left Arm relative to the master arm ===========
     // Slave Arm has Attractor on Object relative to a Right Fixed RF
     // (Should be substituted by vision (i.e. compute attractors from point cloud) - no time for this now)
@@ -57,8 +58,9 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             //- Translation: [-0.130, 0.073, 0.238]
             //- Rotation: in Quaternion [-0.333, 0.753, -0.453, 0.342]
 
-            fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.130, 0.073, 0.238));
-            fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342));
+            fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.130, 0.073+dheight, 0.238));
+            fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342)); //KW
+            fixed_reach_to_peel_attr.setRotation(tf::Quaternion(0.6812, -0.0885, 0.7265, 0.0178));
             left_final_target.mult(fixed_right_arm_rf,fixed_reach_to_peel_attr);
         } else if(phase == PHASE_PEEL){
 
@@ -73,20 +75,28 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         }
         // >>>>> Scooping TASK <<<<
     } else if(task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_SCOOP) ){
+
         tf::Transform fixed_right_arm_rf;
         fixed_right_arm_rf.setIdentity();
-        fixed_right_arm_rf.setRotation(tf::Quaternion(0.8821, 0.3088, 0.0049, 0.3557));
+        fixed_right_arm_rf.setRotation(r_ee_pose.getRotation());
         fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
+
         // To determine ATT run  >> rosrun tf tf_echo /TOOL_ft /Hand_ft
         if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
+
+
+            //        - Translation: [-0.015, -0.072, 0.321]
+            //        - Rotation: in Quaternion [-0.506, 0.805, 0.141, 0.275]
+
             tf::Transform fixed_reach_to_scoop_att;
-            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(0.117, 0.079, 0.232)); // from tf echo
-            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.8925, -0.1301, 0.2192, 0.3720)); // Tf transform * Rx(pi/2)
+            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.015, -0.072, 0.321)); // from tf echo
+            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.506, 0.805, 0.141, 0.275)); // Tf transform * Rx(pi/2)
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
         } else if (phase == PHASE_SCOOP_SCOOP){
+
             tf::Transform fixed_scoop_att;
-            fixed_scoop_att.setOrigin(tf::Vector3(0.027, -0.043, 0.241));
-            fixed_scoop_att.setRotation(tf::Quaternion(0.8925, -0.1301, 0.2192, 0.3720));
+            fixed_scoop_att.setOrigin(tf::Vector3(-0.088, -0.070, 0.259));
+            fixed_scoop_att.setRotation(tf::Quaternion(0.277, 0.918, 0.263, 0.109));
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
         }
     }
@@ -135,7 +145,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
     left_cdsRun->setDT(model_dt);
-    left_cdsRun->setMotionParameters(1,1,1,reachingThreshold, masterType, slaveType);
+    left_cdsRun->setMotionParameters(0.5,0.5,1,reachingThreshold, masterType, slaveType);
     left_cdsRun->postInit();
 
 
@@ -198,7 +208,8 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
         // Transformation for PHASE_REACH_TO_PEEL Model
-        if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL) || (task_id = SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
+//        if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL) || (task_id = SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
+        if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL)){
             tf::Transform  l_ee_rot, ee_2_rob;
             l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
