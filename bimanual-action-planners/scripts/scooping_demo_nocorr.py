@@ -78,22 +78,22 @@ def query_depart_attractors():
 
 	# Phase 3 ==== Depart and reach on top of the bowl ===
 	rA_p3_attr = geometry_msgs.msg.Transform()
-	rA_p3_attr.translation.x = -0.2541
-	rA_p3_attr.translation.y =  0.0822
-	rA_p3_attr.translation.z =  0.3067
-	rA_p3_attr.rotation.x    =  0.9153
-	rA_p3_attr.rotation.y    =  0.3052
-	rA_p3_attr.rotation.z    =  0.0248
-	rA_p3_attr.rotation.w    =  0.2616
- 
+	rA_p3_attr.translation.x = -0.216
+	rA_p3_attr.translation.y =  0.065
+	rA_p3_attr.translation.z =  0.211
+	rA_p3_attr.rotation.x    =  0.370
+	rA_p3_attr.rotation.y    = -0.021
+	rA_p3_attr.rotation.z    =  0.147 
+	rA_p3_attr.rotation.w    =  0.917
+
 	lA_p3_attr = geometry_msgs.msg.Transform()
-	lA_p3_attr.translation.x = -0.0884
-	lA_p3_attr.translation.y = -0.2665
-	lA_p3_attr.translation.z =  0.3794
-	lA_p3_attr.rotation.x    =  0.4350
-	lA_p3_attr.rotation.y    = -0.6174
-	lA_p3_attr.rotation.z    =  0.4472
-	lA_p3_attr.rotation.w    =  0.4791
+	lA_p3_attr.translation.x = -0.027
+	lA_p3_attr.translation.y = -0.225
+	lA_p3_attr.translation.z =  0.347
+	lA_p3_attr.rotation.x    = -0.317
+	lA_p3_attr.rotation.y    =  0.740
+	lA_p3_attr.rotation.z    =  0.520
+	lA_p3_attr.rotation.w    =  0.283
 
 	return rA_p3_attr,lA_p3_attr	
 
@@ -103,22 +103,22 @@ def query_trash_attractors():
 
 	# Phase 4 Right Arm Attractor in Task RF
 	rA_p4_attr = geometry_msgs.msg.Transform()
-	rA_p4_attr.translation.x = -0.2606
-	rA_p4_attr.translation.y =  0.0957
-	rA_p4_attr.translation.z =  0.3134
-	rA_p4_attr.rotation.x    =  0.9179
-	rA_p4_attr.rotation.y    =  0.3059
-	rA_p4_attr.rotation.z    =  0.0257
-	rA_p4_attr.rotation.w    =  0.2513
+	rA_p4_attr.translation.x = -0.220
+	rA_p4_attr.translation.y =  0.290
+	rA_p4_attr.translation.z =  0.201
+	rA_p4_attr.rotation.x    =  0.378
+	rA_p4_attr.rotation.y    = -0.067
+	rA_p4_attr.rotation.z    =  0.107
+	rA_p4_attr.rotation.w    =  0.917
  
 	lA_p4_attr = geometry_msgs.msg.Transform()
-	lA_p4_attr.translation.x = -0.2694
-	lA_p4_attr.translation.y = -0.6593
-	lA_p4_attr.translation.z =  0.3791
-	lA_p4_attr.rotation.x    =  0.1115
-	lA_p4_attr.rotation.y    = -0.5058
-	lA_p4_attr.rotation.z    =  0.6715
-	lA_p4_attr.rotation.w    =  0.5299
+	lA_p4_attr.translation.x = -0.067
+	lA_p4_attr.translation.y = -0.250
+	lA_p4_attr.translation.z =  0.211
+	lA_p4_attr.rotation.x    = -0.692
+	lA_p4_attr.rotation.y    =  0.397
+	lA_p4_attr.rotation.z    =  0.309
+	lA_p4_attr.rotation.w    =  0.517
 	
 	return rA_p4_attr, lA_p4_attr
 
@@ -127,22 +127,24 @@ def query_retract_attractors():
 
 	# Phase 5 Right Arm Attractor in Task RF
 	rA_p5_attr = geometry_msgs.msg.Transform()
-	rA_p5_attr.translation.x = -0.2628
-	rA_p5_attr.translation.y =  0.1106
-	rA_p5_attr.translation.z =  0.3600
-	rA_p5_attr.rotation.x    =  0.9194
-	rA_p5_attr.rotation.y    =  0.3115
-	rA_p5_attr.rotation.z    =  0.0513
-	rA_p5_attr.rotation.w    =  0.2348
- 
+	rA_p5_attr.translation.x = -0.213
+	rA_p5_attr.translation.y =  0.458
+	rA_p5_attr.translation.z =  0.184
+
+	rA_p5_attr.rotation.x    =  0.384
+	rA_p5_attr.rotation.y    = -0.129
+	rA_p5_attr.rotation.z    =  0.119
+	rA_p5_attr.rotation.w    =  0.906
+  
 	lA_p5_attr = geometry_msgs.msg.Transform()
-	lA_p5_attr.translation.x = -0.3597
-	lA_p5_attr.translation.y = -0.8799
-	lA_p5_attr.translation.z =  0.5603
-	lA_p5_attr.rotation.x    =  0.3275
-	lA_p5_attr.rotation.y    =  0.5751
-	lA_p5_attr.rotation.z    = -0.4075
-	lA_p5_attr.rotation.w    = -0.6293
+	lA_p5_attr.translation.x = -0.211
+	lA_p5_attr.translation.y = -0.655
+	lA_p5_attr.translation.z =  0.329
+
+	lA_p5_attr.rotation.x    = -0.372
+	lA_p5_attr.rotation.y    =  0.791
+	lA_p5_attr.rotation.z    =  0.484
+	lA_p5_attr.rotation.w    =  0.020
 
 	return rA_p5_attr, lA_p5_attr
 
@@ -216,39 +218,43 @@ def execute_scooping_planner():
 		raw_input('Press Enter To Scoop with Coupled CDS')
 		print "\n\n= = = = = = = = = = = = = = = = = = ="
 
-		# Reach To Scoop with Coupled CDS
+		# Scooping with Coupled CDS
 		action_type = 'COUPLED_LEARNED_MODEL'  
 		result = send_goal(action_type, 'phase2', task_frame, rA_p0_attr, lA_p2_attr, 10)
 		print "Result:"		
 		print result.success
 
-		peel_var = raw_input("Do you want to scoop again(any), depart(d), or end(e)?")
+		print "\n\n= = = = = = = = = = = = = = = = = = ="
+		raw_input('Press Enter To Depart with Coupled CDS')
+		print "\n\n= = = = = = = = = = = = = = = = = = ="
 
-		if peel_var == 'r':		
-			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
-			raw_input('Press Enter to Run Bimanual ROTATE/REACH with Coordinated Reaching DS')
-			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
+		# Departing with Coupled CDS - to prepare for the trashing action
+		action_type = 'BIMANUAL_REACH'  
+		rA_p3_attr,lA_p3_attr = query_depart_attractors()
+		result = send_goal(action_type, 'phase3', task_frame, rA_p3_attr, lA_p3_attr, 10)
+		print "Result:"		
+		print result.success
 
-			# Master departs to make room for the Slave
-			rA_p3_attr,lA_p3_attr = query_depart_attractors()
-			result = send_goal(action_type, 'phase3', task_frame, rA_p3_attr, lA_p3_attr, 10)
-			print "Result:"		
-			print result.success			
+		print "\n\n= = = = = = = = = = = = = = = = = = ="
+		raw_input('Press Enter To Trash with Coupled CDS')
+		print "\n\n= = = = = = = = = = = = = = = = = = ="
+
+		# Trashing with Coupled CDS 
+		action_type = 'BIMANUAL_REACH'  
+		rA_p4_attr,lA_p4_attr = query_trash_attractors()
+		result = send_goal(action_type, 'phase4', task_frame, rA_p4_attr, lA_p4_attr, 10)
+		print "Result:"		
+		print result.success
+
+		scoop_var = raw_input("Do you want to scoop again(any), or end(e)?")
+
+		if scoop_var != 'e':		
+			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
+			raw_input('Restarting Scooping Task')
+			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
 		
-		if peel_var == 'e':
+		if scoop_var == 'e':
 			break
-
-
-#	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-#	raw_input('Press Enter to Run Bimanual TRASH with Coupled DS')
-#	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-
-	# Trash with Decoupled DS
-#	rA_p4_attr, lA_p4_attr = query_trash_attractors()
-#	action_type = 'BIMANUAL_REACH'  
-#	result = send_goal(action_type, 'phase4',  task_frame, rA_p4_attr, lA_p4_attr, 10)
-#	print "Result:"
-#	print result.success
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
@@ -257,7 +263,7 @@ def execute_scooping_planner():
 	# Retract with Decoupled DS
 	rA_p5_attr, lA_p5_attr = query_retract_attractors()
 	action_type = 'BIMANUAL_REACH'  
-	result = send_goal(action_type, 'phase4',  task_frame, rA_p5_attr, lA_p5_attr, 10)
+	result = send_goal(action_type, 'phase5',  task_frame, rA_p5_attr, lA_p5_attr, 10)
 	print "Result:"
 	print result.success
 

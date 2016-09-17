@@ -94,7 +94,6 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
         } else if (phase == PHASE_SCOOP_SCOOP){
 
-            tf::Transform fixed_scoop_att;
             fixed_scoop_att.setOrigin(tf::Vector3(-0.088, -0.070, 0.259));
             fixed_scoop_att.setRotation(tf::Quaternion(0.277, 0.918, 0.263, 0.109));
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);

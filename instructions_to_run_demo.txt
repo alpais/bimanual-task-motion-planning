@@ -146,3 +146,10 @@ pose:
 
 rosrun tf static_transform_publisher 0 0 0 0 0 -1.56 /left_arm/des_ee_tf /new_attr 10
 rosrun tf static_transform_publisher 0 0 0 0 0 -1.56 /left_attractor /new_attr 10
+
+Setting att
+rosrun tf tf_echo Hand_ft Tool_ft  >> Attractor of the left arm wrt the right arm
+
+rosrun tf tf_echo /task_frame /Hand_ft >> Attractor of right arm wrt the task frame
+rosrun tf tf_echo /task_frame /Tool_ft >> Attractor of left arm wrt the task frame
+
