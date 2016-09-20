@@ -51,7 +51,6 @@
 
 //-- CDDynamics filtering --//
 #include "CDDynamics.h"
-
 #define FORCE_WAIT_TOL		7
 #define R_ARM_ID            1
 #define L_ARM_ID            2
@@ -68,6 +67,7 @@
 #define MAX_PEELING_VERTICAL_SPEED	0.01 	// the max speed to use when going down to search for contact
 #define MAX_PEELING_CONTACT_FORCE	5	// max force to use to establish contact on an object
 // Scooping parametrization
+
 
 
 // Define active task >> In the future read this from file

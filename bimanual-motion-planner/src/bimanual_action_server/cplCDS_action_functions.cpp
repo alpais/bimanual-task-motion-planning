@@ -89,16 +89,54 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             //        - Rotation: in Quaternion [-0.506, 0.805, 0.141, 0.275]
 
             tf::Transform fixed_reach_to_scoop_att;
-            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.015, -0.072, 0.321)); // from tf echo
-            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.506, 0.805, 0.141, 0.275)); // Tf transform * Rx(pi/2)
+//            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.015, -0.072, 0.321)); // from tf echo
+//           fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.506, 0.805, 0.141, 0.275)); // Tf transform * Rx(pi/2)
+
+            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(0.006, -0.090, 0.292)); // from tf echo
+            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.678, -0.619, -0.091, -0.386)); // Tf transform * Rx(pi/2)
+
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
+
         } else if (phase == PHASE_SCOOP_SCOOP){
 
             tf::Transform fixed_scoop_att;
-            fixed_scoop_att.setOrigin(tf::Vector3(-0.088, -0.070, 0.259));
-            fixed_scoop_att.setRotation(tf::Quaternion(0.277, 0.918, 0.263, 0.109));
+
+//            fixed_scoop_att.setOrigin(tf::Vector3(-0.088, -0.070, 0.259));
+//            fixed_scoop_att.setRotation(tf::Quaternion(0.277, 0.918, 0.263, 0.109));
+
+            fixed_scoop_att.setOrigin(tf::Vector3(-0.016, -0.079, 0.270));
+            fixed_scoop_att.setRotation(tf::Quaternion(-0.233, 0.779, 0.576, 0.087));
+
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
+
+        } else if (phase == PHASE_SCOOP_DEPART){
+
+            tf::Transform fixed_depart_att;
+
+            fixed_depart_att.setOrigin(tf::Vector3(0.123, -0.242, 0.273));
+            fixed_depart_att.setRotation(tf::Quaternion(-0.123, 0.970, 0.190, 0.085));
+
+            left_final_target.mult(fixed_right_arm_rf, fixed_depart_att);
+
+        } else if (phase == PHASE_SCOOP_TRASH){
+
+            tf::Transform fixed_trash_att;
+
+            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480, 0.285));
+            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
+
+            left_final_target.mult(fixed_right_arm_rf, fixed_trash_att);
+
+        } else if (phase == PHASE_SCOOP_RETRACT){
+
+            tf::Transform fixed_away_att;
+
+            fixed_away_att.setOrigin(tf::Vector3(-0.031, -0.807, 0.992));
+            fixed_away_att.setRotation(tf::Quaternion(-0.009, 0.963, 0.226, -0.147));
+
+            left_final_target.mult(fixed_right_arm_rf, fixed_away_att);
         }
+
     }
     else // >> Set the target of the left arm relative to the task frame
         left_final_target.mult(task_frame, left_att); // final target in world
