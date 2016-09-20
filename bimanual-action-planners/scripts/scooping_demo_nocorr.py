@@ -187,17 +187,17 @@ def execute_scooping_planner():
 	task_frame.rotation.z = 0
 	task_frame.rotation.w = 1
 
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run Bimanual REACH with Coordinated Reaching DS')
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+	# raw_input('Press Enter to Run Bimanual REACH with Coordinated Reaching DS')
+	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 
 	rA_p0_attr, lA_p0_attr = query_init_attractors()
 
 	# Reach with Coordinated DS
-	action_type = 'BIMANUAL_REACH'  
-	result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
-	print "Result:"		
-	print result.success
+	# action_type = 'BIMANUAL_REACH'  
+	# result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
+	# print "Result:"		
+	# print result.success
 	
 
 	while True:
@@ -229,7 +229,7 @@ def execute_scooping_planner():
 		print "\n\n= = = = = = = = = = = = = = = = = = ="
 
 		# Departing with Coupled CDS - to prepare for the trashing action
-		action_type = 'BIMANUAL_REACH'  
+		action_type = 'COUPLED_LEARNED_MODEL'  
 		rA_p3_attr,lA_p3_attr = query_depart_attractors()
 		result = send_goal(action_type, 'phase3', task_frame, rA_p3_attr, lA_p3_attr, 10)
 		print "Result:"		
@@ -240,7 +240,7 @@ def execute_scooping_planner():
 		print "\n\n= = = = = = = = = = = = = = = = = = ="
 
 		# Trashing with Coupled CDS 
-		action_type = 'BIMANUAL_REACH'  
+		action_type = 'COUPLED_LEARNED_MODEL'  
 		rA_p4_attr,lA_p4_attr = query_trash_attractors()
 		result = send_goal(action_type, 'phase4', task_frame, rA_p4_attr, lA_p4_attr, 10)
 		print "Result:"		

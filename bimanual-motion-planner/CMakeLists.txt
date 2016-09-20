@@ -5,7 +5,7 @@ project(bimanual_motion_planner)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 ##find_package(catkin REQUIRED mathlib std_tools robotlib cds_execution tf tf_conversions cmake_modules)
-find_package(catkin REQUIRED COMPONENTS roscpp actionlib actionlib_msgs mathlib std_tools robotlib cds_execution tf cmake_modules visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver)
+find_package(catkin REQUIRED COMPONENTS roscpp actionlib actionlib_msgs mathlib std_tools robotlib cds_execution tf cmake_modules visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver sgaussians)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -79,7 +79,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES state_transformers
-   CATKIN_DEPENDS actionlib_msgs roscpp geometry_msgs sensor_msgs mathlib robotlib std_tools tf robotlib cds_execution tf visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver
+   CATKIN_DEPENDS actionlib_msgs roscpp geometry_msgs sensor_msgs mathlib robotlib std_tools tf robotlib cds_execution tf visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver sgaussians
 #  DEPENDS system_lib
 )
 

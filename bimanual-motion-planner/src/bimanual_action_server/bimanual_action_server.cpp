@@ -196,6 +196,10 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     feedback_.progress = 0;
     bool success = false;
 
+    initialize_cart_filter(dt, 10, 10);
+    sync_cart_filter(r_ee_pose, l_ee_pose);
+
+    ROS_INFO("Synchronized Cartesian motion");
 
     // Setup transforms for task-space control
     tf::Transform task_frame, right_att, left_att;
@@ -282,7 +286,6 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     //---> ACTION TYPE 3: Use two coupled learned models to execute the action
     if(goal->action_type=="COUPLED_LEARNED_MODEL"){
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
-//        CDSController::DynamicsType slaveType = CDSController::NO_DYNAMICS;
         CDSController::DynamicsType slaveType = CDSController::UTHETA;
         // Execute action from *coupled* learned action model
         success = coupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,

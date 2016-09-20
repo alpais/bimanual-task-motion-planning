@@ -45,6 +45,91 @@ void BimanualActionServer::l_ftStateCallback(const geometry_msgs::WrenchStampedC
 
 }
 
+//void initialize_cart_filter(double dt, double r_Wn, double l_Wn){
+void BimanualActionServer::initialize_cart_filter(double dt, double r_Wn, double l_Wn){
+
+    // Filter for right arm
+    r_cdd_cart_filter = new CDDynamics(7, dt, r_Wn);
+    MathLib::Vector r_vel_lim_cart(7);
+    r_vel_lim_cart = DEG2RAD(60);
+    r_cdd_cart_filter->SetVelocityLimits(r_vel_lim_cart);
+    r_cdd_cart_filter->SetWn(r_Wn);
+
+    // Filter for left arm
+    l_cdd_cart_filter = new CDDynamics(7, dt, l_Wn);
+    MathLib::Vector l_vel_lim_cart(7);
+    l_vel_lim_cart = DEG2RAD(60);
+    l_cdd_cart_filter->SetVelocityLimits(l_vel_lim_cart);
+    l_cdd_cart_filter->SetWn(l_Wn);
+
+
+}
+
+void BimanualActionServer::sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose){
+
+    // synchronize Cartesian motion for the right arm
+    MathLib::Vector r_init_state; r_init_state.Resize(7, false);
+    r_init_state(0) = r_ee_pose.getOrigin().getX();
+    r_init_state(1) = r_ee_pose.getOrigin().getY();
+    r_init_state(2) = r_ee_pose.getOrigin().getZ();
+    r_init_state(3) = r_ee_pose.getRotation().getX();
+    r_init_state(4) = r_ee_pose.getRotation().getY();
+    r_init_state(5) = r_ee_pose.getRotation().getZ();
+    r_init_state(6) = r_ee_pose.getRotation().getW();
+    r_cdd_cart_filter->SetState(r_init_state);
+
+    // synchronize Cartesian motion for the left arm
+    MathLib::Vector l_init_state; l_init_state.Resize(7, false);
+    l_init_state(0) = l_ee_pose.getOrigin().getX();
+    l_init_state(1) = l_ee_pose.getOrigin().getY();
+    l_init_state(2) = l_ee_pose.getOrigin().getZ();
+    l_init_state(3) = l_ee_pose.getRotation().getX();
+    l_init_state(4) = l_ee_pose.getRotation().getY();
+    l_init_state(5) = l_ee_pose.getRotation().getZ();
+    l_init_state(6) = l_ee_pose.getRotation().getW();
+    l_cdd_cart_filter->SetState(l_init_state);
+
+}
+
+void BimanualActionServer::filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose){
+
+    // Filter right arm motion
+    MathLib::Vector r_next_target; r_next_target.Resize(7, false);
+    r_next_target(0) = r_des_ee_pose.getOrigin().getX();
+    r_next_target(1) = r_des_ee_pose.getOrigin().getY();
+    r_next_target(2) = r_des_ee_pose.getOrigin().getZ();
+    r_next_target(3) = r_des_ee_pose.getRotation().getX();
+    r_next_target(4) = r_des_ee_pose.getRotation().getY();
+    r_next_target(5) = r_des_ee_pose.getRotation().getZ();
+    r_next_target(6) = r_des_ee_pose.getRotation().getW();
+
+    r_cdd_cart_filter->SetTarget(r_next_target);
+    r_cdd_cart_filter->Update();
+    r_cdd_cart_filter->GetState(r_next_target);
+
+    r_des_ee_pose.setOrigin(tf::Vector3(r_next_target(0), r_next_target(1), r_next_target(2)));
+    r_des_ee_pose.setRotation(tf::Quaternion(r_next_target(3), r_next_target(4), r_next_target(5), r_next_target(6)));;
+
+    // Filter left arm motion
+    MathLib::Vector l_next_target; l_next_target.Resize(7, false);
+    l_next_target(0) = l_des_ee_pose.getOrigin().getX();
+    l_next_target(1) = l_des_ee_pose.getOrigin().getY();
+    l_next_target(2) = l_des_ee_pose.getOrigin().getZ();
+    l_next_target(3) = l_des_ee_pose.getRotation().getX();
+    l_next_target(4) = l_des_ee_pose.getRotation().getY();
+    l_next_target(5) = l_des_ee_pose.getRotation().getZ();
+    l_next_target(6) = l_des_ee_pose.getRotation().getW();
+
+    l_cdd_cart_filter->SetTarget(l_next_target);
+    l_cdd_cart_filter->Update();
+    l_cdd_cart_filter->GetState(l_next_target);
+
+    l_des_ee_pose.setOrigin(tf::Vector3(l_next_target(0), l_next_target(1), l_next_target(2)));
+    l_des_ee_pose.setRotation(tf::Quaternion(l_next_target(3), l_next_target(4), l_next_target(5), l_next_target(6)));;
+
+}
+
+
 // Send desired EE_pose to robot/joint_ctrls.
 void BimanualActionServer::sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
 

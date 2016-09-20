@@ -31,7 +31,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         delta_rot.setBasis(tf::Matrix3x3(0.866,-0.5,0,0.5,0.866,0,0,0,1)); // Rotate around Z EE RF (30dg)
         right_final_target.mult(delta_rot,right_final_target);
         right_final_target.mult(r_ee_pose,right_final_target);
-    } else if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
+    } else if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
         right_final_target.mult(task_frame, right_att);
     }
     else
@@ -94,6 +94,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
         } else if (phase == PHASE_SCOOP_SCOOP){
 
+            tf::Transform fixed_scoop_att;
             fixed_scoop_att.setOrigin(tf::Vector3(-0.088, -0.070, 0.259));
             fixed_scoop_att.setRotation(tf::Quaternion(0.277, 0.918, 0.263, 0.109));
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
@@ -125,7 +126,12 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
     right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
     right_cdsRun->setDT(model_dt);
-    right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, masterType, slaveType);
+    CDSController::DynamicsType r_masterType;
+    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH))
+        r_masterType = CDSController::LINEAR_DYNAMICS;
+    else
+        r_masterType = masterType;
+    right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, r_masterType, slaveType);
     right_cdsRun->postInit();
 
 
@@ -144,7 +150,17 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
     left_cdsRun->setDT(model_dt);
-    left_cdsRun->setMotionParameters(0.5,0.5,1,reachingThreshold, masterType, slaveType);
+    CDSController::DynamicsType l_masterType;
+    CDSController::DynamicsType l_slaveType;
+    if (task_id == SCOOPING_TASK_ID && (phase == phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
+        l_masterType = CDSController::LINEAR_DYNAMICS;
+        l_slaveType = CDSController::NO_DYNAMICS;
+    }
+    else{
+        l_masterType = masterType;
+        l_slaveType = slaveType;
+    }
+    left_cdsRun->setMotionParameters(1.0,1,1,reachingThreshold, l_masterType, l_slaveType);
     left_cdsRun->postInit();
 
 
@@ -192,9 +208,9 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
         r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
-        l_ori_err = acos(abs(left_final_target.getRotation().dot(l_curr_ee_pose.getRotation())));
-        ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
-        ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
+        l_ori_err = acos(abs(left_final_target.getRotation().dot(l_ee_pose.getRotation())));
+//        ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
+//        ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
 
 
         // Compute Next Desired EE Pose for Right Arm
@@ -232,8 +248,11 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             if (r_pos_err > 0.02)
                 r_des_ee_pose = r_curr_ee_pose;
         }
-        else
+        else{
             l_des_ee_pose = l_mNextRobotEEPose;
+            l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.25) );
+        }
+
 
 
         if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
@@ -253,6 +272,8 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             l_des_ee_pose.setOrigin(origin);
         }
 
+        // Filter Commands in Cartesian space
+
         // Make next pose the current pose for open-loop simulation
         if (just_visualize==true)
             initial_config=false;
@@ -260,14 +281,17 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         //******************************//
         //  Send the computed ee poses  //
         //******************************//
-        if (just_visualize==false)
+
+        if (just_visualize==false){
+            filter_arm_motion(r_des_ee_pose, l_des_ee_pose);
             sendPose(r_des_ee_pose, l_des_ee_pose);
+        }
 
         as_.publishFeedback(feedback_);
 
         if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
 
-            ROS_INFO_STREAM("POSITION DYNAMICS CONVERGED!");
+//            ROS_INFO_STREAM("POSITION DYNAMICS CONVERGED!");
 
             if (phase == PHASE_REACH_TO_PEEL){
                 ROS_INFO_STREAM("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
@@ -280,15 +304,15 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 break;
             }
 
-            if ((task_id == PEELING_TASK_ID && phase == PHASE_PEEL) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
-                sendPose(r_curr_ee_pose, l_curr_ee_pose);
-                break;
-            }
+//            if ((task_id == PEELING_TASK_ID && phase == PHASE_PEEL) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
+//                sendPose(r_curr_ee_pose, l_curr_ee_pose);
+//                break;
+//            }
 
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
-                ROS_INFO_STREAM("RIGHT ORIENTATION DYN CONVERGED!");
+//                ROS_INFO_STREAM("RIGHT ORIENTATION DYN CONVERGED!");
                 if((l_ori_err < orientationThreshold) || isnan(l_ori_err)){
-                    ROS_INFO_STREAM("LEFT ORIENTATION DYN CONVERGED!");
+//                    ROS_INFO_STREAM("LEFT ORIENTATION DYN CONVERGED!");
                     sendPose(r_curr_ee_pose, l_curr_ee_pose);
                     break;
                 }
@@ -296,7 +320,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             //            break;
         }
 
-        ROS_INFO("SLEEEPING NOW");
+//        ROS_INFO("SLEEEPING NOW");
         loop_rate.sleep();
     }
     ROS_INFO("OUT OF LOOP CDS");

@@ -22,7 +22,11 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
     // Initialize Virtual Object Dynamical System
     bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-    vo_dsRun->init(dt,1.0,0.5,800.0,400.0,400.0);
+    if (task_id == SCOOPING_TASK_ID)
+        vo_dsRun->init(dt,1.0,0.5,400.0,200.0,200.0,0.25);
+    else
+        vo_dsRun->init(dt,1.0,0.5,800.0,400.0,400.0,0.5);
+
     vo_dsRun->setCurrentObjectState(real_object, real_object_velocity);
     vo_dsRun->setInterceptPositions(real_object, left_final_target, right_final_target);
     vo_dsRun->setCurrentEEStates(l_curr_ee_pose,r_curr_ee_pose);
@@ -75,6 +79,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         //******************************//
         //  Send the computed ee poses  //
         //******************************//
+        filter_arm_motion(r_des_ee_pose, l_des_ee_pose);
         sendPose(r_des_ee_pose, l_des_ee_pose);
 
         // Visualize desired end-effector poses
@@ -94,7 +99,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         // Current progress variable (position)
         object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();
 
-        ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
+ //       ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
 
         as_.publishFeedback(feedback_);
 
