@@ -58,7 +58,8 @@ void BimanualActionServer::sendAndWaitForNormalForce(double fz, int arm_id)
     }
 }
 
-bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height, double vertical_speed, double thr_force) {
+bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, double min_height, double vertical_speed, double thr_force) {
+
     double rate = 500;
     thr_force = fabs(thr_force);
     ros::Rate thread_rate(rate);
@@ -83,7 +84,7 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
 
 
     double startz = arm_pose.getOrigin().z();
-    ROS_INFO_STREAM("Start Z:" << startz);
+    ROS_INFO_STREAM("Start Height:" << startz);
 
     msg_pose.pose.position.x = arm_pose.getOrigin().x() + offset_X;
     msg_pose.pose.position.y = arm_pose.getOrigin().y() + offset_Y;
@@ -95,42 +96,59 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, double min_height,
 
     ROS_INFO_STREAM("Finding object up to max dist. "<< min_height <<" with vertical speed "<< vertical_speed <<" and threshold force "<<thr_force<<"N.");
     while(ros::ok()) {
-        msg_pose.pose.position.z -= vertical_speed/rate;
 
-        if (arm_id == L_ARM_ID)
-        {
-            msg_pose.pose.position.y += vertical_speed/rate;
+        // Compute Next Pose
+        if (search_dir == SEARCH_DIR_X){
+
+            msg_pose.pose.position.x -= vertical_speed/rate;
+
+        } else if (search_dir == SEARCH_DIR_Y){
+
+            msg_pose.pose.position.y -= vertical_speed/rate;
+
+        } else if (search_dir == SEARCH_DIR_Z){
+
+            msg_pose.pose.position.z -= vertical_speed/rate;
+
+            if (task_id == PEELING_TASK_ID && arm_id == L_ARM_ID)
+            {
+                msg_pose.pose.position.y += vertical_speed/rate; // specific for peeling
+            }
         }
 
+
+        // Publish Next Pose
         if (arm_id == R_ARM_ID){
+
             r_pub_.publish(msg_pose);
             ee_ft = r_curr_ee_ft;
-        }
-        else{
-            l_pub_.publish(msg_pose);
-            ee_ft = l_curr_ee_ft;
-        }
-
-        if (arm_id == R_ARM_ID){
             arm_pose.setOrigin(r_ee_pose.getOrigin());
             arm_pose.setRotation(r_ee_pose.getRotation());
-        }
-        else{
+
+        } else if (arm_id == L_ARM_ID) {
+
+            l_pub_.publish(msg_pose);
+            ee_ft = l_curr_ee_ft;
             arm_pose.setOrigin(l_ee_pose.getOrigin());
             arm_pose.setRotation(l_ee_pose.getRotation());
-        }
 
-        ROS_INFO_STREAM("Current force Z:" << ee_ft[2] << " and Z pos: " << fabs(arm_pose.getOrigin().z()-startz));
+        } else
+
+            break;
+
+        ROS_INFO_STREAM("Current force in dorection:" << search_dir << " is " << ee_ft[search_dir] << " and current height: " << fabs(arm_pose.getOrigin().z()-startz));
 
         // Go down until force reaches the threshold
-        if(fabs(ee_ft[2]) > thr_force) {
-            ROS_INFO("MAX Force applied");
+        if(fabs(ee_ft[search_dir]) > thr_force) {
+            ROS_INFO("Max Force applied");
             break;
         }
+
         if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
             ROS_INFO("Max distance reached");
             break;
         }
+
         thread_rate.sleep();
         feedback_.progress = ee_ft[2];
         as_.publishFeedback(feedback_);

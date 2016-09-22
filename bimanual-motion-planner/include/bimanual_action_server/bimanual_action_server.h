@@ -61,14 +61,22 @@
 #define PEELING_TASK_ID     1
 #define SCOOPING_TASK_ID    2
 
+#define SEARCH_DIR_X        1
+#define SEARCH_DIR_Y        2
+#define SEARCH_DIR_Z        3
+
 // Peeling parametrization >> should come from launch file
-#define MAX_PEELING_FORCE		15	// [N]
-#define MAX_PEELING_SEARCH_HEIGHT 	0.07 	// 7 cm 
-#define MAX_PEELING_VERTICAL_SPEED	0.01 	// the max speed to use when going down to search for contact
-#define MAX_PEELING_CONTACT_FORCE	5	// max force to use to establish contact on an object
+#define MAX_PEELING_FORCE                   15      // [N]
+#define MAX_PEELING_SEARCH_HEIGHT           0.07 	// 7 cm
+#define MAX_PEELING_VERTICAL_SPEED          0.01 	// the max speed to use when going down to search for contact
+#define MAX_PEELING_CONTACT_FORCE           8       // max force to use to establish contact on an object
+#define MAX_PEELING_TABLE_CONTACT_FORCE     10
+
 // Scooping parametrization
-
-
+#define MAX_SCOOPING_FORCE                  10
+#define MAX_SCOOPING_SEARCH_HEIGHT          0.04
+#define MAX_SCOOPING_VERTICAL_SPEED         0.01
+#define MAX_SCOOPING_CONTACT_FORCE          5
 
 // Define active task >> In the future read this from file
 // #define CRT_TASK_SCOOPING
@@ -80,6 +88,10 @@ class BimanualActionServer
 protected:
 
     bool bDisplayDebugInfo;
+
+    bool bBypassOri; // Compute the orientation using CDDynamics
+    bool bFilterOri; // Smooth the orientation given by CDS or VO
+    bool bIgnoreOri; // Completly discard the orientation, only control for position
 
     enum TaskPhase {
         // PEELING Task phases
@@ -200,7 +212,7 @@ protected:
     void sendAndWaitForNormalForce(double fz, int arm_id);
 
     // Function to move ee in Z direction until contact is identified
-    bool find_object_by_contact(int arm_id, double min_height, double vertical_speed, double thr_force);
+    bool find_object_by_contact(int arm_id, int search_dir, double min_height, double vertical_speed, double thr_force);
 
     //**************************************//
     // FUNCTIONS USED BY VO DS ACTION TYPE  //

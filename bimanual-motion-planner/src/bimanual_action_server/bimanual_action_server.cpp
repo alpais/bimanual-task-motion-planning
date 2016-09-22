@@ -21,6 +21,10 @@ void BimanualActionServer::initialize() {
 
     bDisplayDebugInfo = false;
 
+    bBypassOri = false;    // Compute the orientation using CDDynamics
+    bFilterOri = false;    // Smooth the ori
+    bIgnoreOri = false;   // Completly discard the orientation
+
     ros::NodeHandle _nh("~");
 
     // Read Parameters from Launch File

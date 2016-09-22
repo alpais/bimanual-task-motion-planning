@@ -43,15 +43,13 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
     // Before Starting a Reach Bias the FT-Sensors!
     biasFtSensors();
 
-    bool bBypassOri; bBypassOri = true;    // Compute the orientation differently
-    bool bFilterOri; bFilterOri = true;    // Smooth the ori
-    bool bIgnoreOri; bIgnoreOri = false;   // Completly discard the orientation
+    bBypassOri = true;    // Compute the orientation using CDDynamics
+    bFilterOri = true;    // Smooth the ori
+    bIgnoreOri = false;   // Completly discard the orientation
 
-    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_RETRACT)
-        bIgnoreOri = true;
+//    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_RETRACT)
+//        bIgnoreOri = true;
 
-//    if (bBypassOri) {
-        // We discard the orientation computed by the VO and just do a CDDynamics on it
         CDDynamics  *l_cdd_cart_ori_filter;
         l_cdd_cart_ori_filter = new CDDynamics(4, dt, 1.5);
         MathLib::Vector ori_vel_lim(4);
@@ -62,10 +60,6 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         crt_ori(2) = l_ee_pose.getRotation().getZ();
         crt_ori(3) = l_ee_pose.getRotation().getW();
         l_cdd_cart_ori_filter->SetState(crt_ori);
-
-
-//}
-
 
     while(ros::ok()) {
 
@@ -119,7 +113,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
             l_des_ee_pose.setRotation(tf::Quaternion(next_ori(0), next_ori(1), next_ori(2), next_ori(3)));
         }
         if (bIgnoreOri){
-//            l_des_ee_pose.setRotation(l_ee_pose.getRotation());
+            l_des_ee_pose.setRotation(l_ee_pose.getRotation());
         }
         filter_arm_motion(r_des_ee_pose, l_des_ee_pose);
         sendPose(r_des_ee_pose, l_des_ee_pose);
@@ -154,24 +148,21 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
             if(phase ==  PHASE_INIT_REACH) {
                 ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");
                 if (bWaitForForces_right_arm)	{
-                    bool x_r_arm = find_object_by_contact(R_ARM_ID, 0.07, 0.05, 5);
+                    bool x_r_arm = find_object_by_contact(R_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, 0.05, MAX_PEELING_TABLE_CONTACT_FORCE);
                     return x_r_arm;
                 }
-            }else if(phase ==  PHASE_RETRACT){
+            } else if(phase ==  PHASE_RETRACT){
                 ROS_INFO_STREAM("In PHASE_INIT_RETRACT.. biasing ft sensors...");
                 biasFtSensors();
             }
             sendPose(r_curr_ee_pose, l_curr_ee_pose);
-
             break;
         }
-
         loop_rate.sleep();
     }
     delete vo_dsRun;
 
     return ros::ok();
-
 }
 
 

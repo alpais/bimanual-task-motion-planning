@@ -347,21 +347,31 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
             ROS_INFO("POSITION DYNAMICS CONVERGED!");
 
-            if (phase == PHASE_REACH_TO_PEEL){
-                ROS_INFO_STREAM("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
-                //sendPose(r_curr_ee_pose, l_curr_ee_pose);
-                if (bWaitForForces_left_arm)	{
-                    bool x_l_arm = find_object_by_contact(L_ARM_ID, 0.07, 0.01, 8);
+            if (bIgnoreOri){
+                sendPose(r_curr_ee_pose, l_curr_ee_pose); // Stop the robot after the position has converged
+                break;
+            }
+
+            if (task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL){
+                ROS_INFO("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
+                if (bWaitForForces_left_arm)	{                    
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, MAX_PEELING_VERTICAL_SPEED, MAX_PEELING_CONTACT_FORCE);
                     return x_l_arm;
                 }
                 ROS_INFO("Finished Finding Object LOOP");
                 break;
             }
 
-//            if ((task_id == PEELING_TASK_ID && phase == PHASE_PEEL) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP) || (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
-//                sendPose(r_curr_ee_pose, l_curr_ee_pose);
-//                break;
-//            }
+
+            if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
+                ROS_INFO("In PHASE_REACH_TO_SCOOP ... finding the mellon now ...");
+                if (bWaitForForces_left_arm)	{
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_X, MAX_PEELING_SEARCH_HEIGHT, MAX_PEELING_VERTICAL_SPEED, MAX_PEELING_CONTACT_FORCE);
+                    return x_l_arm;
+                }
+                ROS_INFO("Finished Finding Object LOOP");
+                break;
+            }
 
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
                 ROS_INFO("RIGHT ORIENTATION DYN CONVERGED!");
