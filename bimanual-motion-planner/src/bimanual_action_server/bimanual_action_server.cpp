@@ -19,6 +19,8 @@ BimanualActionServer::~BimanualActionServer(void)
 
 void BimanualActionServer::initialize() {
 
+    bDisplayDebugInfo = false;
+
     ros::NodeHandle _nh("~");
 
     // Read Parameters from Launch File
@@ -196,9 +198,6 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     feedback_.progress = 0;
     bool success = false;
 
-    initialize_cart_filter(dt, 10, 10);
-    sync_cart_filter(r_ee_pose, l_ee_pose);
-
     ROS_INFO("Synchronized Cartesian motion");
 
     // Setup transforms for task-space control
@@ -269,6 +268,18 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
         }
 
     }
+
+    double r_Wn = 25;
+    double l_Wn = 10;
+
+    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
+        l_Wn = 55;
+    }
+    else l_Wn = 10;
+
+    initialize_cart_filter(dt, r_Wn, l_Wn);
+    sync_cart_filter(r_ee_pose, l_ee_pose);
+
     //---> ACTION TYPE 1: Use two independent learned models to execute the action
     if(goal->action_type=="UNCOUPLED_LEARNED_MODEL"){
         CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;

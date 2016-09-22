@@ -79,6 +79,8 @@ class BimanualActionServer
 
 protected:
 
+    bool bDisplayDebugInfo;
+
     enum TaskPhase {
         // PEELING Task phases
         PHASE_INIT_REACH            =  0,
@@ -129,9 +131,10 @@ protected:
     bool bWaitForForces_left_arm;
     bool bWaitForForces_right_arm;
 
-    // Filter for cartesian commands
+    // Filters for cartesian commands
     CDDynamics  *r_cdd_cart_filter;
     CDDynamics  *l_cdd_cart_filter;
+
     void initialize_cart_filter(double dt, double r_Wn, double l_Wn);
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
     void filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose);

@@ -22,8 +22,9 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
     // Initialize Virtual Object Dynamical System
     bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
-    if (task_id == SCOOPING_TASK_ID)
-        vo_dsRun->init(dt,1.0,0.5,400.0,200.0,200.0,0.25);
+    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH)
+//        vo_dsRun->init(dt, 1, 0.5, 1200, 400, 400, 0.25);
+    vo_dsRun->init(dt,1.0,0.5,400.0,200.0,200.0,0.25);
     else
         vo_dsRun->init(dt,1.0,0.5,800.0,400.0,400.0,0.5);
 
@@ -41,6 +42,29 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
     // Before Starting a Reach Bias the FT-Sensors!
     biasFtSensors();
+
+    bool bBypassOri; bBypassOri = true;    // Compute the orientation differently
+    bool bFilterOri; bFilterOri = true;    // Smooth the ori
+    bool bIgnoreOri; bIgnoreOri = false;   // Completly discard the orientation
+
+    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_RETRACT)
+        bIgnoreOri = true;
+
+//    if (bBypassOri) {
+        // We discard the orientation computed by the VO and just do a CDDynamics on it
+        CDDynamics  *l_cdd_cart_ori_filter;
+        l_cdd_cart_ori_filter = new CDDynamics(4, dt, 1.5);
+        MathLib::Vector ori_vel_lim(4);
+        ori_vel_lim = DEG2RAD(60); l_cdd_cart_ori_filter->SetVelocityLimits(ori_vel_lim);
+        MathLib::Vector crt_ori; crt_ori.Resize(4, false);
+        crt_ori(0) = l_ee_pose.getRotation().getX();
+        crt_ori(1) = l_ee_pose.getRotation().getY();
+        crt_ori(2) = l_ee_pose.getRotation().getZ();
+        crt_ori(3) = l_ee_pose.getRotation().getW();
+        l_cdd_cart_ori_filter->SetState(crt_ori);
+
+
+//}
 
 
     while(ros::ok()) {
@@ -79,6 +103,24 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         //******************************//
         //  Send the computed ee poses  //
         //******************************//
+        if (bFilterOri) {
+            // Filter orientation of the left arm
+            MathLib::Vector fin_des_ori; fin_des_ori.Resize(4, false);
+            fin_des_ori(0) = l_des_ee_pose.getRotation().getX();
+            fin_des_ori(1) = l_des_ee_pose.getRotation().getY();
+            fin_des_ori(2) = l_des_ee_pose.getRotation().getZ();
+            fin_des_ori(3) = l_des_ee_pose.getRotation().getW();
+
+            l_cdd_cart_ori_filter->SetTarget(fin_des_ori);
+            MathLib::Vector next_ori; next_ori.Resize(4);
+
+            l_cdd_cart_ori_filter->Update();
+            l_cdd_cart_ori_filter->GetState(next_ori);
+            l_des_ee_pose.setRotation(tf::Quaternion(next_ori(0), next_ori(1), next_ori(2), next_ori(3)));
+        }
+        if (bIgnoreOri){
+//            l_des_ee_pose.setRotation(l_ee_pose.getRotation());
+        }
         filter_arm_motion(r_des_ee_pose, l_des_ee_pose);
         sendPose(r_des_ee_pose, l_des_ee_pose);
 
@@ -99,8 +141,9 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         // Current progress variable (position)
         object_err = (virtual_object.getOrigin() - real_object.getOrigin()).length();
 
- //       ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
-
+        if (bDisplayDebugInfo){
+            ROS_INFO_STREAM("Position Threshold : "    << reachingThreshold    << " ... Current VO Error: " << object_err);
+        }
         as_.publishFeedback(feedback_);
 
         // // Only Check for Position Error
@@ -119,6 +162,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
                 biasFtSensors();
             }
             sendPose(r_curr_ee_pose, l_curr_ee_pose);
+
             break;
         }
 

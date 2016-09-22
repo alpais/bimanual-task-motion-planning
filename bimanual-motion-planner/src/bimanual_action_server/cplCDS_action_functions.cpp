@@ -84,16 +84,10 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         // To determine ATT run  >> rosrun tf tf_echo /TOOL_ft /Hand_ft
         if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
 
-
-            //        - Translation: [-0.015, -0.072, 0.321]
-            //        - Rotation: in Quaternion [-0.506, 0.805, 0.141, 0.275]
-
             tf::Transform fixed_reach_to_scoop_att;
-//            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.015, -0.072, 0.321)); // from tf echo
-//           fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.506, 0.805, 0.141, 0.275)); // Tf transform * Rx(pi/2)
 
-            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(0.006, -0.090, 0.292)); // from tf echo
-            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.678, -0.619, -0.091, -0.386)); // Tf transform * Rx(pi/2)
+            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010, -0.087, 0.286)); // from tf echo
+            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.325, 0.862, 0.031, 0.387));
 
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
 
@@ -101,11 +95,8 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
             tf::Transform fixed_scoop_att;
 
-//            fixed_scoop_att.setOrigin(tf::Vector3(-0.088, -0.070, 0.259));
-//            fixed_scoop_att.setRotation(tf::Quaternion(0.277, 0.918, 0.263, 0.109));
-
-            fixed_scoop_att.setOrigin(tf::Vector3(-0.016, -0.079, 0.270));
-            fixed_scoop_att.setRotation(tf::Quaternion(-0.233, 0.779, 0.576, 0.087));
+            fixed_scoop_att.setOrigin(tf::Vector3(-0.047, -0.061, 0.270));
+            fixed_scoop_att.setRotation(tf::Quaternion(0.312, 0.903, 0.262, 0.138));
 
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
 
@@ -121,10 +112,10 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         } else if (phase == PHASE_SCOOP_TRASH){
 
             tf::Transform fixed_trash_att;
-
-            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480, 0.285));
-            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
-
+            double dh = 0.12;
+            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480 + dh, 0.285));
+//            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
+            fixed_trash_att.setRotation(tf::Quaternion(0.705, -0.625, -0.039, -0.334));
             left_final_target.mult(fixed_right_arm_rf, fixed_trash_att);
 
         } else if (phase == PHASE_SCOOP_RETRACT){
@@ -164,12 +155,21 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
     right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
     right_cdsRun->setDT(model_dt);
+
     CDSController::DynamicsType r_masterType;
-    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH))
+    double r_pos_gain; r_pos_gain = 1;
+    double r_ori_gain; r_ori_gain = 0.5;
+    double r_err_gain; r_err_gain = 1;
+
+    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
         r_masterType = CDSController::LINEAR_DYNAMICS;
+       // r_pos_gain = 2;
+     //   r_ori_gain = 1;
+        r_err_gain = 1.5;
+    }
     else
         r_masterType = masterType;
-    right_cdsRun->setMotionParameters(0.5,1,1,reachingThreshold, r_masterType, slaveType);
+    right_cdsRun->setMotionParameters(r_ori_gain, r_pos_gain, r_err_gain, reachingThreshold, r_masterType, slaveType);
     right_cdsRun->postInit();
 
 
@@ -190,15 +190,31 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     left_cdsRun->setDT(model_dt);
     CDSController::DynamicsType l_masterType;
     CDSController::DynamicsType l_slaveType;
-    if (task_id == SCOOPING_TASK_ID && (phase == phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
+    double l_pos_gain; l_pos_gain = 1;
+    double l_ori_gain; l_ori_gain = 1;
+    double l_err_gain; l_err_gain = 1;
+
+    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
         l_masterType = CDSController::LINEAR_DYNAMICS;
-        l_slaveType = CDSController::NO_DYNAMICS;
+        l_slaveType = CDSController::UTHETA;
     }
     else{
         l_masterType = masterType;
         l_slaveType = slaveType;
     }
-    left_cdsRun->setMotionParameters(1.0,1,1,reachingThreshold, l_masterType, l_slaveType);
+    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
+        l_ori_gain = 1.5;
+        l_pos_gain = 1;
+        l_err_gain = 2;
+        l_masterType = CDSController::LINEAR_DYNAMICS;
+        l_slaveType = CDSController::NO_DYNAMICS;
+    }
+    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_SCOOP)){
+        l_ori_gain = 1.5;
+        l_err_gain = 1.5;
+    }
+//    left_cdsRun->setMotionParameters(l_ori_gain, l_pos_gain, l_err_gain, reachingThreshold, l_masterType, l_slaveType);
+    left_cdsRun->setMotionParameters(1, 1, 1, reachingThreshold, l_masterType, l_slaveType);
     left_cdsRun->postInit();
 
 
@@ -247,9 +263,11 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
         r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
         l_ori_err = acos(abs(left_final_target.getRotation().dot(l_ee_pose.getRotation())));
-//        ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
-//        ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
 
+        if (bDisplayDebugInfo){
+            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
+            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
+         }
 
         // Compute Next Desired EE Pose for Right Arm
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
@@ -261,7 +279,6 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
         // Transformation for PHASE_REACH_TO_PEEL Model
-//        if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL) || (task_id = SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP)){
         if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL)){
             tf::Transform  l_ee_rot, ee_2_rob;
             l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
@@ -310,7 +327,6 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             l_des_ee_pose.setOrigin(origin);
         }
 
-        // Filter Commands in Cartesian space
 
         // Make next pose the current pose for open-loop simulation
         if (just_visualize==true)
@@ -321,7 +337,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         //******************************//
 
         if (just_visualize==false){
-            filter_arm_motion(r_des_ee_pose, l_des_ee_pose);
+            filter_arm_motion(r_des_ee_pose, l_des_ee_pose);         // Filter Commands in Cartesian space
             sendPose(r_des_ee_pose, l_des_ee_pose);
         }
 
@@ -329,7 +345,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
 
-//            ROS_INFO_STREAM("POSITION DYNAMICS CONVERGED!");
+            ROS_INFO("POSITION DYNAMICS CONVERGED!");
 
             if (phase == PHASE_REACH_TO_PEEL){
                 ROS_INFO_STREAM("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
@@ -348,22 +364,25 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 //            }
 
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
-//                ROS_INFO_STREAM("RIGHT ORIENTATION DYN CONVERGED!");
+                ROS_INFO("RIGHT ORIENTATION DYN CONVERGED!");
                 if((l_ori_err < orientationThreshold) || isnan(l_ori_err)){
-//                    ROS_INFO_STREAM("LEFT ORIENTATION DYN CONVERGED!");
-                    sendPose(r_curr_ee_pose, l_curr_ee_pose);
+                    ROS_INFO("LEFT ORIENTATION DYN CONVERGED!");
+                    sendPose(r_curr_ee_pose, l_curr_ee_pose); // Stopping the robot, by sending the current position again which results in zero velocity
                     break;
                 }
             }
             //            break;
         }
 
-//        ROS_INFO("SLEEEPING NOW");
         loop_rate.sleep();
     }
     ROS_INFO("OUT OF LOOP CDS");
+
     delete right_cdsRun;
     delete left_cdsRun;
+
+    delete r_cdd_cart_filter;
+    delete l_cdd_cart_filter;
 
 }
 

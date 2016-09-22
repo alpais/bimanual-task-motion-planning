@@ -54,8 +54,8 @@ def query_scoop_attractors():
 	# Phase 2 ==== Scoop ===
 	lA_p1_attr = geometry_msgs.msg.Transform()
 	lA_p1_attr.translation.x = -0.120 
-	lA_p1_attr.translation.y = -0.237
-	lA_p1_attr.translation.z =  0.396
+	lA_p1_attr.translation.y = -0.245237
+	lA_p1_attr.translation.z =  0.40396
 	lA_p1_attr.rotation.x    = -0.233  
 	lA_p1_attr.rotation.y    =  0.779
 	lA_p1_attr.rotation.z    =  0.576
@@ -94,7 +94,7 @@ def query_trash_attractors():
 	rA_p3_attr = geometry_msgs.msg.Transform()
 	rA_p3_attr.translation.x = -0.270  
 	rA_p3_attr.translation.y =  0.338
-	rA_p3_attr.translation.z =  0.239
+	rA_p3_attr.translation.z =  0.30239
 	rA_p3_attr.rotation.x    =  0.352 
 	rA_p3_attr.rotation.y    = -0.196
 	rA_p3_attr.rotation.z    =  0.083
@@ -104,7 +104,7 @@ def query_trash_attractors():
 	lA_p3_attr = geometry_msgs.msg.Transform()
 	lA_p3_attr.translation.x = -0.057 
 	lA_p3_attr.translation.y = -0.206
-	lA_p3_attr.translation.z =  0.211
+	lA_p3_attr.translation.z =  0.28211
 	lA_p3_attr.rotation.x    = -0.738 
 	lA_p3_attr.rotation.y    =  0.307
 	lA_p3_attr.rotation.z    =  0.247
@@ -118,7 +118,7 @@ def query_away_attractors():
 	# Away - Right Arm Attractor in Task RF
 	rA_p4_attr = geometry_msgs.msg.Transform()
 	rA_p4_attr.translation.x = -0.168
-	rA_p4_attr.translation.y =  0.523
+	rA_p4_attr.translation.y =  0.4523
 	rA_p4_attr.translation.z =  0.216
 	rA_p4_attr.rotation.x    =  0.386 
 	rA_p4_attr.rotation.y    = -0.144
@@ -128,7 +128,7 @@ def query_away_attractors():
 	# Away - Left Arm Attractor in Task RF
 	lA_p4_attr = geometry_msgs.msg.Transform()
 	lA_p4_attr.translation.x = -0.246 
-	lA_p4_attr.translation.y = -0.753
+	lA_p4_attr.translation.y = -0.40753
 	lA_p4_attr.translation.z =  0.308
 	lA_p4_attr.rotation.x    = -0.152 
 	lA_p4_attr.rotation.y    =  0.809
@@ -191,15 +191,15 @@ def execute_scooping_planner():
 
 	while True:
 
-		# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
-		# raw_input('Press Enter to Run Reach-To-Scoop with Coupled CDS')
-		# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
+		print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
+		raw_input('Press Enter to Run Reach-To-Scoop with Coupled CDS')
+		print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
 
-		# rA_p0_attr,lA_p0_attr = query_reach_attractors()
-		# action_type = 'COUPLED_LEARNED_MODEL'  
-		# result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p0_attr, 10)
-		# print "Result:"		
-		# print result.success
+		rA_p0_attr,lA_p0_attr = query_reach_attractors()
+		action_type = 'COUPLED_LEARNED_MODEL'  
+		result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p0_attr, 10)
+		print "Result:"		
+		print result.success
 
 		print "\n\n= = = = = = = = = = = = = = = = = = ="
 		raw_input('Press Enter To Scoop with Coupled CDS')
