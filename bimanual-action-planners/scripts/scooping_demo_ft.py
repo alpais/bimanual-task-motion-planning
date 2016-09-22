@@ -189,57 +189,46 @@ def execute_scooping_planner():
 	# print result.success
 	
 
-	while True:
 
-		print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
-		raw_input('Press Enter to Run Reach-To-Scoop with Coupled CDS')
-		print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
+	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
+	raw_input('Press Enter to Run Reach-To-Scoop with Coupled CDS')
+	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
 
-		rA_p0_attr,lA_p0_attr = query_reach_attractors()
-		action_type = 'COUPLED_LEARNED_MODEL'  
-		result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p0_attr, 10)
-		print "Result:"		
-		print result.success
+	rA_p0_attr,lA_p0_attr = query_reach_attractors()
+	action_type = 'COUPLED_LEARNED_MODEL'  
+	result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p0_attr, 10)
+	print "Result:"		
+	print result.success
 
-		print "\n\n= = = = = = = = = = = = = = = = = = ="
-		raw_input('Press Enter To Scoop with Coupled CDS')
-		print "\n\n= = = = = = = = = = = = = = = = = = ="
+	print "\n\n= = = = = = = = = = = = = = = = = = ="
+	raw_input('Press Enter To Scoop with Coupled CDS')
+	print "\n\n= = = = = = = = = = = = = = = = = = ="
 
-		rA_p1_attr,lA_p1_attr = query_scoop_attractors()
-		action_type = 'COUPLED_LEARNED_MODEL'  
-		result = send_goal(action_type, 'phase2', task_frame, rA_p1_attr, lA_p1_attr, 10)
-		print "Result:"		
-		print result.success
+	rA_p1_attr,lA_p1_attr = query_scoop_attractors()
+	action_type = 'COUPLED_LEARNED_MODEL'  
+	result = send_goal(action_type, 'phase2', task_frame, rA_p1_attr, lA_p1_attr, 10)
+	print "Result:"		
+	print result.success
 
-		print "\n\n= = = = = = = = = = = = = = = = = = ="
-		raw_input('Press Enter To Depart with Coupled CDS')
-		print "\n\n= = = = = = = = = = = = = = = = = = ="
+	print "\n\n= = = = = = = = = = = = = = = = = = ="
+	raw_input('Press Enter To Depart with Coupled CDS')
+	print "\n\n= = = = = = = = = = = = = = = = = = ="
 
-		rA_p2_attr,lA_p2_attr = query_depart_attractors()
-		action_type = 'COUPLED_LEARNED_MODEL'  
-		result = send_goal(action_type, 'phase3', task_frame, rA_p2_attr, lA_p2_attr, 10)
-		print "Result:"		
-		print result.success
+	rA_p2_attr,lA_p2_attr = query_depart_attractors()
+	action_type = 'COUPLED_LEARNED_MODEL'  
+	result = send_goal(action_type, 'phase3', task_frame, rA_p2_attr, lA_p2_attr, 10)
+	print "Result:"		
+	print result.success
 
-		print "\n\n= = = = = = = = = = = = = = = = = = ="
-		raw_input('Press Enter To Trash with Coupled CDS')
-		print "\n\n= = = = = = = = = = = = = = = = = = ="
+	print "\n\n= = = = = = = = = = = = = = = = = = ="
+	raw_input('Press Enter To Trash with Coupled CDS')
+	print "\n\n= = = = = = = = = = = = = = = = = = ="
 
-		rA_p3_attr,lA_p3_attr = query_trash_attractors()
-		action_type = 'BIMANUAL_REACH'  
-		result = send_goal(action_type, 'phase4', task_frame, rA_p3_attr, lA_p3_attr, 10)
-		print "Result:"		
-		print result.success
-
-		scoop_var = raw_input("Do you want to scoop again(any), or end(e)?")
-
-		if scoop_var != 'e':		
-			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
-			raw_input('Restarting Scooping Task')
-			print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = "
-		
-		if scoop_var == 'e':
-			break
+	rA_p3_attr,lA_p3_attr = query_trash_attractors()
+	action_type = 'BIMANUAL_REACH'  
+	result = send_goal(action_type, 'phase4', task_frame, rA_p3_attr, lA_p3_attr, 10)
+	print "Result:"		
+	print result.success
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
 	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')

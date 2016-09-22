@@ -61,9 +61,9 @@
 #define PEELING_TASK_ID     1
 #define SCOOPING_TASK_ID    2
 
-#define SEARCH_DIR_X        1
-#define SEARCH_DIR_Y        2
-#define SEARCH_DIR_Z        3
+#define SEARCH_DIR_X        0
+#define SEARCH_DIR_Y        1
+#define SEARCH_DIR_Z        2
 
 // Peeling parametrization >> should come from launch file
 #define MAX_PEELING_FORCE                   15      // [N]
@@ -212,7 +212,7 @@ protected:
     void sendAndWaitForNormalForce(double fz, int arm_id);
 
     // Function to move ee in Z direction until contact is identified
-    bool find_object_by_contact(int arm_id, int search_dir, double min_height, double vertical_speed, double thr_force);
+    bool find_object_by_contact(int arm_id, int search_dir, double search_distance, double search_speed, double thr_force);
 
     //**************************************//
     // FUNCTIONS USED BY VO DS ACTION TYPE  //

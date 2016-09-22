@@ -366,7 +366,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
                 ROS_INFO("In PHASE_REACH_TO_SCOOP ... finding the mellon now ...");
                 if (bWaitForForces_left_arm)	{
-                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_X, MAX_PEELING_SEARCH_HEIGHT, MAX_PEELING_VERTICAL_SPEED, MAX_PEELING_CONTACT_FORCE);
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_Z, MAX_SCOOPING_SEARCH_HEIGHT, MAX_SCOOPING_VERTICAL_SPEED, MAX_SCOOPING_CONTACT_FORCE);
                     return x_l_arm;
                 }
                 ROS_INFO("Finished Finding Object LOOP");

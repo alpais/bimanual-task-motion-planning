@@ -58,7 +58,12 @@ void BimanualActionServer::sendAndWaitForNormalForce(double fz, int arm_id)
     }
 }
 
-bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, double min_height, double vertical_speed, double thr_force) {
+bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, double search_distance, double search_speed, double thr_force) {
+/*
+ *  This function searches for an object by moving the end effector of the specified arm in the given search_dir for a maximum search_distance.
+ *  The search ends when there is a contact force of up to thr_force, or when the maximum search_distance along that direction has been reached.
+ */
+
 
     double rate = 500;
     thr_force = fabs(thr_force);
@@ -83,8 +88,12 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, do
     }
 
 
-    double startz = arm_pose.getOrigin().z();
-    ROS_INFO_STREAM("Start Height:" << startz);
+    double start_pos;
+    if (search_dir == SEARCH_DIR_X) start_pos = arm_pose.getOrigin().x();
+    if (search_dir == SEARCH_DIR_Y) start_pos = arm_pose.getOrigin().y();
+    if (search_dir == SEARCH_DIR_Z) start_pos = arm_pose.getOrigin().z();
+
+    ROS_INFO_STREAM("Start position in the search direction:" << start_pos);
 
     msg_pose.pose.position.x = arm_pose.getOrigin().x() + offset_X;
     msg_pose.pose.position.y = arm_pose.getOrigin().y() + offset_Y;
@@ -94,25 +103,29 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, do
     msg_pose.pose.orientation.z = arm_pose.getRotation().z();
     msg_pose.pose.orientation.w = arm_pose.getRotation().w();
 
-    ROS_INFO_STREAM("Finding object up to max dist. "<< min_height <<" with vertical speed "<< vertical_speed <<" and threshold force "<<thr_force<<"N.");
+    ROS_INFO_STREAM("Finding object up to max dist. "<< search_distance <<" with speed "<< search_speed <<" and threshold force " << thr_force << "N.");
+
+
+    // =========== REALTIME LOOP ===================
+
     while(ros::ok()) {
 
         // Compute Next Pose
         if (search_dir == SEARCH_DIR_X){
 
-            msg_pose.pose.position.x -= vertical_speed/rate;
+            msg_pose.pose.position.x -= search_speed/rate;
 
         } else if (search_dir == SEARCH_DIR_Y){
 
-            msg_pose.pose.position.y -= vertical_speed/rate;
+            msg_pose.pose.position.y -= search_speed/rate;
 
         } else if (search_dir == SEARCH_DIR_Z){
 
-            msg_pose.pose.position.z -= vertical_speed/rate;
+            msg_pose.pose.position.z -= search_speed/rate;
 
             if (task_id == PEELING_TASK_ID && arm_id == L_ARM_ID)
             {
-                msg_pose.pose.position.y += vertical_speed/rate; // specific for peeling
+                msg_pose.pose.position.y += search_speed/rate; // specific for peeling
             }
         }
 
@@ -136,7 +149,12 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, do
 
             break;
 
-        ROS_INFO_STREAM("Current force in dorection:" << search_dir << " is " << ee_ft[search_dir] << " and current height: " << fabs(arm_pose.getOrigin().z()-startz));
+        double current_pos;
+        if (search_dir == SEARCH_DIR_X) current_pos = arm_pose.getOrigin().x();
+        if (search_dir == SEARCH_DIR_Y) current_pos = arm_pose.getOrigin().y();
+        if (search_dir == SEARCH_DIR_Z) current_pos = arm_pose.getOrigin().z();
+
+        ROS_INFO_STREAM_THROTTLE(10, "Current force in direction:" << search_dir << " is " << ee_ft[search_dir] << " and current distance: " << (current_pos - start_pos));
 
         // Go down until force reaches the threshold
         if(fabs(ee_ft[search_dir]) > thr_force) {
@@ -144,7 +162,7 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, do
             break;
         }
 
-        if(fabs(arm_pose.getOrigin().z()-startz) > min_height) {
+        if(fabs(current_pos - start_pos) > search_distance) {
             ROS_INFO("Max distance reached");
             break;
         }
