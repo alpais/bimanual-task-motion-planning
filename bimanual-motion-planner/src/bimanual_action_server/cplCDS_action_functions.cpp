@@ -233,30 +233,9 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
         // Transformation for PHASE_REACH_TO_PEEL Model
-        if ((task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL)){
-            tf::Transform  l_ee_rot, ee_2_rob;
-            l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 
-            // Transform Attractor to Origin
-            l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
-
-            // -> Apply Rotation (pi on Z in Origin RF)
-            l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,-1,0,0,0,1)); //z (pi)
-            l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-
-            // -> Apply Rotation (pi on X in Origin RF)
-            //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
-            l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
-            l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
-
-            // -> Transform back to Robot
-            l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
-            l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.75) );
-
-            // Don't Care about master
-            if (r_pos_err > 0.02)
-                r_des_ee_pose = r_curr_ee_pose;
-        }
+        if (bAdditionalTransforms)
+            apply_task_specific_transformations(left_final_target, l_mNextRobotEEPose);
         else{
             l_des_ee_pose = l_mNextRobotEEPose;
             l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.25) );

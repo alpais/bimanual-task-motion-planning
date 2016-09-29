@@ -159,7 +159,6 @@ void BimanualActionServer::sync_cart_filter(const tf::Pose& r_ee_pose, const tf:
 
     ROS_INFO("Synchronized Cartesian motion");
 
-
 }
 
 void BimanualActionServer::filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose){
@@ -197,6 +196,33 @@ void BimanualActionServer::filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& 
 
     l_des_ee_pose.setOrigin(tf::Vector3(l_next_target(0), l_next_target(1), l_next_target(2)));
     l_des_ee_pose.setRotation(tf::Quaternion(l_next_target(3), l_next_target(4), l_next_target(5), l_next_target(6)));;
+
+}
+
+void BimanualActionServer::apply_task_specific_transformations(tf::Pose& left_final_target, tf::Pose& l_mNextRobotEEPose){
+
+    tf::Transform  l_ee_rot, ee_2_rob;
+    l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
+
+    // Transform Attractor to Origin
+    l_des_ee_pose.mult(left_final_target.inverse(),l_mNextRobotEEPose);
+
+    // -> Apply Rotation (pi on Z in Origin RF)
+    l_ee_rot.setBasis(tf::Matrix3x3(-1,0,0,0,-1,0,0,0,1)); //z (pi)
+    l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+
+    // -> Apply Rotation (pi on X in Origin RF)
+    //l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,cos,-sin,0,sin,cos)); //x
+    l_ee_rot.setBasis(tf::Matrix3x3(1,0,0,0,0,1,0,-1,0)); //x (-pi/2)
+    l_des_ee_pose.mult(l_ee_rot,l_des_ee_pose);
+
+    // -> Transform back to Robot
+    l_des_ee_pose.mult(left_final_target,l_des_ee_pose);
+    l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.75) );
+
+    // Don't Care about master
+    if (r_pos_err > 0.02)
+        r_des_ee_pose = r_curr_ee_pose;
 
 }
 

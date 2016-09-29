@@ -219,7 +219,8 @@ protected:
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
     void filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose);
 
-
+    bool bAdditionalTransforms; // True if the motion models were learned in a different RF than the actual EE frame. Than additional transforms are needed to get the correct motion
+    void apply_task_specific_transformations(tf::Pose& left_final_target, tf::Pose& l_mNextRobotEEPose);
     // =====================================================
     //          SIMULATION AND VISUALIZATION
     // =====================================================

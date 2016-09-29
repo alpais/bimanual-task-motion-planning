@@ -243,6 +243,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     CDSController::DynamicsType l_slaveType = CDSController::UTHETA;
 
     bool bActionTypeReach = false;
+    bAdditionalTransforms = false;
 
     // TODO: the Action-specific parameters should be read from yaml files
 
@@ -315,6 +316,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = true;
 
 
         } else if(goal->action_name == "phase2") {
