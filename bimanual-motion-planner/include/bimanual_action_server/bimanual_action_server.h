@@ -66,17 +66,25 @@
 #define SEARCH_DIR_Z        2
 
 // Peeling parametrization >> should come from launch file
-#define MAX_PEELING_FORCE                   15      // [N]
-#define MAX_PEELING_SEARCH_HEIGHT           0.07 	// 7 cm
-#define MAX_PEELING_VERTICAL_SPEED          0.01 	// the max speed to use when going down to search for contact
-#define MAX_PEELING_CONTACT_FORCE           8       // max force to use to establish contact on an object
-#define MAX_PEELING_TABLE_CONTACT_FORCE     10
+//#define MAX_PEELING_FORCE                   15      // [N]
+//#define MAX_PEELING_SEARCH_HEIGHT           0.07 	// 7 cm
+//#define MAX_PEELING_VERTICAL_SPEED          0.01 	// the max speed to use when going down to search for contact
+//#define MAX_PEELING_CONTACT_FORCE           8       // max force to use to establish contact on an object
+//#define MAX_PEELING_TABLE_CONTACT_FORCE     10
 
 // Scooping parametrization
-#define MAX_SCOOPING_FORCE                  5
-#define MAX_SCOOPING_SEARCH_HEIGHT          0.08
-#define MAX_SCOOPING_VERTICAL_SPEED         0.01
-#define MAX_SCOOPING_CONTACT_FORCE          8
+//#define MAX_SCOOPING_FORCE                  5
+//#define MAX_SCOOPING_SEARCH_HEIGHT          0.08
+//#define MAX_SCOOPING_VERTICAL_SPEED         0.01
+//#define MAX_SCOOPING_CONTACT_FORCE          8
+
+#define FT_CTRL_AXIS_X                      0
+#define FT_CTRL_AXIS_Y                      1
+#define FT_CTRL_AXIS_Z                      2
+#define FT_CTRL_AXIS_RX                     3
+#define FT_CTRL_AXIS_RY                     4
+#define FT_CTRL_AXIS_RZ                     5
+
 
 // Define active task >> In the future read this from file
 // #define CRT_TASK_SCOOPING
@@ -137,30 +145,80 @@ protected:
     bimanual_action_planners::PLAN2CTRLFeedback feedback_;
     bimanual_action_planners::PLAN2CTRLResult result_;
 
+    // =====================================================
+    //          FORCE control
+    // =====================================================
+
     // Create messages for sending force commands
     geometry_msgs::WrenchStamped msg_ft;
     geometry_msgs::PoseStamped msg_pose;
     bool bWaitForForces_left_arm;
-    bool bWaitForForces_right_arm;
+    bool bWaitForForces_right_arm; 
 
-    // Model based forces
-    bool bEnableForceModel_l_arm;
-    bool bForceModelInitialized_l_arm;
+    // >>>>  LEFT ARM <<<<
+    bool bUseForce_l_arm;               // True if force control should be applied
+    bool bEnableForceModel_l_arm;       // True if force should be model based
+    bool bForceModelInitialized_l_arm;  // True if GMR was initialized successfully
+    bool bBypassForceModel_l_arm;       // True if a constant force should be used regardless of the model estimate
+    bool bEndInContact_l_arm;           // True if after a reaching movement the end effector should be in contact with the environment
+
+    double max_task_force_l_arm;        // in [N]
+    double max_search_distance_l_arm;   // in cm
+    double max_vertical_speed_l_arm;    // max speed to use when going down to search for contact
+    double max_contact_force_l_arm;     // max force to use to establish contact on an object
+    int    search_axis_l_arm;           // the direction in which to establish contact
+
     GMR *mForceModel_l_arm;
 
-    bool bEnableForceModel_r_arm;
-    bool bForceModelInitialized_r_arm;
+    // >>>> RIGHT ARM <<<<
+    bool bUseForce_r_arm;               // True if force control should be applied
+    bool bEnableForceModel_r_arm;       // True if force should be model based
+    bool bForceModelInitialized_r_arm;  // True if GMR was initialized successfully
+    bool bBypassForceModel_r_arm;       // True if a constant force should be used regardless of the model estimate
+    bool bEndInContact_r_arm;           // True if after a reaching movement the end effector should be in contact with the environment
+
+    double max_task_force_r_arm;        // in [N]
+    double max_search_distance_r_arm;   // in cm
+    double max_vertical_speed_r_arm;    // max speed to use when going down to search for contact
+    double max_contact_force_r_arm;     // max force to use to establish contact on an object
+    int    search_axis_r_arm;           // the direction in which to establish contact
+
     GMR *mForceModel_r_arm;
 
-    void initializeForceModel(std::string base_path, TaskPhase phase, int arm_id, string role);
+    double force_control_axis;          // the axis on which to perform force control X, Y, Z, RX, RY, RZ
+
+    double desired_force;               // if constant force should be used
+    double force_correction;            // position displacement to match to desired force
+    double force_correction_max;        // maximum allowed position displacement to match to desired force
+    double force_correction_delta;      // increment in the position displacement
+
+    // FUNCTIONS USED FOR FORCE CONTROL
+
+    void biasFtSensors();                                           // Zero the forces and torques after each reaching movement
+    void send_and_wait_for_normal_force(double fz, int arm_id);     // Blocks until the desired force is achieved!
+    bool find_object_by_contact(int arm_id, int search_dir, double search_distance, double search_speed, double thr_force); // Moves ee in the desired direction until contact is detected
+    void initialize_force_model(std::string base_path, TaskPhase phase, int arm_id, string role);   // Initializes GMR for model based force profiles
+    tf::Pose update_ee_pose_based_on_force(int arm_id, int ft_control_axis);                        // Only for actions that require continuous force
+    tf::Pose remove_correction_due_to_force_from_trajectory(int arm_id, int ft_control_axis);       // When controlling with CDS
+
+    // =====================================================
+    //          CARTESIAN control
+    // =====================================================
 
     // Filters for cartesian commands
     CDDynamics  *r_cdd_cart_filter;
     CDDynamics  *l_cdd_cart_filter;
 
+    double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
+
     void initialize_cart_filter(double dt, double r_Wn, double l_Wn);
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
     void filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose);
+
+
+    // =====================================================
+    //          SIMULATION AND VISUALIZATION
+    // =====================================================
 
     // Simulation/execution variables
     volatile bool isOkay;
@@ -213,17 +271,6 @@ protected:
                              tf::Transform& left_final_target, tf::Transform& task_frame);
 
 
-    //************************************//
-    // FUNCTIONS USED FOR FORCE CONTROL  //
-    //***********************************//
-
-    void biasFtSensors();
-
-    // This will block until the desired force is achieved!
-    void sendAndWaitForNormalForce(double fz, int arm_id);
-
-    // Function to move ee in Z direction until contact is identified
-    bool find_object_by_contact(int arm_id, int search_dir, double search_distance, double search_speed, double thr_force);
 
     //**************************************//
     // FUNCTIONS USED BY VO DS ACTION TYPE  //

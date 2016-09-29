@@ -204,8 +204,6 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     feedback_.progress = 0;
     bool success = false;
 
-    ROS_INFO("Synchronized Cartesian motion");
-
     // Setup transforms for task-space control
     tf::Transform task_frame, right_att, left_att;
     // Set transform for task frame
@@ -232,19 +230,59 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
     task_id = SCOOPING_TASK_ID; // Apparently this value gets overwritten at each call of the action server. First time it works, second time it becomes 1
 
+    // filter gains
+    double r_Wn = 25;
+    double l_Wn = 10;
+
     TaskPhase phase;
     if (task_id == PEELING_TASK_ID){
         if(goal->action_name == "phase0"){
             phase = PHASE_INIT_REACH;
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = true;
+
+            search_axis_r_arm = SEARCH_DIR_Z;
+            max_task_force_r_arm        = 15;
+            max_search_distance_r_arm     = 0.07;
+            max_vertical_speed_r_arm    = 0.01;
+            max_contact_force_r_arm     = 10;
+
         }
         else if(goal->action_name   == "phase1") {
             phase = PHASE_REACH_TO_PEEL;
+            bEndInContact_l_arm = true;
+            bEndInContact_r_arm = false;
+
+            search_axis_l_arm = SEARCH_DIR_Z;
+            max_task_force_l_arm        = 15;
+            max_search_distance_l_arm   = 0.07;
+            max_vertical_speed_l_arm    = 0.01;
+            max_contact_force_l_arm     = 8;
+
+
         } else if(goal->action_name == "phase2") {
+
             phase = PHASE_PEEL;
+            force_control_axis = FT_CTRL_AXIS_Z;
+            bUseForce_l_arm = true;
+            bBypassForceModel_l_arm = true;
+
+            force_correction = 0;
+            desired_force = 8;
+            force_correction_max = 0.05;    // 5cm
+            force_correction_delta = 0.001; // 1 mm
+
         } else if(goal->action_name == "phase3") {
             phase = PHASE_ROTATE;
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
         } else if(goal->action_name == "phase4") {
             phase = PHASE_RETRACT;
+
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
         } else {
             ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
             result_.success = 0;
@@ -252,20 +290,62 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             return;
         }
     }
-    else{
+    else if (task_id == SCOOPING_TASK_ID) {
         if(goal->action_name == "phase0"){
             phase = PHASE_SCOOP_INIT_REACH;
+
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
         }
         else if(goal->action_name   == "phase1") {
             phase = PHASE_SCOOP_REACH_TO_SCOOP;
+
+            bEndInContact_l_arm = true;
+            bEndInContact_r_arm = false;
+
+            search_axis_l_arm = SEARCH_DIR_Z;
+            max_task_force_l_arm        = 5;
+            max_search_distance_l_arm   = 0.08;
+            max_vertical_speed_l_arm    = 0.01;
+            max_contact_force_l_arm     = 8;
+
         } else if(goal->action_name == "phase2") {
+
             phase = PHASE_SCOOP_SCOOP;
+            bUseForce_l_arm = true;
+            bBypassForceModel_l_arm = true;
+            force_control_axis = FT_CTRL_AXIS_RZ;
+
+            force_correction = 0;
+            desired_force = 0.1;                // torque around Z
+            force_correction_max = 0.01;        // 1cm
+            force_correction_delta = 0.001;     // 1 mm
+            bUseForce_r_arm = false;
+
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
+
         } else if(goal->action_name == "phase3") {
             phase = PHASE_SCOOP_DEPART;
+
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
         } else if(goal->action_name == "phase4") {
             phase = PHASE_SCOOP_TRASH;
+            l_Wn = 55; r_Wn = 25;
+
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
         } else if(goal->action_name == "phase5") {
             phase = PHASE_SCOOP_RETRACT;
+
+            bEndInContact_l_arm = false;
+            bEndInContact_r_arm = false;
+
         } else {
             ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
             result_.success = 0;
@@ -273,18 +353,25 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             return;
         }
 
+    } else {
+        ROS_INFO("INVALID TASK");
+        exit(1);
     }
 
-    double r_Wn = 25;
-    double l_Wn = 10;
 
-    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
-        l_Wn = 55;
-    }
-    else l_Wn = 10;
+//    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
+//        l_Wn = 55;
+//    }
+//    else l_Wn = 10;
 
     initialize_cart_filter(dt, r_Wn, l_Wn);
     sync_cart_filter(r_ee_pose, l_ee_pose);
+
+    if (bEnableForceModel_l_arm && !bBypassForceModel_l_arm)
+        initialize_force_model(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
+
+    if (bEnableForceModel_r_arm && !bBypassForceModel_r_arm)
+        initialize_force_model(model_base_path, phase, R_ARM_ID, R_ARM_ROLE);
 
     //---> ACTION TYPE 1: Use two independent learned models to execute the action
     if(goal->action_type=="UNCOUPLED_LEARNED_MODEL"){

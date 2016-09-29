@@ -2,6 +2,9 @@
 
 
 void BimanualActionServer::biasFtSensors(){
+/*
+ * Zeros the forces and torques. Should be used after each reaching movement.
+ */
     netft_rdt_driver::String_cmd srv;
     srv.request.cmd  = "bias";
     srv.response.res = "";
@@ -22,9 +25,12 @@ void BimanualActionServer::biasFtSensors(){
 
 
 
-// This will block until the desired force is achieved!
-void BimanualActionServer::sendAndWaitForNormalForce(double fz, int arm_id)
+
+void BimanualActionServer::send_and_wait_for_normal_force(double fz, int arm_id)
 {
+/*
+ * Blocks until the desired force is achieved!
+ */
     if (arm_id==R_ARM_ID && bWaitForForces_right_arm){
         ROS_INFO_STREAM("Waiting for force on right arm "<<fz<<" N.");
         sendPose(r_ee_pose, l_ee_pose);
@@ -57,6 +63,115 @@ void BimanualActionServer::sendAndWaitForNormalForce(double fz, int arm_id)
         }
     }
 }
+
+tf::Pose BimanualActionServer::remove_correction_due_to_force_from_trajectory(int arm_id, int ft_control_axis){
+/*
+ * This function is necessary when a CDS controller is used for computing the end effector trajectory!!!
+ *
+ * For CDS at each time step the current ee pose is read from the robot and it is used as a querry point for the trajectory models.
+ * If the pose was corrected in order to achieve a force this new position will modify the CDS dynamics causing convergence issues.
+ * Therefore we need to apply this backward correction, to trick the CDS into thinking there was no actual deviation from the trajectory
+ * that the model outputed.
+ */
+
+    tf::Pose corr_arm_pose;
+
+    if (arm_id == L_ARM_ID){
+        corr_arm_pose = l_curr_ee_pose;
+    } else if (arm_id == R_ARM_ID){
+        corr_arm_pose = r_curr_ee_pose;
+    } else
+        ROS_ERROR("Arm ID Invalid");
+
+    if (ft_control_axis == FT_CTRL_AXIS_X || ft_control_axis == FT_CTRL_AXIS_Y || ft_control_axis == FT_CTRL_AXIS_Z){
+        tf::Vector3& origin = corr_arm_pose.getOrigin();
+        origin[ft_control_axis] += force_correction;
+        corr_arm_pose.setOrigin(origin);
+    }
+    else if (ft_control_axis == FT_CTRL_AXIS_RX || ft_control_axis == FT_CTRL_AXIS_RY || ft_control_axis == FT_CTRL_AXIS_RZ){
+        MathLib::Vector3 crtRot;
+        corr_arm_pose.getBasis().getRPY(crtRot(0), crtRot(1), crtRot(2));
+        crtRot(ft_control_axis) += force_correction;
+        corr_arm_pose.getBasis().setRPY(crtRot(0), crtRot(1), crtRot(2));
+    }
+
+    return corr_arm_pose;
+}
+
+
+tf::Pose BimanualActionServer::update_ee_pose_based_on_force(int arm_id, int ft_control_axis){
+
+/*
+ * This function updates the pose of the end effector based on the matching the sensed force with the desired force.
+ * The desired force can be a fixed value or can be model based. Should be used only for functions that require a continuous
+ * force to be applied.
+ */
+
+    tf::Pose arm_pose;
+    tf::Vector3 origin;
+
+    Eigen::VectorXd ee_ft;
+    ee_ft.resize(6);
+
+    double estimated_model_force;   // Output from GMR
+    double delta_force_tol;         // Force tolerance wrt the fixed desired force.
+    delta_force_tol = 10;           // The estimated model force should be within limits of the desired_force +/- delta_force_tol
+    double actual_ft;               // force to be applied, either the constant one, or the model estimated value
+
+    if (arm_id == L_ARM_ID){
+
+        ee_ft = l_curr_ee_ft;
+        arm_pose = l_des_ee_pose;
+        origin = l_des_ee_pose.getOrigin();
+
+        if (bForceModelInitialized_l_arm && !bBypassForceModel_l_arm){
+            mForceModel_l_arm -> getGMROutput(&l_pos_err, &estimated_model_force); // Querry GMR for the desired force
+            if ((estimated_model_force > desired_force - delta_force_tol) && (estimated_model_force < desired_force + delta_force_tol)){
+                actual_ft = estimated_model_force; // should also smooth it
+            }
+        } else
+            actual_ft = desired_force;
+
+    } else if (arm_id == R_ARM_ID) {
+
+        ee_ft = r_curr_ee_ft;
+        arm_pose = r_des_ee_pose;
+        origin = r_des_ee_pose.getOrigin();
+
+        if (bForceModelInitialized_r_arm && !bBypassForceModel_r_arm){
+            mForceModel_r_arm -> getGMROutput(&r_pos_err, &estimated_model_force); // Querry GMR for the desired force
+            if ((estimated_model_force > desired_force - delta_force_tol) && (estimated_model_force < desired_force + delta_force_tol)){
+                actual_ft = estimated_model_force; // should also smooth it
+            }
+        } else
+            actual_ft = desired_force;
+
+    } else {
+        ROS_ERROR("Invalid Arm ID");
+        exit(1);
+    }
+
+
+    double crt_force = ee_ft[ft_control_axis];
+    if (crt_force < actual_ft && force_correction <= force_correction_max){
+        force_correction += force_correction_delta;
+    }
+
+    if (ft_control_axis == FT_CTRL_AXIS_X || ft_control_axis == FT_CTRL_AXIS_Y || ft_control_axis == FT_CTRL_AXIS_Z){
+        origin[ft_control_axis] -= force_correction;
+        arm_pose.setOrigin(origin);
+    }
+    else if (ft_control_axis == FT_CTRL_AXIS_RX || ft_control_axis == FT_CTRL_AXIS_RY || ft_control_axis == FT_CTRL_AXIS_RZ){
+        MathLib::Vector3 crtRot;
+        arm_pose.getBasis().getRPY(crtRot(0), crtRot(1), crtRot(2));
+        crtRot(ft_control_axis) -= force_correction;
+        arm_pose.getBasis().setRPY(crtRot(0), crtRot(1), crtRot(2));
+    }
+
+    return arm_pose;
+
+}
+
 
 bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, double search_distance, double search_speed, double thr_force) {
 /*

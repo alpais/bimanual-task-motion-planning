@@ -223,23 +223,19 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
     tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
 
-    double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
     // for the PEELING task
-    double z_force_correction = 0;
-    double z_desired_force = 8;
-    double z_force_correction_max = 0.05; // 1cm
-    double z_force_correction_delta = 0.001; // 1 mm
+//    double z_force_correction = 0;
+//    double z_desired_force = 8;
+//    double z_force_correction_max = 0.05; // 1cm
+//    double z_force_correction_delta = 0.001; // 1 mm
 
     // for the SCOOPING task
-    double y_tq_correction = 0;
-    double y_des_tq = 0.1;
-    double y_tq_correction_max = 0.01; // 1cm
-    double y_tq_correction_delta = 0.001; // 1 mm
+//    double y_tq_correction = 0;
+//    double y_des_tq = 0.1;
+//    double y_tq_correction_max = 0.01; // 1cm
+//    double y_tq_correction_delta = 0.001; // 1 mm
 
-    if (bEnableForceModel_l_arm){
-        initializeForceModel(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
-    }
 
     // ======================================================================================================
     // ========= Real time loop
@@ -248,18 +244,19 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     ROS_INFO("Execution started");
     while(ros::ok()) {
 
-        // Setting Initial conditions
         if (initial_config == true){
+            // Setting Initial conditions
             r_curr_ee_pose = r_ee_pose;
             l_curr_ee_pose = l_ee_pose;
-            if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL) {
-                // trick the CDS to think there's no correction
-                tf::Vector3& origin = l_curr_ee_pose.getOrigin();
-                origin[2] += z_force_correction;
-                l_curr_ee_pose.setOrigin(origin);
-            }
+
+            // Compensating for the trajectory modifications due to the desired force
+            if (bUseForce_l_arm)
+                l_curr_ee_pose = remove_correction_due_to_force_from_trajectory(L_ARM_ID, force_control_axis);
+            if (bUseForce_r_arm)
+                r_curr_ee_pose = remove_correction_due_to_force_from_trajectory(R_ARM_ID, force_control_axis);
         }
-        else{ // For visualization of trajectories
+        else{
+            // For visualization of trajectories
             r_curr_ee_pose = r_des_ee_pose;
             l_curr_ee_pose = l_des_ee_pose;
         }
@@ -279,6 +276,8 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
             ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
          }
+
+// ================ Cartesian Trajectory Computation =============================================
 
         // Compute Next Desired EE Pose for Right Arm
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
@@ -322,48 +321,54 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
 // ================ Force computation =============================================
 
-        if (bForceModelInitialized_l_arm){
-            // Querry GMR for the desired force
-            double nModelDesiredForce_l_arm;
-            mForceModel_l_arm -> getGMROutput(&l_pos_err, &nModelDesiredForce_l_arm);
+        if (bUseForce_l_arm)
+            l_des_ee_pose = update_ee_pose_based_on_force(L_ARM_ID, force_control_axis);
 
-        }
+        if (bUseForce_r_arm)
+            r_des_ee_pose = update_ee_pose_based_on_force(R_ARM_ID, force_control_axis);
 
-        if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
-            // TODO Check the force first
+//        if (bForceModelInitialized_l_arm){
+//            // Querry GMR for the desired force
+//            double nModelDesiredForce_l_arm;
+//            mForceModel_l_arm -> getGMROutput(&l_pos_err, &nModelDesiredForce_l_arm);
 
-            Eigen::VectorXd ee_ft;
-            ee_ft.resize(6);
-            ee_ft = l_curr_ee_ft;
+//        }
 
-            double z_crt_force = ee_ft[2];
-            if (z_crt_force < z_desired_force && z_force_correction <= z_force_correction_max){
-                z_force_correction += z_force_correction_delta;
-            }
-            //            l_des_ee_pose.setOrigin().z(z_force_correction);
-            tf::Vector3& origin = l_des_ee_pose.getOrigin();
-            origin[2] -= z_force_correction;
-            l_des_ee_pose.setOrigin(origin);
-        }
+//        if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
+//            // TODO Check the force first
 
-        // SCOOPING with a fixed torque
-        if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP){
+//            Eigen::VectorXd ee_ft;
+//            ee_ft.resize(6);
+//            ee_ft = l_curr_ee_ft;
 
-            Eigen::VectorXd ee_ft;
-            ee_ft.resize(6);
-            ee_ft = l_curr_ee_ft;
+//            double z_crt_force = ee_ft[2];
+//            if (z_crt_force < z_desired_force && z_force_correction <= z_force_correction_max){
+//                z_force_correction += z_force_correction_delta;
+//            }
+//            //            l_des_ee_pose.setOrigin().z(z_force_correction);
+//            tf::Vector3& origin = l_des_ee_pose.getOrigin();
+//            origin[2] -= z_force_correction;
+//            l_des_ee_pose.setOrigin(origin);
+//        }
 
-            double y_crt_tq = ee_ft[5];
-            if (y_crt_tq < y_des_tq && y_tq_correction <= y_tq_correction_max){
-                y_tq_correction += y_tq_correction_delta;
-            }
-            MathLib::Matrix4 crtPose; crtPose = toMatrix4(l_des_ee_pose);
-            MathLib::Vector3 crtRot; crtRot = crtPose.GetOrientation().GetExactRotationAxis();
-            l_des_ee_pose.getBasis().getRPY(crtRot(0), crtRot(1), crtRot(2));
-            crtRot(1) -= y_tq_correction;
+//        // SCOOPING with a fixed torque
+//        if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP){
 
-            l_des_ee_pose.getBasis().setRPY(crtRot(0), crtRot(1), crtRot(2));
-        }
+//            Eigen::VectorXd ee_ft;
+//            ee_ft.resize(6);
+//            ee_ft = l_curr_ee_ft;
+
+//            double y_crt_tq = ee_ft[5];
+//            if (y_crt_tq < y_des_tq && y_tq_correction <= y_tq_correction_max){
+//                y_tq_correction += y_tq_correction_delta;
+//            }
+//            MathLib::Matrix4 crtPose; crtPose = toMatrix4(l_des_ee_pose);
+//            MathLib::Vector3 crtRot; crtRot = crtPose.GetOrientation().GetExactRotationAxis();
+//            l_des_ee_pose.getBasis().getRPY(crtRot(0), crtRot(1), crtRot(2));
+//            crtRot(1) -= y_tq_correction;
+
+//            l_des_ee_pose.getBasis().setRPY(crtRot(0), crtRot(1), crtRot(2));
+//        }
 
 // ====================================================================================
 
@@ -383,6 +388,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         as_.publishFeedback(feedback_);
 
+        // >>>> Check Convergence in Position
         if(r_pos_err < reachingThreshold && l_pos_err < reachingThreshold){
 
             ROS_INFO("POSITION DYNAMICS CONVERGED!");
@@ -392,32 +398,55 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
                 break;
             }
 
-            if (task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL){
-                ROS_INFO("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
-                if (bWaitForForces_left_arm)	{                    
-                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, MAX_PEELING_VERTICAL_SPEED, MAX_PEELING_CONTACT_FORCE);
+
+            // >>>> Check if a force should be applied
+            if (bEndInContact_l_arm){
+                if (bWaitForForces_left_arm){
+                    ROS_INFO_STREAM("In PHASE " << phase << " >> searching for contact now on arm " << L_ARM_ID);
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, search_axis_l_arm, max_search_distance_l_arm, max_vertical_speed_l_arm, max_contact_force_l_arm);
                     return x_l_arm;
                 }
                 ROS_INFO("Finished Finding Object LOOP");
                 break;
             }
 
-
-            if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
-                ROS_INFO("In PHASE_REACH_TO_SCOOP ... finding the mellon now ...");
-                if (bWaitForForces_left_arm)	{
-                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_Z, MAX_SCOOPING_SEARCH_HEIGHT, MAX_SCOOPING_VERTICAL_SPEED, MAX_SCOOPING_CONTACT_FORCE);
-                    return x_l_arm;
+            if (bEndInContact_r_arm){
+                if (bWaitForForces_right_arm){
+                    ROS_INFO_STREAM("In PHASE " << phase << " >> searching for contact now on arm " << R_ARM_ID);
+                    bool x_r_arm = find_object_by_contact(R_ARM_ID, search_axis_r_arm, max_search_distance_r_arm, max_vertical_speed_r_arm, max_contact_force_r_arm);
+                    return x_r_arm;
                 }
                 ROS_INFO("Finished Finding Object LOOP");
                 break;
             }
 
+//            if (task_id == PEELING_TASK_ID && phase == PHASE_REACH_TO_PEEL){
+//                ROS_INFO("In PHASE_REACH_TO_PEEL.. finding zucchini now...");
+//                if (bWaitForForces_left_arm)	{
+//                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, MAX_PEELING_VERTICAL_SPEED, MAX_PEELING_CONTACT_FORCE);
+//                    return x_l_arm;
+//                }
+//                ROS_INFO("Finished Finding Object LOOP");
+//                break;
+//            }
+
+
+//            if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_REACH_TO_SCOOP){
+//                ROS_INFO("In PHASE_REACH_TO_SCOOP ... finding the mellon now ...");
+//                if (bWaitForForces_left_arm)	{
+//                    bool x_l_arm = find_object_by_contact(L_ARM_ID, SEARCH_DIR_Z, MAX_SCOOPING_SEARCH_HEIGHT, MAX_SCOOPING_VERTICAL_SPEED, MAX_SCOOPING_CONTACT_FORCE);
+//                    return x_l_arm;
+//                }
+//                ROS_INFO("Finished Finding Object LOOP");
+//                break;
+//            }
+
+            // >>>> Check Convergence in Orientation
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
                 ROS_INFO("RIGHT ORIENTATION DYN CONVERGED!");
                 if((l_ori_err < orientationThreshold) || isnan(l_ori_err)){
                     ROS_INFO("LEFT ORIENTATION DYN CONVERGED!");
-                    sendPose(r_curr_ee_pose, l_curr_ee_pose); // Stopping the robot, by sending the current position again which results in zero velocity
+                    sendPose(r_curr_ee_pose, l_curr_ee_pose); // Stop the robot by sending the current position again, which results in zero velocity
                     break;
                 }
             }

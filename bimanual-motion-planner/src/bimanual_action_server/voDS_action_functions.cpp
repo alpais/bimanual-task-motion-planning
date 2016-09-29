@@ -145,16 +145,37 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
             ROS_INFO_STREAM("VIRTUAL OBJECT HAS CONVERGED!!");
 
-            if(phase ==  PHASE_INIT_REACH) {
-                ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");
-                if (bWaitForForces_right_arm)	{
-                    bool x_r_arm = find_object_by_contact(R_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, 0.05, MAX_PEELING_TABLE_CONTACT_FORCE);
+            // >>>> Check if a force should be applied
+            if (bEndInContact_l_arm){
+                if (bWaitForForces_left_arm){
+                    ROS_INFO_STREAM("In PHASE " << phase << " >> searching for contact now on arm " << R_ARM_ID);
+                    bool x_l_arm = find_object_by_contact(L_ARM_ID, search_axis_l_arm, max_search_distance_l_arm, max_vertical_speed_l_arm, max_contact_force_l_arm);
+                    return x_l_arm;
+                }
+                ROS_INFO("Finished Finding Object LOOP");
+                break;
+            }
+
+            if (bEndInContact_r_arm){
+                if (bWaitForForces_right_arm){
+                    ROS_INFO_STREAM("In PHASE " << phase << " >> searching for contact now on arm " << R_ARM_ID);
+                    bool x_r_arm = find_object_by_contact(R_ARM_ID, search_axis_r_arm, max_search_distance_r_arm, max_vertical_speed_r_arm, max_contact_force_r_arm);
                     return x_r_arm;
                 }
-            } else if(phase ==  PHASE_RETRACT){
-                ROS_INFO_STREAM("In PHASE_INIT_RETRACT.. biasing ft sensors...");
-                biasFtSensors();
+                ROS_INFO("Finished Finding Object LOOP");
+                break;
             }
+
+//            if(phase ==  PHASE_INIT_REACH) {
+//                ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");
+//                if (bWaitForForces_right_arm)	{
+//                    bool x_r_arm = find_object_by_contact(R_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, 0.05, MAX_PEELING_TABLE_CONTACT_FORCE);
+//                    return x_r_arm;
+//                }
+//            } else if(phase ==  PHASE_RETRACT){
+//                ROS_INFO_STREAM("In PHASE_INIT_RETRACT.. biasing ft sensors...");
+//                biasFtSensors();
+//            }
             sendPose(r_curr_ee_pose, l_curr_ee_pose);
             break;
         }

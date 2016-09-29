@@ -45,7 +45,9 @@ void BimanualActionServer::l_ftStateCallback(const geometry_msgs::WrenchStampedC
 
 }
 
-void BimanualActionServer::initializeForceModel(std::string base_path, TaskPhase phase, int arm_id, std::string role){
+
+
+void BimanualActionServer::initialize_force_model(std::string base_path, TaskPhase phase, int arm_id, std::string role){
 
     string arm;
     if (arm_id == R_ARM_ID)
@@ -63,8 +65,8 @@ void BimanualActionServer::initializeForceModel(std::string base_path, TaskPhase
             char sForce[256];
             sprintf(sForce, "%s/Phase%d/%s/%s_posGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
 
-            std::vector<int> in_dim;  in_dim.resize(1);
-            std::vector<int> out_dim; out_dim.resize(1);
+            std::vector<int> in_dim;  in_dim.resize(1);  in_dim[0] = 0;
+            std::vector<int> out_dim; out_dim.resize(1); out_dim[0] = 1;
 
             mForceModel_l_arm = new GMR(sForce);
             mForceModel_l_arm->initGMR(in_dim, out_dim);
@@ -73,8 +75,10 @@ void BimanualActionServer::initializeForceModel(std::string base_path, TaskPhase
                 ROS_INFO_STREAM("ERROR: Could not initialize force model for the " << arm << " arm");
                 exit(1);
             }
-            else
+            else {
                 bForceModelInitialized_l_arm = true;
+                mForceModel_l_arm->printInfo();
+            }
         }
     }
     else if (arm_id == R_ARM_ID){
@@ -86,8 +90,8 @@ void BimanualActionServer::initializeForceModel(std::string base_path, TaskPhase
             char sForce[256];
             sprintf(sForce, "%s/Phase%d/%s/%s_posGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
 
-            std::vector<int> in_dim;  in_dim.resize(1);
-            std::vector<int> out_dim; out_dim.resize(1);
+            std::vector<int> in_dim;  in_dim.resize(1);  in_dim[0] = 0;
+            std::vector<int> out_dim; out_dim.resize(1); out_dim[0] = 1;
 
             mForceModel_r_arm = new GMR(sForce);
             mForceModel_r_arm->initGMR(in_dim, out_dim);
@@ -96,8 +100,10 @@ void BimanualActionServer::initializeForceModel(std::string base_path, TaskPhase
                 ROS_INFO_STREAM("ERROR: Could not initialize force model for the " << arm << " arm");
                 exit(1);
             }
-            else
+            else {
                 bForceModelInitialized_r_arm = true;
+                mForceModel_r_arm->printInfo();
+            }
         }
 
     } else {
@@ -150,6 +156,9 @@ void BimanualActionServer::sync_cart_filter(const tf::Pose& r_ee_pose, const tf:
     l_init_state(5) = l_ee_pose.getRotation().getZ();
     l_init_state(6) = l_ee_pose.getRotation().getW();
     l_cdd_cart_filter->SetState(l_init_state);
+
+    ROS_INFO("Synchronized Cartesian motion");
+
 
 }
 
