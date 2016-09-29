@@ -41,7 +41,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
 
 
     // Before Starting a Reach Bias the FT-Sensors!
-    biasFtSensors();
+//    biasFtSensors();
 
     bBypassOri = true;    // Compute the orientation using CDDynamics
     bFilterOri = true;    // Smooth the ori

@@ -231,21 +231,53 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     task_id = SCOOPING_TASK_ID; // Apparently this value gets overwritten at each call of the action server. First time it works, second time it becomes 1
 
     // filter gains
-    double r_Wn = 25;
-    double l_Wn = 10;
+    double r_filter_gain_Wn = 25;
+    double l_filter_gain_Wn = 10;
+
+    // Default values for CDS control right arm
+    CDSController::DynamicsType r_masterType = CDSController::MODEL_DYNAMICS;
+    CDSController::DynamicsType r_slaveType = CDSController::UTHETA;
+
+    // Default values for CDS control left arm
+    CDSController::DynamicsType l_masterType = CDSController::MODEL_DYNAMICS;
+    CDSController::DynamicsType l_slaveType = CDSController::UTHETA;
+
+    bool bActionTypeReach = false;
+
+    // TODO: the Action-specific parameters should be read from yaml files
 
     TaskPhase phase;
     if (task_id == PEELING_TASK_ID){
         if(goal->action_name == "phase0"){
             phase = PHASE_INIT_REACH;
+
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = true;
 
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
             search_axis_r_arm = SEARCH_DIR_Z;
             max_task_force_r_arm        = 15;
-            max_search_distance_r_arm     = 0.07;
+            max_search_distance_r_arm   = 0.07;
             max_vertical_speed_r_arm    = 0.01;
             max_contact_force_r_arm     = 10;
+
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = true;
 
         }
         else if(goal->action_name   == "phase1") {
@@ -259,6 +291,31 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             max_vertical_speed_l_arm    = 0.01;
             max_contact_force_l_arm     = 8;
 
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = true;
+
 
         } else if(goal->action_name == "phase2") {
 
@@ -267,21 +324,94 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             bUseForce_l_arm = true;
             bBypassForceModel_l_arm = true;
 
-            force_correction = 0;
-            desired_force = 8;
-            force_correction_max = 0.05;    // 5cm
-            force_correction_delta = 0.001; // 1 mm
+            force_correction            = 0;
+            desired_force               = 8;
+            force_correction_max        = 0.05;    // 5cm
+            force_correction_delta      = 0.001; // 1 mm
+
+            bUseForce_l_arm = true;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = false;
 
         } else if(goal->action_name == "phase3") {
             phase = PHASE_ROTATE;
+
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
+
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = false;
 
         } else if(goal->action_name == "phase4") {
             phase = PHASE_RETRACT;
 
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
+
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = false;
 
         } else {
             ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
@@ -294,9 +424,33 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
         if(goal->action_name == "phase0"){
             phase = PHASE_SCOOP_INIT_REACH;
 
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
 
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = true;
         }
         else if(goal->action_name   == "phase1") {
             phase = PHASE_SCOOP_REACH_TO_SCOOP;
@@ -310,11 +464,38 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             max_vertical_speed_l_arm    = 0.01;
             max_contact_force_l_arm     = 8;
 
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1.5;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::LINEAR_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = true;
+
         } else if(goal->action_name == "phase2") {
 
             phase = PHASE_SCOOP_SCOOP;
+
             bUseForce_l_arm = true;
             bBypassForceModel_l_arm = true;
+
             force_control_axis = FT_CTRL_AXIS_RZ;
 
             force_correction = 0;
@@ -326,6 +507,30 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
 
+            bUseForce_l_arm = true;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1.5;
+            l_err_gain = 1.5;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = false;
 
         } else if(goal->action_name == "phase3") {
             phase = PHASE_SCOOP_DEPART;
@@ -333,18 +538,92 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
 
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1.5;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::LINEAR_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::LINEAR_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = true;
+
         } else if(goal->action_name == "phase4") {
             phase = PHASE_SCOOP_TRASH;
-            l_Wn = 55; r_Wn = 25;
 
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
+
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1.5;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1.5;
+            l_err_gain = 2;
+
+            r_masterType = CDSController::LINEAR_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::LINEAR_DYNAMICS;
+            l_slaveType = CDSController::NO_DYNAMICS;
+
+            r_filter_gain_Wn = 55;
+            l_filter_gain_Wn = 25;
+
+            bActionTypeReach = true;
 
         } else if(goal->action_name == "phase5") {
             phase = PHASE_SCOOP_RETRACT;
 
             bEndInContact_l_arm = false;
             bEndInContact_r_arm = false;
+
+            bUseForce_l_arm = false;
+            bUseForce_r_arm = false;
+
+            bEnableForceModel_l_arm = false;
+            bEnableForceModel_r_arm = false;
+
+            r_pos_gain = 1;
+            r_ori_gain = 0.5;
+            r_err_gain = 1;
+
+            l_pos_gain = 1;
+            l_ori_gain = 1;
+            l_err_gain = 1;
+
+            r_masterType = CDSController::MODEL_DYNAMICS;
+            r_slaveType = CDSController::UTHETA;
+
+            l_masterType = CDSController::MODEL_DYNAMICS;
+            l_slaveType = CDSController::UTHETA;
+
+            r_filter_gain_Wn = 25;
+            l_filter_gain_Wn = 10;
+
+            bActionTypeReach = true;
 
         } else {
             ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
@@ -364,14 +643,22 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 //    }
 //    else l_Wn = 10;
 
-    initialize_cart_filter(dt, r_Wn, l_Wn);
+    initialize_cart_filter(dt, r_filter_gain_Wn, l_filter_gain_Wn);
     sync_cart_filter(r_ee_pose, l_ee_pose);
 
-    if (bEnableForceModel_l_arm && !bBypassForceModel_l_arm)
-        initialize_force_model(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
+    // For each reaching action we bias the FT sensors
+    if (bActionTypeReach)
+        biasFtSensors();
 
-    if (bEnableForceModel_r_arm && !bBypassForceModel_r_arm)
+    if (bEnableForceModel_l_arm && !bBypassForceModel_l_arm){
+        ROS_INFO("Attempting to initialize force model for left arm");
+        initialize_force_model(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
+    }
+
+    if (bEnableForceModel_r_arm && !bBypassForceModel_r_arm){
+        ROS_INFO("Attempting to initialize force model for right arm");
         initialize_force_model(model_base_path, phase, R_ARM_ID, R_ARM_ROLE);
+    }
 
     //---> ACTION TYPE 1: Use two independent learned models to execute the action
     if(goal->action_type=="UNCOUPLED_LEARNED_MODEL"){
@@ -389,10 +676,8 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
     //---> ACTION TYPE 3: Use two coupled learned models to execute the action
     if(goal->action_type=="COUPLED_LEARNED_MODEL"){
-        CDSController::DynamicsType masterType = CDSController::MODEL_DYNAMICS;
-        CDSController::DynamicsType slaveType = CDSController::UTHETA;
         // Execute action from *coupled* learned action model
-        success = coupled_learned_model_execution(phase, masterType, slaveType, reachingThreshold, orientationThreshold,
+        success = coupled_learned_model_execution(phase, r_masterType, r_slaveType, l_masterType, l_slaveType, reachingThreshold, orientationThreshold,
                                                   task_frame, right_att, left_att);
     }
 

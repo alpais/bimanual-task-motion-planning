@@ -209,7 +209,11 @@ protected:
     CDDynamics  *r_cdd_cart_filter;
     CDDynamics  *l_cdd_cart_filter;
 
-    double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
+    double r_pos_err, r_ori_err;
+    double r_pos_gain, r_ori_gain, r_err_gain;
+
+    double l_pos_err, l_ori_err;
+    double l_pos_gain, l_ori_gain, l_err_gain;
 
     void initialize_cart_filter(double dt, double r_Wn, double l_Wn);
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
@@ -301,7 +305,7 @@ protected:
 
 
     // ACTION TYPE 3: Execute bimanual reach with virtual object dynamical system
-    bool coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
+    bool coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType,
                                          double reachingThreshold, double orientationThreshold,  tf::Transform task_frame,
                                          tf::Transform right_att, tf::Transform left_att);
 

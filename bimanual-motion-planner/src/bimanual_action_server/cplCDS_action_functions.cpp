@@ -1,8 +1,8 @@
 #include "bimanual_action_server.h"
 
-bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType,
-                                                           CDSController::DynamicsType slaveType, double reachingThreshold,
-                                                           double orientationThreshold, tf::Transform task_frame,
+bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType,
+                                                           CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType,
+                                                           double reachingThreshold, double orientationThreshold, tf::Transform task_frame,
                                                            tf::Transform right_att, tf::Transform left_att)
 {
 
@@ -156,20 +156,18 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     right_cdsRun->setCurrentEEPose(toMatrix4(r_curr_ee_pose));
     right_cdsRun->setDT(model_dt);
 
-    CDSController::DynamicsType r_masterType;
-    double r_pos_gain; r_pos_gain = 1;
-    double r_ori_gain; r_ori_gain = 0.5;
-    double r_err_gain; r_err_gain = 1;
+//    CDSController::DynamicsType r_masterType;
 
-    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
-        r_masterType = CDSController::LINEAR_DYNAMICS;
-       // r_pos_gain = 2;
-     //   r_ori_gain = 1;
-        r_err_gain = 1.5;
-    }
-    else
-        r_masterType = masterType;
-    right_cdsRun->setMotionParameters(r_ori_gain, r_pos_gain, r_err_gain, reachingThreshold, r_masterType, slaveType);
+//    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
+//        r_masterType = CDSController::LINEAR_DYNAMICS;
+//       // r_pos_gain = 2;
+//     //   r_ori_gain = 1;
+//        r_err_gain = 1.5;
+//    }
+//    else
+//        r_masterType = masterType;
+
+    right_cdsRun->setMotionParameters(r_ori_gain, r_pos_gain, r_err_gain, reachingThreshold, r_masterType, r_slaveType);
     right_cdsRun->postInit();
 
 
@@ -188,31 +186,29 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     left_cdsRun->setCurrentEEPose(toMatrix4(l_curr_ee_pose));
     left_cdsRun->setDT(model_dt);
-    CDSController::DynamicsType l_masterType;
-    CDSController::DynamicsType l_slaveType;
-    double l_pos_gain; l_pos_gain = 1;
-    double l_ori_gain; l_ori_gain = 1;
-    double l_err_gain; l_err_gain = 1;
+//    CDSController::DynamicsType l_masterType;
+//    CDSController::DynamicsType l_slaveType;
 
-    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
-        l_masterType = CDSController::LINEAR_DYNAMICS;
-        l_slaveType = CDSController::UTHETA;
-    }
-    else{
-        l_masterType = masterType;
-        l_slaveType = slaveType;
-    }
-    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
-        l_ori_gain = 1.5;
-        l_pos_gain = 1;
-        l_err_gain = 2;
-        l_masterType = CDSController::LINEAR_DYNAMICS;
-        l_slaveType = CDSController::NO_DYNAMICS;
-    }
-    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_SCOOP)){
-        l_ori_gain = 1.5;
-        l_err_gain = 1.5;
-    }
+
+//    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_DEPART || phase == PHASE_SCOOP_TRASH)){
+//        l_masterType = CDSController::LINEAR_DYNAMICS;
+//        l_slaveType = CDSController::UTHETA;
+//    }
+//    else{
+//        l_masterType = masterType;
+//        l_slaveType = slaveType;
+//    }
+//    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
+//        l_ori_gain = 1.5;
+//        l_pos_gain = 1;
+//        l_err_gain = 2;
+//        l_masterType = CDSController::LINEAR_DYNAMICS;
+//        l_slaveType = CDSController::NO_DYNAMICS;
+//    }
+//    if (task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_SCOOP)){
+//        l_ori_gain = 1.5;
+//        l_err_gain = 1.5;
+//    }
 //    left_cdsRun->setMotionParameters(l_ori_gain, l_pos_gain, l_err_gain, reachingThreshold, l_masterType, l_slaveType);
     left_cdsRun->setMotionParameters(1, 1, 1, reachingThreshold, l_masterType, l_slaveType);
     left_cdsRun->postInit();
