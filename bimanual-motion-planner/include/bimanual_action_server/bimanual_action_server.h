@@ -73,10 +73,10 @@
 #define MAX_PEELING_TABLE_CONTACT_FORCE     10
 
 // Scooping parametrization
-#define MAX_SCOOPING_FORCE                  10
-#define MAX_SCOOPING_SEARCH_HEIGHT          0.04
+#define MAX_SCOOPING_FORCE                  5
+#define MAX_SCOOPING_SEARCH_HEIGHT          0.08
 #define MAX_SCOOPING_VERTICAL_SPEED         0.01
-#define MAX_SCOOPING_CONTACT_FORCE          5
+#define MAX_SCOOPING_CONTACT_FORCE          8
 
 // Define active task >> In the future read this from file
 // #define CRT_TASK_SCOOPING
@@ -142,6 +142,17 @@ protected:
     geometry_msgs::PoseStamped msg_pose;
     bool bWaitForForces_left_arm;
     bool bWaitForForces_right_arm;
+
+    // Model based forces
+    bool bEnableForceModel_l_arm;
+    bool bForceModelInitialized_l_arm;
+    GMR *mForceModel_l_arm;
+
+    bool bEnableForceModel_r_arm;
+    bool bForceModelInitialized_r_arm;
+    GMR *mForceModel_r_arm;
+
+    void initializeForceModel(std::string base_path, TaskPhase phase, int arm_id, string role);
 
     // Filters for cartesian commands
     CDDynamics  *r_cdd_cart_filter;

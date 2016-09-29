@@ -122,11 +122,12 @@ bool BimanualActionServer::find_object_by_contact(int arm_id, int search_dir, do
         } else if (search_dir == SEARCH_DIR_Z){
 
             msg_pose.pose.position.z -= search_speed/rate;
+            msg_pose.pose.position.y += 0.5*search_speed/rate; // temporary hack
 
-            if (task_id == PEELING_TASK_ID && arm_id == L_ARM_ID)
-            {
-                msg_pose.pose.position.y += search_speed/rate; // specific for peeling
-            }
+//            if (task_id == PEELING_TASK_ID && arm_id == L_ARM_ID)
+//            {
+//                msg_pose.pose.position.y += search_speed/rate; // specific for peeling
+//            }
         }
 
 

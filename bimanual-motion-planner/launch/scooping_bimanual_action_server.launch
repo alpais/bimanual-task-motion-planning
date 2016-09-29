@@ -28,6 +28,8 @@
 			<param name="wait_for_force_right_arm" 		value="true"/>
 			<param name="wait_for_force_left_arm" 		value="true"/>
 			<param name="task_id"						value="2"/>
+			<param name="enable_force_model_l_arm"  	value="true"/>			
+			<param name="enable_force_model_r_arm"  	value="true"/>			
 		  </node>
 
 

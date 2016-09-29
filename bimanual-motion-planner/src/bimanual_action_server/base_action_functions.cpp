@@ -45,6 +45,68 @@ void BimanualActionServer::l_ftStateCallback(const geometry_msgs::WrenchStampedC
 
 }
 
+void BimanualActionServer::initializeForceModel(std::string base_path, TaskPhase phase, int arm_id, std::string role){
+
+    string arm;
+    if (arm_id == R_ARM_ID)
+        arm = "Right";
+    if (arm_id == L_ARM_ID)
+        arm = "Left";
+
+
+    if (arm_id == L_ARM_ID){
+        if (bForceModelInitialized_l_arm){
+            delete mForceModel_l_arm;
+            bForceModelInitialized_l_arm = false;
+        }
+        else {
+            char sForce[256];
+            sprintf(sForce, "%s/Phase%d/%s/%s_posGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
+
+            std::vector<int> in_dim;  in_dim.resize(1);
+            std::vector<int> out_dim; out_dim.resize(1);
+
+            mForceModel_l_arm = new GMR(sForce);
+            mForceModel_l_arm->initGMR(in_dim, out_dim);
+
+            if (!mForceModel_l_arm->getIsInit()){
+                ROS_INFO_STREAM("ERROR: Could not initialize force model for the " << arm << " arm");
+                exit(1);
+            }
+            else
+                bForceModelInitialized_l_arm = true;
+        }
+    }
+    else if (arm_id == R_ARM_ID){
+        if (bForceModelInitialized_r_arm){
+            delete mForceModel_r_arm;
+            bForceModelInitialized_r_arm = false;
+        }
+        else {
+            char sForce[256];
+            sprintf(sForce, "%s/Phase%d/%s/%s_posGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
+
+            std::vector<int> in_dim;  in_dim.resize(1);
+            std::vector<int> out_dim; out_dim.resize(1);
+
+            mForceModel_r_arm = new GMR(sForce);
+            mForceModel_r_arm->initGMR(in_dim, out_dim);
+
+            if (!mForceModel_r_arm->getIsInit()){
+                ROS_INFO_STREAM("ERROR: Could not initialize force model for the " << arm << " arm");
+                exit(1);
+            }
+            else
+                bForceModelInitialized_r_arm = true;
+        }
+
+    } else {
+        ROS_ERROR("Arm ID invalid. Could not initialize force from model");
+        exit(1);
+    }
+
+}
+
 //void initialize_cart_filter(double dt, double r_Wn, double l_Wn){
 void BimanualActionServer::initialize_cart_filter(double dt, double r_Wn, double l_Wn){
 

@@ -85,8 +85,8 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
 
             tf::Transform fixed_reach_to_scoop_att;
-
-            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010, -0.087, 0.286)); // from tf echo
+            double dcorr; dcorr = 0.02;
+            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010-dcorr, -0.087, 0.286)); // from tf echo
             fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.325, 0.862, 0.031, 0.387));
 
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
@@ -225,10 +225,21 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
     double r_pos_err, r_ori_err, l_pos_err, l_ori_err;
 
+    // for the PEELING task
     double z_force_correction = 0;
     double z_desired_force = 8;
     double z_force_correction_max = 0.05; // 1cm
     double z_force_correction_delta = 0.001; // 1 mm
+
+    // for the SCOOPING task
+    double y_tq_correction = 0;
+    double y_des_tq = 0.1;
+    double y_tq_correction_max = 0.01; // 1cm
+    double y_tq_correction_delta = 0.001; // 1 mm
+
+    if (bEnableForceModel_l_arm){
+        initializeForceModel(model_base_path, phase, L_ARM_ID, L_ARM_ROLE);
+    }
 
     // ======================================================================================================
     // ========= Real time loop
@@ -309,6 +320,14 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         }
 
 
+// ================ Force computation =============================================
+
+        if (bForceModelInitialized_l_arm){
+            // Querry GMR for the desired force
+            double nModelDesiredForce_l_arm;
+            mForceModel_l_arm -> getGMROutput(&l_pos_err, &nModelDesiredForce_l_arm);
+
+        }
 
         if (task_id == PEELING_TASK_ID && phase == PHASE_PEEL){
             // TODO Check the force first
@@ -326,6 +345,27 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             origin[2] -= z_force_correction;
             l_des_ee_pose.setOrigin(origin);
         }
+
+        // SCOOPING with a fixed torque
+        if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_SCOOP){
+
+            Eigen::VectorXd ee_ft;
+            ee_ft.resize(6);
+            ee_ft = l_curr_ee_ft;
+
+            double y_crt_tq = ee_ft[5];
+            if (y_crt_tq < y_des_tq && y_tq_correction <= y_tq_correction_max){
+                y_tq_correction += y_tq_correction_delta;
+            }
+            MathLib::Matrix4 crtPose; crtPose = toMatrix4(l_des_ee_pose);
+            MathLib::Vector3 crtRot; crtRot = crtPose.GetOrientation().GetExactRotationAxis();
+            l_des_ee_pose.getBasis().getRPY(crtRot(0), crtRot(1), crtRot(2));
+            crtRot(1) -= y_tq_correction;
+
+            l_des_ee_pose.getBasis().setRPY(crtRot(0), crtRot(1), crtRot(2));
+        }
+
+// ====================================================================================
 
 
         // Make next pose the current pose for open-loop simulation

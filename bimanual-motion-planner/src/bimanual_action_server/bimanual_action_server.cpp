@@ -41,6 +41,8 @@ void BimanualActionServer::initialize() {
     _nh.getParam("wait_for_force_right", bWaitForForces_right_arm);
     _nh.getParam("wait_for_force_left", bWaitForForces_left_arm);
     _nh.getParam("task_id", task_id);
+    _nh.getParam("enable_force_model_l_arm", bEnableForceModel_l_arm);
+    _nh.getParam("enable_force_model_r_arm", bEnableForceModel_r_arm);
 
     if(!_nh.getParam("wait_for_force_right", bWaitForForces_right_arm) && task_id == PEELING_TASK_ID) {
         ROS_INFO_STREAM("Set the Waiting for forces flag");
