@@ -23,8 +23,8 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
     // Initialize Virtual Object Dynamical System
     bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
     if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH)
-//        vo_dsRun->init(dt, 1, 0.5, 1200, 400, 400, 0.25);
-    vo_dsRun->init(dt,1.0,0.5,400.0,200.0,200.0,0.25);
+        //        vo_dsRun->init(dt, 1, 0.5, 1200, 400, 400, 0.25);
+        vo_dsRun->init(dt,1.0,0.5,400.0,200.0,200.0,0.25);
     else
         vo_dsRun->init(dt,1.0,0.5,800.0,400.0,400.0,0.5);
 
@@ -39,27 +39,20 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
     tf::Transform r_trans_ee, l_trans_ee;
     double object_err;
 
-
-    // Before Starting a Reach Bias the FT-Sensors!
-//    biasFtSensors();
-
     bBypassOri = true;    // Compute the orientation using CDDynamics
     bFilterOri = true;    // Smooth the ori
     bIgnoreOri = false;   // Completly discard the orientation
 
-//    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_RETRACT)
-//        bIgnoreOri = true;
-
-        CDDynamics  *l_cdd_cart_ori_filter;
-        l_cdd_cart_ori_filter = new CDDynamics(4, dt, 1.5);
-        MathLib::Vector ori_vel_lim(4);
-        ori_vel_lim = DEG2RAD(60); l_cdd_cart_ori_filter->SetVelocityLimits(ori_vel_lim);
-        MathLib::Vector crt_ori; crt_ori.Resize(4, false);
-        crt_ori(0) = l_ee_pose.getRotation().getX();
-        crt_ori(1) = l_ee_pose.getRotation().getY();
-        crt_ori(2) = l_ee_pose.getRotation().getZ();
-        crt_ori(3) = l_ee_pose.getRotation().getW();
-        l_cdd_cart_ori_filter->SetState(crt_ori);
+    CDDynamics  *l_cdd_cart_ori_filter;
+    l_cdd_cart_ori_filter = new CDDynamics(4, dt, 1.5);
+    MathLib::Vector ori_vel_lim(4);
+    ori_vel_lim = DEG2RAD(60); l_cdd_cart_ori_filter->SetVelocityLimits(ori_vel_lim);
+    MathLib::Vector crt_ori; crt_ori.Resize(4, false);
+    crt_ori(0) = l_ee_pose.getRotation().getX();
+    crt_ori(1) = l_ee_pose.getRotation().getY();
+    crt_ori(2) = l_ee_pose.getRotation().getZ();
+    crt_ori(3) = l_ee_pose.getRotation().getW();
+    l_cdd_cart_ori_filter->SetState(crt_ori);
 
     while(ros::ok()) {
 
@@ -166,16 +159,6 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
                 break;
             }
 
-//            if(phase ==  PHASE_INIT_REACH) {
-//                ROS_INFO_STREAM("In PHASE_INIT_REACH.. finding table now...");
-//                if (bWaitForForces_right_arm)	{
-//                    bool x_r_arm = find_object_by_contact(R_ARM_ID, SEARCH_DIR_Z, MAX_PEELING_SEARCH_HEIGHT, 0.05, MAX_PEELING_TABLE_CONTACT_FORCE);
-//                    return x_r_arm;
-//                }
-//            } else if(phase ==  PHASE_RETRACT){
-//                ROS_INFO_STREAM("In PHASE_INIT_RETRACT.. biasing ft sensors...");
-//                biasFtSensors();
-//            }
             sendPose(r_curr_ee_pose, l_curr_ee_pose);
             break;
         }
