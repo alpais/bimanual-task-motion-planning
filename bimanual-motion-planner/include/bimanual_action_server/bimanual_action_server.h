@@ -65,19 +65,6 @@
 #define SEARCH_DIR_Y        1
 #define SEARCH_DIR_Z        2
 
-// Peeling parametrization >> should come from launch file
-//#define MAX_PEELING_FORCE                   15      // [N]
-//#define MAX_PEELING_SEARCH_HEIGHT           0.07 	// 7 cm
-//#define MAX_PEELING_VERTICAL_SPEED          0.01 	// the max speed to use when going down to search for contact
-//#define MAX_PEELING_CONTACT_FORCE           8       // max force to use to establish contact on an object
-//#define MAX_PEELING_TABLE_CONTACT_FORCE     10
-
-// Scooping parametrization
-//#define MAX_SCOOPING_FORCE                  5
-//#define MAX_SCOOPING_SEARCH_HEIGHT          0.08
-//#define MAX_SCOOPING_VERTICAL_SPEED         0.01
-//#define MAX_SCOOPING_CONTACT_FORCE          8
-
 #define FT_CTRL_AXIS_X                      0
 #define FT_CTRL_AXIS_Y                      1
 #define FT_CTRL_AXIS_Z                      2
@@ -221,6 +208,7 @@ protected:
 
     bool bAdditionalTransforms; // True if the motion models were learned in a different RF than the actual EE frame. Than additional transforms are needed to get the correct motion
     void apply_task_specific_transformations(tf::Pose& left_final_target, tf::Pose& l_mNextRobotEEPose);
+
     // =====================================================
     //          SIMULATION AND VISUALIZATION
     // =====================================================
@@ -238,7 +226,6 @@ protected:
     visualization_msgs::Marker vo_arrow_left;
     visualization_msgs::Marker vo_arrow_right;
 
-
     //************************************//
     // FUNCTIONS USED BY ANY ACTION TYPE  //
     //***********************************//
@@ -247,17 +234,14 @@ protected:
 
     void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose);
 
-
     // Callback for the current right end effector pose
     void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);
-
 
     // Callback for the current right end effector force/torque
     void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);
 
     // Callback for the current left end effector pose
     void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);
-
 
     // Callback for the current left end effector force/torque
     void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);
@@ -274,7 +258,6 @@ protected:
 
     void publish_task_frames(tf::Pose& r_curr_ee_pose, tf::Pose& l_curr_ee_pose, tf::Transform& right_final_target,
                              tf::Transform& left_final_target, tf::Transform& task_frame);
-
 
 
     //**************************************//

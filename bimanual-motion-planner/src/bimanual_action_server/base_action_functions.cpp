@@ -201,6 +201,8 @@ void BimanualActionServer::filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& 
 
 void BimanualActionServer::apply_task_specific_transformations(tf::Pose& left_final_target, tf::Pose& l_mNextRobotEEPose){
 
+    // Transformations specific to the PEELING_TASK, the PHASE_REACH_TO_PEEL Models
+
     tf::Transform  l_ee_rot, ee_2_rob;
     l_ee_rot.setIdentity(); ee_2_rob.setIdentity();
 

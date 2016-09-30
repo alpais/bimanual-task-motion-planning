@@ -41,7 +41,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
     // In depart it goes away few cm >> see Att in the python script
     // In Trash it goes away even more
 
-    double dheight = 0.10;
+
     // ============= Left Arm relative to the master arm ===========
     // Slave Arm has Attractor on Object relative to a Right Fixed RF
     // (Should be substituted by vision (i.e. compute attractors from point cloud) - no time for this now)
@@ -57,7 +57,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
             //- Translation: [-0.130, 0.073, 0.238]
             //- Rotation: in Quaternion [-0.333, 0.753, -0.453, 0.342]
-
+            double dheight = 0.10;
             fixed_reach_to_peel_attr.setOrigin(tf::Vector3(-0.130, 0.073+dheight, 0.238));
             fixed_reach_to_peel_attr.setRotation(tf::Quaternion(-0.333, 0.753, -0.453, 0.342)); //KW
             fixed_reach_to_peel_attr.setRotation(tf::Quaternion(0.6812, -0.0885, 0.7265, 0.0178));
@@ -85,9 +85,23 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
 
             tf::Transform fixed_reach_to_scoop_att;
-            double dcorr; dcorr = 0.02;
-            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010-dcorr, -0.087, 0.286)); // from tf echo
-            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.325, 0.862, 0.031, 0.387));
+
+
+//            double dcorr; dcorr = 0.02;
+//            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010-dcorr, -0.087, 0.286)); // from tf echo
+//            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.325, 0.862, 0.031, 0.387));
+
+
+//            - Translation: [-0.001, -0.080, 0.306]
+//            - Rotation: in Quaternion [0.813, -0.458, 0.159, -0.324]
+
+            // More rotation
+
+//            - Translation: [0.008, -0.063, 0.307]
+  //          - Rotation: in Quaternion [0.943, -0.063, 0.239, -0.224]
+
+            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.001-0.02, -0.07, 0.306)); // from tf echo
+            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.813, -0.458, 0.159, -0.324));
 
             left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
 
@@ -95,8 +109,15 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
             tf::Transform fixed_scoop_att;
 
-            fixed_scoop_att.setOrigin(tf::Vector3(-0.047, -0.061, 0.270));
+            // NEW SCOOPING ATTS
+//            - Translation: [-0.050, -0.062, 0.295]
+//            - Rotation: in Quaternion [-0.595, 0.756, 0.052, 0.266]
+
+            fixed_scoop_att.setOrigin(tf::Vector3(-0.047-0.01, -0.064, 0.270));
             fixed_scoop_att.setRotation(tf::Quaternion(0.312, 0.903, 0.262, 0.138));
+
+//            fixed_scoop_att.setOrigin(tf::Vector3(-0.050, -0.062, 0.295));
+//            fixed_scoop_att.setRotation(tf::Quaternion(-0.595, 0.756, 0.052, 0.266));
 
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
 
@@ -111,11 +132,21 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
 
         } else if (phase == PHASE_SCOOP_TRASH){
 
+            // NEW TRASHING ATTS
+//            - Translation: [-0.073, -0.221, 0.154]
+//            - Rotation: in Quaternion [0.949, -0.036, 0.097, -0.297]
+
+
+
             tf::Transform fixed_trash_att;
-            double dh = 0.12;
-            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480 + dh, 0.285));
-//            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
-            fixed_trash_att.setRotation(tf::Quaternion(0.705, -0.625, -0.039, -0.334));
+//            double dh = 0.12;
+//            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480 + dh, 0.285));
+// //            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
+//            fixed_trash_att.setRotation(tf::Quaternion(0.705, -0.625, -0.039, -0.334));
+
+            fixed_trash_att.setOrigin(tf::Vector3(-0.073, -0.221, 0.154));
+            fixed_trash_att.setRotation(tf::Quaternion(0.949, -0.036, 0.097, -0.297));
+
             left_final_target.mult(fixed_right_arm_rf, fixed_trash_att);
 
         } else if (phase == PHASE_SCOOP_RETRACT){
@@ -231,8 +262,6 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         // Compute Next Desired EE Pose for Left Arm
         left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
-
-        // Transformation for PHASE_REACH_TO_PEEL Model
 
         if (bAdditionalTransforms)
             apply_task_specific_transformations(left_final_target, l_mNextRobotEEPose);

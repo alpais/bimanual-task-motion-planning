@@ -279,6 +279,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = false;
 
         }
         else if(goal->action_name   == "phase1") {
@@ -355,6 +356,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = false;
+            bAdditionalTransforms = false;
 
         } else if(goal->action_name == "phase3") {
             phase = PHASE_ROTATE;
@@ -383,6 +385,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = false;
+            bAdditionalTransforms = false;
 
         } else if(goal->action_name == "phase4") {
             phase = PHASE_RETRACT;
@@ -414,6 +417,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = false;
+            bAdditionalTransforms = false;
 
         } else {
             ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
@@ -453,6 +457,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = false;
         }
         else if(goal->action_name   == "phase1") {
             phase = PHASE_SCOOP_REACH_TO_SCOOP;
@@ -464,7 +469,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             max_task_force_l_arm        = 5;
             max_search_distance_l_arm   = 0.08;
             max_vertical_speed_l_arm    = 0.01;
-            max_contact_force_l_arm     = 8;
+            max_contact_force_l_arm     = 12;
 
             bUseForce_l_arm = false;
             bUseForce_r_arm = false;
@@ -472,9 +477,9 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             bEnableForceModel_l_arm = false;
             bEnableForceModel_r_arm = false;
 
-            r_pos_gain = 1;
-            r_ori_gain = 0.5;
-            r_err_gain = 1.5;
+            r_pos_gain = 0.5;
+            r_ori_gain = 1.5;
+            r_err_gain = 1;
 
             l_pos_gain = 1;
             l_ori_gain = 1;
@@ -483,13 +488,14 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             r_masterType = CDSController::LINEAR_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
 
-            l_masterType = CDSController::MODEL_DYNAMICS;
-            l_slaveType = CDSController::UTHETA;
+            l_masterType = CDSController::LINEAR_DYNAMICS;
+            l_slaveType = CDSController::NO_DYNAMICS;
 
             r_filter_gain_Wn = 25;
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = false;
 
         } else if(goal->action_name == "phase2") {
 
@@ -501,7 +507,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             force_control_axis = FT_CTRL_AXIS_RZ;
 
             force_correction = 0;
-            desired_force = 0.1;                // torque around Z
+            desired_force = 0.12;                // torque around Z
             force_correction_max = 0.01;        // 1cm
             force_correction_delta = 0.001;     // 1 mm
             bUseForce_r_arm = false;
@@ -533,6 +539,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = false;
+            bAdditionalTransforms = false;
 
         } else if(goal->action_name == "phase3") {
             phase = PHASE_SCOOP_DEPART;
@@ -564,6 +571,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = false;
 
         } else if(goal->action_name == "phase4") {
             phase = PHASE_SCOOP_TRASH;
@@ -595,6 +603,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 25;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = false;
 
         } else if(goal->action_name == "phase5") {
             phase = PHASE_SCOOP_RETRACT;
@@ -626,6 +635,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_filter_gain_Wn = 10;
 
             bActionTypeReach = true;
+            bAdditionalTransforms = false;
 
         } else {
             ROS_ERROR_STREAM("Unidentified action name "<<goal->action_name.c_str());
