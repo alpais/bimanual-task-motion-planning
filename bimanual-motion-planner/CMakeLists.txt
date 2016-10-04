@@ -106,7 +106,10 @@ add_library(bimanual_action_server
     src/bimanual_action_server/uncplCDS_action_functions.cpp
     src/bimanual_action_server/cplCDS_action_functions.cpp
     src/bimanual_action_server/voDS_action_functions.cpp
-    src/bimanual_action_server/bimanual_gotocart_functions.cpp)
+    src/bimanual_action_server/bimanual_gotocart_functions.cpp
+    src/bimanual_action_server/ros_sub_pub_functions.cpp
+    src/bimanual_action_server/collab_passive_functions.cpp
+)
 target_link_libraries(bimanual_action_server
    ${catkin_LIBRARIES})
 

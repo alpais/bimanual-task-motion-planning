@@ -154,6 +154,21 @@ rosrun tf tf_echo Hand_ft Tool_ft  >> Attractor of the left arm wrt the right ar
 rosrun tf tf_echo /task_frame /Hand_ft >> Attractor of right arm wrt the task frame
 rosrun tf tf_echo /task_frame /Tool_ft >> Attractor of left arm wrt the task frame
 
+
+Stiffness
+=========
+
+Testing different stiffnesses from the command line
+
+rostopic pub -r 10  /KUKA_LeftArm/joint_imp_cmd kuka_fri_bridge/JointStateImpedance '{stiffness: [1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]}'
+
+rostopic pub -r 10  /KUKA_LeftArm/joint_imp_cmd kuka_fri_bridge/JointStateImpedance '{stiffness: [500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0]}'
+
+rostopic pub -r 10  /KUKA_LeftArm/joint_imp_cmd kuka_fri_bridge/JointStateImpedance '{stiffness: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]}'
+
+
+
+
 >> Reading New Attractors suitable for force control 
 
 ============

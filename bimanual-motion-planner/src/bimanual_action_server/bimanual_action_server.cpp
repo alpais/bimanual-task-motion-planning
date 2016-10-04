@@ -247,7 +247,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
     // TODO: the Action-specific parameters should be read from yaml files
 
-    TaskPhase phase;
+
     if (task_id == PEELING_TASK_ID){
         if(goal->action_name == "phase0"){
             phase = PHASE_INIT_REACH;

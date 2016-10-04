@@ -51,6 +51,11 @@
 
 //-- CDDynamics filtering --//
 #include "CDDynamics.h"
+
+//-- Stiffness -- //
+#include "kuka_fri_bridge/JointStateImpedance.h"
+
+
 #define FORCE_WAIT_TOL		7
 #define R_ARM_ID            1
 #define L_ARM_ID            2
@@ -88,7 +93,8 @@ protected:
     bool bFilterOri; // Smooth the orientation given by CDS or VO
     bool bIgnoreOri; // Completly discard the orientation, only control for position
 
-    enum TaskPhase {
+    enum TaskPhase
+    {
         // PEELING Task phases
         PHASE_INIT_REACH            =  0,
         PHASE_REACH_TO_PEEL         =  1,
@@ -104,11 +110,13 @@ protected:
         PHASE_SCOOP_RETRACT         = 10,
     };
 
+    TaskPhase phase;
+
     ros::NodeHandle nh_;
 
     // Publishers + Subscribers
     ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_;
-    ros::Publisher  r_pub_, r_pub_ft_, l_pub_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_;
+    ros::Publisher  r_pub_, r_pub_ft_, r_pub_jstiff_, l_pub_, l_pub_jstiff, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_;
     string right_robot_frame, left_robot_frame;
 
     // Right/Left EE states/cmds/topics
@@ -226,6 +234,52 @@ protected:
     visualization_msgs::Marker vo_arrow_left;
     visualization_msgs::Marker vo_arrow_right;
 
+
+
+    //**************************************//
+    // FUNCTIONS USED BY VO DS ACTION TYPE  //
+    //**************************************//
+
+    // Compute Pose of Real Object
+    void compute_object_pose(const tf::Transform& right, const tf::Transform& left, tf::Transform& object);
+
+    // Publish real object shape for VO bimanual DS
+    void publish_ro_rviz(const tf::Transform& ro_pose, const double& object_length);
+
+    // Publish virtual object shape for VO bimanual DS
+    void publish_vo_rviz(const tf::Transform& vo_pose,  const double& object_length, const tf::Transform& right, const tf::Transform& left);
+
+
+    //*******************************************//
+    // EXECUTION FUNCTIONS FOR EACH ACTION TYPE  //
+    //*******************************************//
+
+    // >>>>>>>>>>>> Autonomous behaviors <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    // ACTION TYPE 1: Execute action from two independent learned models
+    bool uncoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
+                                           double reachingThreshold, double orientationThreshold, tf::Transform task_frame,
+                                           tf::Transform right_att, tf::Transform left_att);
+
+    // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
+    bool coordinated_bimanual_ds_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt);
+
+
+    // ACTION TYPE 3: Execute bimanual reach with virtual object dynamical system
+    bool coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType,
+                                         double reachingThreshold, double orientationThreshold,  tf::Transform task_frame,
+                                         tf::Transform right_att, tf::Transform left_att);
+
+    // ACTION TYPE 4: Go to Targets in Cartesian Space
+    bool bimanual_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att);
+
+    // >>>>>>>>>>>> Collaborative Behaviors <<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    // Action Type 1: Robot Arm is passive
+
+    // Action Type 2: Robot arm is active
+
+
     //************************************//
     // FUNCTIONS USED BY ANY ACTION TYPE  //
     //***********************************//
@@ -258,43 +312,6 @@ protected:
 
     void publish_task_frames(tf::Pose& r_curr_ee_pose, tf::Pose& l_curr_ee_pose, tf::Transform& right_final_target,
                              tf::Transform& left_final_target, tf::Transform& task_frame);
-
-
-    //**************************************//
-    // FUNCTIONS USED BY VO DS ACTION TYPE  //
-    //**************************************//
-
-    // Compute Pose of Real Object
-    void compute_object_pose(const tf::Transform& right, const tf::Transform& left, tf::Transform& object);
-
-    // Publish real object shape for VO bimanual DS
-    void publish_ro_rviz(const tf::Transform& ro_pose, const double& object_length);
-
-    // Publish virtual object shape for VO bimanual DS
-    void publish_vo_rviz(const tf::Transform& vo_pose,  const double& object_length, const tf::Transform& right, const tf::Transform& left);
-
-
-    //*******************************************//
-    // EXECUTION FUNCTIONS FOR EACH ACTION TYPE  //
-    //*******************************************//
-
-
-    // ACTION TYPE 1: Execute action from two independent learned models
-    bool uncoupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType masterType, CDSController::DynamicsType slaveType,
-                                           double reachingThreshold, double orientationThreshold, tf::Transform task_frame,
-                                           tf::Transform right_att, tf::Transform left_att);
-
-    // ACTION TYPE 2: Execute bimanual reach with virtual object dynamical system
-    bool coordinated_bimanual_ds_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att, double dt);
-
-
-    // ACTION TYPE 3: Execute bimanual reach with virtual object dynamical system
-    bool coupled_learned_model_execution(TaskPhase phase, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType,
-                                         double reachingThreshold, double orientationThreshold,  tf::Transform task_frame,
-                                         tf::Transform right_att, tf::Transform left_att);
-
-    // ACTION TYPE 4: Go to Targets in Cartesian Space
-    bool bimanual_goto_cart_execution(tf::Transform task_frame, tf::Transform right_att, tf::Transform left_att);
 
 public:
 
