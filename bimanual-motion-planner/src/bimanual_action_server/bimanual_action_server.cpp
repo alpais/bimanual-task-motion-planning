@@ -54,17 +54,82 @@ void BimanualActionServer::initialize() {
         bWaitForForces_left_arm = true;
     }
 
-    std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_cmd_pose, r_ss_cmd_ft;
+    std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_state_stiff;
+    std::stringstream r_ss_cmd_pose, r_ss_cmd_ft, r_ss_cmd_stiff;
+
+    std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_state_stiff;
+    std::stringstream l_ss_cmd_pose, l_ss_cmd_ft, l_ss_cmd_stiff;
+
+#ifdef USE_JOINT_CONTROLLERS        // The state transformers package will transform cartesian commands to joint commands
+
+    // Right Arm
     r_ss_state_pose << "/" << r_topic_ns << "/joint_to_cart/est_ee_pose";
     r_ss_state_ft   << "/hand/ft_sensor/netft_data";
+    r_ss_state_stiff<< "/KUKA_RightArm/joint_imp_states";           // Read directly from the robot_mirror
+
     r_ss_cmd_pose   << "/" << r_topic_ns << "/cart_to_joint/des_ee_pose";
     r_ss_cmd_ft     << "/" << r_topic_ns << "/cart_to_joint/des_ee_ft";
+    r_ss_cmd_stiff  << "/KUKA_RightArm/joint_imp_cmd";
+//    r_ss_cmd_stiff  << "/" << r_topic_ns << "/cart_to_joint/des_ee_stiff";
 
+    // Left Arm
+    l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
+    l_ss_state_ft   << "/tool/ft_sensor/netft_data";
+    l_ss_state_stiff<< "/KUKA_LeftArm/joint_imp_states";            // Read directly from the robot_mirror
+
+    l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
+    l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
+    l_ss_cmd_stiff  << "/KUKA_LeftArm/joint_imp_cmd";
+//    l_ss_cmd_stiff  << "/" << l_topic_ns << "/cart_to_joint/des_ee_stiff";
+
+/*   -------------------------------------------------------------------------------
+ *   Note that the stiffness command needs to be sent directly to the robot_mirror.
+ *   In the current implementation of the state_transformers, sending the command
+ *   to /left_arm/cart_to_joint/des_ee_stiff will not update the stiffness.
+ *   -------------------------------------------------------------------------------
+ */
+
+#endif
+
+#ifdef USE_FRI_CART_CONTROLLERS         // Bypass the state transformers completely
+
+    // Right Arm
+    r_ss_state_pose << "/KUKA_RightArm/Pose";
+    r_ss_state_ft   << "/hand/ft_sensor/netft_data";
+    r_ss_state_stiff<< "/KUKA_RightArm/Stiff"
+
+    r_ss_cmd_pose   << "/KUKA_RightArm/des_ee_pose";
+    r_ss_cmd_ft     << "/KUKA_RightArm/des_ee_ft";
+    r_ss_cmd_stiff  << "/KUKA_RightArm/des_ee_stiff";
+
+    // Left Arm
+    l_ss_state_pose << "/KUKA_LeftArm/Pose";
+    l_ss_state_ft   << "/tool/ft_sensor/netft_data";    // or alternatively take the estimate from the robot >> /KUKA_LeftArm/FT
+    l_ss_state_stiff<< "/KUKA_LeftArm/Stiff";
+
+    l_ss_cmd_pose   << " /KUKA_LeftArm/des_ee_pose";
+    l_ss_cmd_ft     << "/KUKA_LeftArm/des_ee_ft";
+    l_ss_cmd_stiff  << "/KUKA_LeftArm/des_ee_stiff";
+
+#endif
+
+    // Right Arm
     R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
     R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
+    R_STATE_JSTIFF_TOPIC  = r_ss_state_stiff.str();
+
     R_EE_CMD_POSE_TOPIC	  = r_ss_cmd_pose.str();
     R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
+    R_CMD_JSTIFF_TOPIC    = r_ss_cmd_stiff.str();
 
+    // Left Arm
+    L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
+    L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
+    L_STATE_JSTIFF_TOPIC  = l_ss_state_stiff.str();
+
+    L_EE_CMD_POSE_TOPIC	  = l_ss_cmd_pose.str();
+    L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
+    L_CMD_JSTIFF_TOPIC    = l_ss_cmd_stiff.str();
 
     // ROS TOPICS for right arm controllers
     r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::r_eeStateCallback, this);
@@ -73,32 +138,24 @@ void BimanualActionServer::initialize() {
     r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::r_ftStateCallback, this);
     r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
 
-
-
-    std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_cmd_pose, l_ss_cmd_ft;
-    l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
-    l_ss_state_ft   << "/tool/ft_sensor/netft_data";
-    l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
-    l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
-
-    L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
-    L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
-    L_EE_CMD_POSE_TOPIC	  = l_ss_cmd_pose.str();
-    L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
-
-
-    r_curr_ee_ft.resize(6);
-    l_curr_ee_ft.resize(6);
+    r_sub_jstiff_ = nh_.subscribe(R_STATE_JSTIFF_TOPIC, 1, &BimanualActionServer::r_jstiffStateCallback, this);
+    r_pub_jstiff_ = nh_.advertise<kuka_fri_bridge::JointStateImpedance>(R_CMD_JSTIFF_TOPIC, 1);
 
     // ROS TOPICS for left arm controllers
     l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::l_eeStateCallback, this);
     l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::l_ftStateCallback, this);
+
     l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
     l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
 
+    l_sub_jstiff_ = nh_.subscribe(L_STATE_JSTIFF_TOPIC, 1, &BimanualActionServer::l_jstiffStateCallback, this);
+    l_pub_jstiff_ = nh_.advertise<kuka_fri_bridge::JointStateImpedance>(L_CMD_JSTIFF_TOPIC, 1);
 
-    ROS_INFO_STREAM("Right (BHand-Zucchini) FT Sensor: " << R_EE_STATE_FT_TOPIC);
-    ROS_INFO_STREAM("Left (Peel-Tool) FT Sensor: " << L_EE_STATE_FT_TOPIC);
+    r_curr_ee_ft.resize(6); r_curr_jstiff.resize(nDOF);
+    l_curr_ee_ft.resize(6); l_curr_jstiff.resize(nDOF);
+
+    ROS_INFO_STREAM("Right - Passive - FT Sensor: " << R_EE_STATE_FT_TOPIC);
+    ROS_INFO_STREAM("Left - Active Tool -  FT Sensor: " << L_EE_STATE_FT_TOPIC);
 
 
     // Service Clients for FT/Sensor Biasing
