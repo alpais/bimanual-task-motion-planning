@@ -32,7 +32,6 @@ void BimanualActionServer::r_jstiffStateCallback(const kuka_fri_bridge::JointSta
     r_curr_jstiff[5] = msg.get()->stiffness[5];
     r_curr_jstiff[6] = msg.get()->stiffness[6];
 
-
 }
 
 // Callback for the current left end effector pose
@@ -67,10 +66,20 @@ void BimanualActionServer::l_jstiffStateCallback(const kuka_fri_bridge::JointSta
     l_curr_jstiff[4] = msg.get()->stiffness[4];
     l_curr_jstiff[5] = msg.get()->stiffness[5];
     l_curr_jstiff[6] = msg.get()->stiffness[6];
+}
+
+
+// ------ Human arm and task frame tracked by vision ------ //
+void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
+
+}
+
+void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
 
 }
 
 
+// ------ Sending commands ---------------- //
 void BimanualActionServer::sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {
 
     sendPoseRight(r_pose_);
@@ -129,6 +138,22 @@ void BimanualActionServer::sendNormalForce(double fz, int arm_id) {
     }
     else{
         l_pub_ft_.publish(msg_ft);
+    }
+
+}
+
+void BimanualActionServer::sendJStiffCmd(double des_stiff, int arm_id){
+
+    // use same stiffness for all axes
+    jstiff_msg.stiffness[0] = des_stiff;      jstiff_msg.stiffness[1] = des_stiff;      jstiff_msg.stiffness[2] = des_stiff;
+    jstiff_msg.stiffness[3] = des_stiff;      jstiff_msg.stiffness[4] = des_stiff;      jstiff_msg.stiffness[5] = des_stiff;
+    jstiff_msg.stiffness[6] = des_stiff;
+
+    if (arm_id == R_ARM_ID){
+        r_pub_jstiff_.publish(jstiff_msg);
+    }
+    else{
+        l_pub_jstiff_.publish(jstiff_msg);
     }
 
 }

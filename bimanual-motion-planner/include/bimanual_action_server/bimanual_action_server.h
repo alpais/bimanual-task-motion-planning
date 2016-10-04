@@ -133,6 +133,10 @@ protected:
     string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC, L_STATE_JSTIFF_TOPIC, L_CMD_JSTIFF_TOPIC;
     tf::StampedTransform right_arm_base, left_arm_base;
 
+    // For collaborative Execution
+    tf::Pose h_wrist_pose;          // human wrist pose
+    tf::Pose vision_task_frame;     // now the task frame moves with the object
+
     // Service Clients
     ros::ServiceClient hand_ft_client;
     ros::ServiceClient tool_ft_client;
@@ -155,7 +159,7 @@ protected:
     bool bWaitForForces_left_arm;
     bool bWaitForForces_right_arm; 
 
-    kuka_fri_bridge::JointStateImpedance r_jstiff_msg, l_jstiff_msg;
+    kuka_fri_bridge::JointStateImpedance jstiff_msg;
 
     // >>>>  LEFT ARM <<<<
     bool bUseForce_l_arm;               // True if force control should be applied
@@ -247,7 +251,6 @@ protected:
     visualization_msgs::Marker vo_arrow_right;
 
 
-
     //**************************************//
     // FUNCTIONS USED BY VO DS ACTION TYPE  //
     //**************************************//
@@ -287,44 +290,47 @@ protected:
 
     // >>>>>>>>>>>> Collaborative Behaviors <<<<<<<<<<<<<<<<<<<<<<<<<<
 
+    bool bEnableCollaborativeMode;          // True if a task should be performed in collaboration with a human
+
     // Action Type 1: Robot Arm is passive
+    bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt);
 
     // Action Type 2: Robot arm is active
+    bool collab_active_model_execution(TaskPhase phase, tf::Transform wrist_frame, tf::Transform left_att, double dt);
 
 
     //************************************//
     // FUNCTIONS USED BY ANY ACTION TYPE  //
     //***********************************//
 
+    // ---- Type Transformations ------
     MathLib::Matrix4 toMatrix4(const tf::Pose& pose);
-
     void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose);
 
-    // Callback for the current right end effector pose
-    void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);
+    // ---- Right Arm -----
+    void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                  // Callback for the current right end effector pose
+    void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);                // Callback for the current right end effector force/torque
+    void r_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);    // Callback for the current right joint stiffness
 
-    // Callback for the current right end effector force/torque
-    void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);
+    // ---- Left Arm -----
+    void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                  // Callback for the current left end effector pose
+    void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);                // Callback for the current left end effector force/torque
+    void l_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);    // Callback for the current left joint stiffness
 
-    void r_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);
-
-    // Callback for the current left end effector pose
-    void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);
-
-    // Callback for the current left end effector force/torque
-    void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);
-
-    void l_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);
+    // ---- Human Arm - from Vision -----
+    void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);               // Callback for the current wrist position of the human arm
+    void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);           // Callback for the current task frame tracked by vision
 
     // Send desired EE_pose to robot/joint_ctrls.
     void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_);
-
     void sendPoseLeft(const tf::Pose& l_pose_);
-
     void sendPoseRight(const tf::Pose& r_pose_);
 
     // Send desired EE_ft to robot/joint_ctrls.
     void sendNormalForce(double fz, int arm_id);
+
+    // Send desired Stiffness
+    void sendJStiffCmd(double des_stiff, int arm_id);
 
     void publish_task_frames(tf::Pose& r_curr_ee_pose, tf::Pose& l_curr_ee_pose, tf::Transform& right_final_target,
                              tf::Transform& left_final_target, tf::Transform& task_frame);
