@@ -34,6 +34,15 @@ void BimanualActionServer::r_jstiffStateCallback(const kuka_fri_bridge::JointSta
 
 }
 
+void BimanualActionServer::r_cartStiffStateCallback(const geometry_msgs::TwistConstPtr &msg){
+
+    r_curr_cart_stiff[0] = msg.get()->linear.x;
+    r_curr_cart_stiff[1] = msg.get()->linear.y;
+    r_curr_cart_stiff[2] = msg.get()->linear.z;
+
+}
+
+
 // Callback for the current left end effector pose
 void BimanualActionServer::l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg) {
     const geometry_msgs::PoseStamped* data = msg.get();
@@ -68,14 +77,28 @@ void BimanualActionServer::l_jstiffStateCallback(const kuka_fri_bridge::JointSta
     l_curr_jstiff[6] = msg.get()->stiffness[6];
 }
 
+void BimanualActionServer::l_cartStiffStateCallback(const geometry_msgs::TwistConstPtr &msg){
 
-// ------ Human arm and task frame tracked by vision ------ //
-void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
+    l_curr_cart_stiff[0] = msg.get()->linear.x;
+    l_curr_cart_stiff[1] = msg.get()->linear.y;
+    l_curr_cart_stiff[2] = msg.get()->linear.z;
 
 }
 
-void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
 
+// ------ Human arm and task frame tracked by vision ------ //
+void BimanualActionServer::h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
+
+    const geometry_msgs::PoseStamped* data = msg.get();
+    h_wrist_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+    h_wrist_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+
+}
+
+void BimanualActionServer::h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
+    const geometry_msgs::PoseStamped* data = msg.get();
+    vision_task_frame.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+    vision_task_frame.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
 }
 
 
@@ -142,6 +165,7 @@ void BimanualActionServer::sendNormalForce(double fz, int arm_id) {
 
 }
 
+// Send desired joint stiffness command
 void BimanualActionServer::sendJStiffCmd(double des_stiff, int arm_id){
 
     // use same stiffness for all axes
@@ -157,6 +181,22 @@ void BimanualActionServer::sendJStiffCmd(double des_stiff, int arm_id){
     }
 
 }
+
+void BimanualActionServer::sendCartStiffCmd(Eigen::Vector3d des_stiff, int arm_id){
+
+    msg_cart_stiff.linear.x = des_stiff[0];
+    msg_cart_stiff.linear.y = des_stiff[0];
+    msg_cart_stiff.linear.z = des_stiff[0];
+
+    if (arm_id == R_ARM_ID){
+        r_pub_cart_stiff_.publish(msg_cart_stiff);
+    }
+    else{
+        l_pub_cart_stiff_.publish(msg_cart_stiff);
+    }
+
+}
+
 
 void BimanualActionServer::publish_task_frames(tf::Pose &r_curr_ee_pose, tf::Pose &l_curr_ee_pose,
                                                tf::Transform &right_final_target, tf::Transform &left_final_target,

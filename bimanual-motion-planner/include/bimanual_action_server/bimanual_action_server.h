@@ -120,17 +120,17 @@ protected:
     ros::NodeHandle nh_;
 
     // Publishers + Subscribers
-    ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_, r_sub_jstiff_, l_sub_jstiff_;
-    ros::Publisher  r_pub_, r_pub_ft_, r_pub_jstiff_, l_pub_, l_pub_jstiff_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_;
+    ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_, r_sub_jstiff_, l_sub_jstiff_, l_sub_cart_stiff_, r_sub_cart_stiff_;
+    ros::Publisher  r_pub_, r_pub_ft_, r_pub_jstiff_, l_pub_, l_pub_jstiff_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_, r_pub_cart_stiff_, l_pub_cart_stiff_;
     string right_robot_frame, left_robot_frame;
 
     // Right/Left EE states/cmds/topics
     tf::Pose r_ee_pose, r_curr_ee_pose, r_des_ee_pose, l_ee_pose, l_curr_ee_pose, l_des_ee_pose;
-    Eigen::VectorXd  r_curr_ee_ft, l_curr_ee_ft, r_curr_jstiff, l_curr_jstiff;
+    Eigen::VectorXd  r_curr_ee_ft, l_curr_ee_ft, r_curr_jstiff, l_curr_jstiff, r_curr_cart_stiff, l_curr_cart_stiff;
     string r_base_path, l_base_path, r_topic_ns, l_topic_ns;
     string model_base_path;
-    string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC, R_STATE_JSTIFF_TOPIC, R_CMD_JSTIFF_TOPIC;
-    string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC, L_STATE_JSTIFF_TOPIC, L_CMD_JSTIFF_TOPIC;
+    string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC, R_STATE_STIFF_TOPIC, R_CMD_STIFF_TOPIC;
+    string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC, L_STATE_STIFF_TOPIC, L_CMD_STIFF_TOPIC;
     tf::StampedTransform right_arm_base, left_arm_base;
 
     // For collaborative Execution
@@ -156,10 +156,13 @@ protected:
     // Create messages for sending force commands
     geometry_msgs::WrenchStamped msg_ft;
     geometry_msgs::PoseStamped msg_pose;
+
+    kuka_fri_bridge::JointStateImpedance jstiff_msg;
+    geometry_msgs::Twist msg_cart_stiff;
+
     bool bWaitForForces_left_arm;
     bool bWaitForForces_right_arm; 
 
-    kuka_fri_bridge::JointStateImpedance jstiff_msg;
 
     // >>>>  LEFT ARM <<<<
     bool bUseForce_l_arm;               // True if force control should be applied
@@ -311,11 +314,13 @@ protected:
     void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                  // Callback for the current right end effector pose
     void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);                // Callback for the current right end effector force/torque
     void r_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);    // Callback for the current right joint stiffness
+    void r_cartStiffStateCallback(const geometry_msgs::TwistConstPtr& msg);         // Callback for the current right cartesian stiffness
 
     // ---- Left Arm -----
     void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                  // Callback for the current left end effector pose
     void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);                // Callback for the current left end effector force/torque
     void l_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);    // Callback for the current left joint stiffness
+    void l_cartStiffStateCallback(const geometry_msgs::TwistConstPtr &msg);         // Callback for the current left cartesian stiffness
 
     // ---- Human Arm - from Vision -----
     void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);               // Callback for the current wrist position of the human arm
@@ -330,7 +335,8 @@ protected:
     void sendNormalForce(double fz, int arm_id);
 
     // Send desired Stiffness
-    void sendJStiffCmd(double des_stiff, int arm_id);
+    void sendJStiffCmd(double des_stiff, int arm_id);               // joint level
+    void sendCartStiffCmd(Eigen::Vector3d des_stiff, int arm_id);   // cartesian level
 
     void publish_task_frames(tf::Pose& r_curr_ee_pose, tf::Pose& l_curr_ee_pose, tf::Transform& right_final_target,
                              tf::Transform& left_final_target, tf::Transform& task_frame);
