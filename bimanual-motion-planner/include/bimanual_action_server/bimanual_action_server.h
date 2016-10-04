@@ -161,6 +161,7 @@ protected:
     bool bUseForce_l_arm;               // True if force control should be applied
     bool bEnableForceModel_l_arm;       // True if force should be model based
     bool bForceModelInitialized_l_arm;  // True if GMR was initialized successfully
+    bool bStiffModelInitialized_l_arm;  // True if GMR was initialized successfully
     bool bBypassForceModel_l_arm;       // True if a constant force should be used regardless of the model estimate
     bool bEndInContact_l_arm;           // True if after a reaching movement the end effector should be in contact with the environment
 
@@ -171,11 +172,13 @@ protected:
     int    search_axis_l_arm;           // the direction in which to establish contact
 
     GMR *mForceModel_l_arm;
+    GMR *mStiffModel_l_arm;
 
     // >>>> RIGHT ARM <<<<
     bool bUseForce_r_arm;               // True if force control should be applied
     bool bEnableForceModel_r_arm;       // True if force should be model based
     bool bForceModelInitialized_r_arm;  // True if GMR was initialized successfully
+    bool bStiffModelInitialized_r_arm;  // True if GMR was initialized successfully
     bool bBypassForceModel_r_arm;       // True if a constant force should be used regardless of the model estimate
     bool bEndInContact_r_arm;           // True if after a reaching movement the end effector should be in contact with the environment
 
@@ -186,6 +189,7 @@ protected:
     int    search_axis_r_arm;           // the direction in which to establish contact
 
     GMR *mForceModel_r_arm;
+    GMR *mStiffModel_r_arm;
 
     double force_control_axis;          // the axis on which to perform force control X, Y, Z, RX, RY, RZ
 

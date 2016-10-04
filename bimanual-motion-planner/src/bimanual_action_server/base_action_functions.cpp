@@ -43,7 +43,7 @@ void BimanualActionServer::initialize_force_model(std::string base_path, TaskPha
         }
         else {
             char sForce[256];
-            sprintf(sForce, "%s/Phase%d/%s/%s_posGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
+            sprintf(sForce, "%s/Phase%d/%s/%s_forGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
 
             std::vector<int> in_dim;  in_dim.resize(1);  in_dim[0] = 0;
             std::vector<int> out_dim; out_dim.resize(1); out_dim[0] = 1;
@@ -67,6 +67,75 @@ void BimanualActionServer::initialize_force_model(std::string base_path, TaskPha
     }
 
 }
+
+
+
+void BimanualActionServer::initialize_stiffness_model(std::string base_path, TaskPhase phase, int arm_id, std::string role){
+
+    string arm;
+    if (arm_id == R_ARM_ID)
+        arm = "Right";
+    if (arm_id == L_ARM_ID)
+        arm = "Left";
+
+
+    if (arm_id == L_ARM_ID){
+        if (bStiffModelInitialized_l_arm){
+            delete mStiffModel_l_arm;
+            bStiffModelInitialized_l_arm = false;
+        }
+        else {
+            char sStiff[256];
+            sprintf(sStiff, "%s/Phase%d/%s/%s_stiffGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
+
+            std::vector<int> in_dim;  in_dim.resize(3);  in_dim[0] = 0; in_dim[1] = 1; in_dim[2] = 2;
+            std::vector<int> out_dim; out_dim.resize(3); out_dim[0] = 3; out_dim[1] = 4; out_dim[2] = 5;
+
+            mStiffModel_l_arm = new GMR(sStiff);
+            mStiffModel_l_arm->initGMR(in_dim, out_dim);
+
+            if (!mStiffModel_l_arm->getIsInit()){
+                ROS_INFO_STREAM("ERROR: Could not initialize stiffness model for the " << arm << " arm");
+                exit(1);
+            }
+            else {
+                bStiffModelInitialized_l_arm = true;
+                mStiffModel_l_arm->printInfo();
+            }
+        }
+    }
+    else if (arm_id == R_ARM_ID){
+        if (bStiffModelInitialized_r_arm){
+            delete mStiffModel_r_arm;
+            bStiffModelInitialized_r_arm = false;
+        }
+        else {
+            char sStiff[256];
+            sprintf(sStiff, "%s/Phase%d/%s/%s_stiffGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
+
+            std::vector<int> in_dim;  in_dim.resize(3);  in_dim[0] = 0; in_dim[1] = 1; in_dim[2] = 2;
+            std::vector<int> out_dim; out_dim.resize(3); out_dim[0] = 3; out_dim[1] = 4; out_dim[2] = 5;
+
+            mStiffModel_r_arm = new GMR(sStiff);
+            mStiffModel_r_arm->initGMR(in_dim, out_dim);
+
+            if (!mStiffModel_r_arm->getIsInit()){
+                ROS_INFO_STREAM("ERROR: Could not initialize stiffness model for the " << arm << " arm");
+                exit(1);
+            }
+            else {
+                bStiffModelInitialized_r_arm = true;
+                mStiffModel_r_arm->printInfo();
+            }
+        }
+
+    } else {
+        ROS_ERROR("Arm ID invalid. Could not initialize force from model");
+        exit(1);
+    }
+
+}
+
 
 //void initialize_cart_filter(double dt, double r_Wn, double l_Wn){
 void BimanualActionServer::initialize_cart_filter(double dt, double r_Wn, double l_Wn){
