@@ -99,6 +99,20 @@ void BimanualActionServer::h_taskFrameStateCallback(const geometry_msgs::PoseSta
     const geometry_msgs::PoseStamped* data = msg.get();
     vision_task_frame.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
     vision_task_frame.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+    bEnableVision = true;
+}
+
+void BimanualActionServer::h_currentActionStateCallback(const std_msgs::BoolConstPtr& msg){
+
+    h_current_action_state = msg.get()->data;
+
+}
+
+
+void BimanualActionServer::h_currentActionErrorCallback(const std_msgs::Float64ConstPtr msg){
+
+    h_current_action_err = msg.get()->data;
+
 }
 
 

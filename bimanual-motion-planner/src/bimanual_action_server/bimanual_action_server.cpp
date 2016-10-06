@@ -623,11 +623,11 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
             r_pos_gain = 1;
             r_ori_gain = 0.5;
-            r_err_gain = 1.5;
+            r_err_gain = 2.5;
 
             l_pos_gain = 1;
             l_ori_gain = 1;
-            l_err_gain = 1;
+            l_err_gain = 1.5;
 
             r_masterType = CDSController::LINEAR_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
@@ -718,11 +718,6 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     }
 
 
-//    if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH){
-//        l_Wn = 55;
-//    }
-//    else l_Wn = 10;
-
     initialize_cart_filter(dt, r_filter_gain_Wn, l_filter_gain_Wn);
     sync_cart_filter(r_ee_pose, l_ee_pose);
 
@@ -765,6 +760,14 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     if(goal->action_type=="BIMANUAL_GOTO_CART")
         success = bimanual_goto_cart_execution(task_frame, right_att, left_att);
     result_.success = success;
+
+    //---> ACTION TYPE 5: Collaborative - Robot arm is passive
+    if(goal->action_type=="COLLABORATIVE_PASSIVE"){
+        // Execute model based action in collab
+        bEnableCollaborativeMode = true;
+        success = collab_passive_model_execution(phase, task_frame, right_att, DT, r_masterType, r_slaveType, reachingThreshold, orientationThreshold);
+    }
+
     if(success)
     {
         ROS_INFO("%s: Succeeded", action_name_.c_str());

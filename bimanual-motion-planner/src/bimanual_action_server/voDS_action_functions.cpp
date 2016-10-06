@@ -23,7 +23,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
     // Initialize Virtual Object Dynamical System
     bimanual_ds_execution *vo_dsRun = new bimanual_ds_execution;
     if (task_id == SCOOPING_TASK_ID && phase == PHASE_SCOOP_TRASH)
-        //        vo_dsRun->init(dt, 1, 0.5, 1200, 400, 400, 0.25);
+//                vo_dsRun->init(dt, 1, 0.5, 1200, 400, 400, 0.25);
         vo_dsRun->init(dt,1.0,0.5,400.0,200.0,200.0,0.25);
     else
         vo_dsRun->init(dt,1.0,0.5,800.0,400.0,400.0,0.5);
@@ -44,7 +44,7 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
     bIgnoreOri = false;   // Completly discard the orientation
 
     CDDynamics  *l_cdd_cart_ori_filter;
-    l_cdd_cart_ori_filter = new CDDynamics(4, dt, 1.5);
+    l_cdd_cart_ori_filter = new CDDynamics(4, dt, 2.5);
     MathLib::Vector ori_vel_lim(4);
     ori_vel_lim = DEG2RAD(60); l_cdd_cart_ori_filter->SetVelocityLimits(ori_vel_lim);
     MathLib::Vector crt_ori; crt_ori.Resize(4, false);
@@ -133,8 +133,10 @@ bool BimanualActionServer::coordinated_bimanual_ds_execution(TaskPhase phase, tf
         }
         as_.publishFeedback(feedback_);
 
+//        double  l_vo_ori_err = acos(abs(virtual_object.getRotation().dot(l_des_ee_pose.getRotation())));
+
         // // Only Check for Position Error
-        if(object_err < reachingThreshold ) {
+       if(object_err < reachingThreshold) {
 
             ROS_INFO_STREAM("VIRTUAL OBJECT HAS CONVERGED!!");
 

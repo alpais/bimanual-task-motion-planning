@@ -79,7 +79,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES state_transformers
-   CATKIN_DEPENDS actionlib_msgs roscpp geometry_msgs sensor_msgs mathlib robotlib std_tools tf robotlib cds_execution tf visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver sgaussians
+   CATKIN_DEPENDS actionlib_msgs roscpp geometry_msgs std_msgs sensor_msgs mathlib robotlib std_tools tf robotlib cds_execution tf visualization_msgs tf_conversions bimanual_ds_execution netft_rdt_driver sgaussians
 #  DEPENDS system_lib
 )
 

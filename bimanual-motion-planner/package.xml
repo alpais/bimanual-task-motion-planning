@@ -39,6 +39,7 @@
   <build_depend>robotlib</build_depend> 
   <build_depend>std_tools</build_depend> 
   <build_depend>geometry_msgs</build_depend> 
+  <build_depend>std_msgs</build_depend> 
   <build_depend>tf</build_depend> 
   <build_depend>iai_control_msgs</build_depend> 
   <build_depend>bimanual_action_planners</build_depend> 
@@ -59,6 +60,7 @@
   <run_depend>robotlib</run_depend> 
   <run_depend>std_tools</run_depend> 
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
   <run_depend>tf</run_depend>  
   <run_depend>iai_control_msgs</run_depend>
   <run_depend>bimanual_action_planners</run_depend> 

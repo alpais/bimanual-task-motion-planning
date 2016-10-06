@@ -34,6 +34,8 @@
 //-- Message Types --//
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/WrenchStamped.h"
+#include "std_msgs/Bool.h"
+#include "std_msgs/Float64.h"
 
 //-- CDS Stuff --//
 #include "CDSExecution.h"
@@ -136,6 +138,8 @@ protected:
     // For collaborative Execution
     tf::Pose h_wrist_pose;          // human wrist pose
     tf::Pose vision_task_frame;     // now the task frame moves with the object
+    bool  h_current_action_state;   // true if the human user has completed his part of the task
+    float h_current_action_err;
 
     // Service Clients
     ros::ServiceClient hand_ft_client;
@@ -167,12 +171,13 @@ protected:
     // >>>>  LEFT ARM <<<<
     bool bUseForce_l_arm;               // True if force control should be applied
     bool bEnableForceModel_l_arm;       // True if force should be model based
+    bool bEnableStiffModel_l_arm;       // True if force should be model based
     bool bForceModelInitialized_l_arm;  // True if GMR was initialized successfully
     bool bStiffModelInitialized_l_arm;  // True if GMR was initialized successfully
     bool bBypassForceModel_l_arm;       // True if a constant force should be used regardless of the model estimate
     bool bEndInContact_l_arm;           // True if after a reaching movement the end effector should be in contact with the environment
 
-    double max_task_force_l_arm;        // in [N]
+    double max_task_force_l_arm;        // in [N] - for continuous motions
     double max_search_distance_l_arm;   // in cm
     double max_vertical_speed_l_arm;    // max speed to use when going down to search for contact
     double max_contact_force_l_arm;     // max force to use to establish contact on an object
@@ -184,6 +189,7 @@ protected:
     // >>>> RIGHT ARM <<<<
     bool bUseForce_r_arm;               // True if force control should be applied
     bool bEnableForceModel_r_arm;       // True if force should be model based
+    bool bEnableStiffModel_r_arm;       // True if force should be model based
     bool bForceModelInitialized_r_arm;  // True if GMR was initialized successfully
     bool bStiffModelInitialized_r_arm;  // True if GMR was initialized successfully
     bool bBypassForceModel_r_arm;       // True if a constant force should be used regardless of the model estimate
@@ -294,12 +300,12 @@ protected:
     // >>>>>>>>>>>> Collaborative Behaviors <<<<<<<<<<<<<<<<<<<<<<<<<<
 
     bool bEnableCollaborativeMode;          // True if a task should be performed in collaboration with a human
-
+    bool bEnableVision;
     // Action Type 1: Robot Arm is passive
-    bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt);
+    bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold);
 
     // Action Type 2: Robot arm is active
-    bool collab_active_model_execution(TaskPhase phase, tf::Transform wrist_frame, tf::Transform left_att, double dt);
+    bool collab_active_model_execution(TaskPhase phase, tf::Transform wrist_frame, tf::Transform left_att, double dt, CDSController::DynamicsType s_masterType, CDSController::DynamicsType s_slaveType, double reachingThreshold, double orientationThreshold);
 
 
     //************************************//
@@ -325,6 +331,8 @@ protected:
     // ---- Human Arm - from Vision -----
     void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);               // Callback for the current wrist position of the human arm
     void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);           // Callback for the current task frame tracked by vision
+    void h_currentActionStateCallback(const std_msgs::BoolConstPtr& msg);
+    void h_currentActionErrorCallback(const std_msgs::Float64ConstPtr msg);
 
     // Send desired EE_pose to robot/joint_ctrls.
     void sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_);

@@ -88,8 +88,8 @@ void BimanualActionServer::initialize_stiffness_model(std::string base_path, Tas
             char sStiff[256];
             sprintf(sStiff, "%s/Phase%d/%s/%s_stiffGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
 
-            std::vector<int> in_dim;  in_dim.resize(3);  in_dim[0] = 0; in_dim[1] = 1; in_dim[2] = 2;
-            std::vector<int> out_dim; out_dim.resize(3); out_dim[0] = 3; out_dim[1] = 4; out_dim[2] = 5;
+            std::vector<int> in_dim;  in_dim.resize(1);  in_dim[0] = 0;
+            std::vector<int> out_dim; out_dim.resize(1); out_dim[0] = 1;
 
             mStiffModel_l_arm = new GMR(sStiff);
             mStiffModel_l_arm->initGMR(in_dim, out_dim);
@@ -113,8 +113,8 @@ void BimanualActionServer::initialize_stiffness_model(std::string base_path, Tas
             char sStiff[256];
             sprintf(sStiff, "%s/Phase%d/%s/%s_stiffGMM.txt", base_path.c_str(), phase, arm.c_str(), role.c_str());
 
-            std::vector<int> in_dim;  in_dim.resize(3);  in_dim[0] = 0; in_dim[1] = 1; in_dim[2] = 2;
-            std::vector<int> out_dim; out_dim.resize(3); out_dim[0] = 3; out_dim[1] = 4; out_dim[2] = 5;
+            std::vector<int> in_dim;  in_dim.resize(1);  in_dim[0] = 0;
+            std::vector<int> out_dim; out_dim.resize(1); out_dim[0] = 1;
 
             mStiffModel_r_arm = new GMR(sStiff);
             mStiffModel_r_arm->initGMR(in_dim, out_dim);
