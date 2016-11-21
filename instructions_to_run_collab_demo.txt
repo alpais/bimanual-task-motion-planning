@@ -1,0 +1,128 @@
+// ============================================== //
+// === Step 1. Get all devices to stream data === //
+// ============================================== //
+
+The Beast
+>> roscore
+
+========================================
+Case 1. Running human as master 
+i.e. human is holding the mellon
+========================================
+
+Start Kuka Left arm >> i.e. the arm holding the tool
+>> run script nadia
+>> tool 13
+>> make sure the FT sensor is streaming data
+
+On Lasa PC 18 
+>> roscd robot-toolkit
+>> sudo -E ./bin/LWRMain --config packages/move_to_home_jpos/move_to_home_jpos
+	ifneedbe >> find joint angles values on the beast catkin_ws/src/kuka-rviz-simulation/kuka_lwr_bringup/config/bimanual_lwr_start_config_scooping.yaml
+
+>> rosrun kuka_fri_bridge run_lwr.sh left
+	pg down pg down
+	control 1
+
+========================================
+Case 2. Running robot as master 
+i.e. robot is holding the mellon
+========================================
+
+Start Kuka Right arm >> i.e. the arm holding the mellon
+>> run script nadia
+>> tool 4
+>> make sure the FT sensor is streaming data
+
+On Lasa PC 39
+>> roscd robot-toolkit
+>> sudo -E ./bin/LWRMain --config packages/move_to_home_jpos/move_to_home_jpos
+	ifneedbe >> find joint angles values on the beast catkin_ws/src/kuka-rviz-simulation/kuka_lwr_bringup/config/bimanual_lwr_start_config_scooping.yaml
+
+>> rosrun kuka_fri_bridge run_lwr.sh right
+	pg down pg down
+	control 1
+
+========================================
+	Start vision tracking
+========================================
+On the Vision computer
+>> open vision sw and load project:
+	# Lucia_robot_master_good_calib.ttp >> if the robot is holding and human is scooping
+	# Lucia_human_master_good_calib.ttp >> if the robot is scooping and the human is holding
+
+On Lasa PC 39
+>> roslaunch mocap_optitrack mocap_human_track
+	should stream 3 frames 
+		/Vision_frame/base_link (base of the robot)
+		/Human_Wrist/base_link 
+		/Bowl_Frame/base_link
+
+========================================
+	Start Streaming Hand Data
+========================================
+On Lasa PC 41 (the Tekscan PC on Windows)
+
+new terminal
+>> yarpserver
+
+>> Connect the glove and the tekscan sensors
+	# Insert the battery + press the green button
+	# Open the "Device Configuration Utility"
+	# Cyberglove1 >> right click >> reconnect (repeat until it works) 
+		>> this should bring up the glove 
+		>> any change in the joint angles should be visible in the GUI
+	# Open the Grip Research Realtime2 >> New
+		>> should open a GUI for the tekscan sensors
+		>> changes in pressure should be visible
+
+>> Open the Api2Demo solution in Visual Studio (Desktop>Ravin>GraspDataCapture>data_capture_application)
+	# run
+	# from the menu > Action > Grasp Data Capture 
+	# choose what you want to stream
+	# choose record location (create before an empty file xyz.grsp)
+	# start record
+		>> notice at some point the error >> buffer full >> need to restart
+
+On the laptop 
+>> connect the laptop to HUB and Wi-Fi
+>> check that the ROS_MASTER is set properly
+>> check that YARP is configured properly and can read data from Lasa PC 41
+
+>> rosrun glove_tekscan_ros_wrapper
+	# reads data from Yarp ports and streams it on ROS topics
+	# check that it works >> rostopic echo /LasaDataStream
+
+
+
+// ============================ //
+// === Step 2. Run the demo === //
+// ============================ //
+
+On the Beast
+
+>> roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true
+	# Visualizer + FT Sensors + Robot
+
+>> roslaunch state_transformers bimanual_joint_ctrls_real.launch 
+	# State-Tranformers
+
+>> roslaunch bimanual_motion_planner scooping_bimanual_action_server.launch
+	# Action Server >> optionally add this for seeing the trail of the RF in simulation >> simulation:=true just_visualize:=true
+
+>> rosrun bimanual_action_planners scooping_demo_ft.py
+	# Action Planner
+	# autonomous scooping with FT sensors and control
+
+>> rosrun bimanual_action_planners scooping_collab_passive.py
+	# Action Planner
+	# collaborative scooping, robot acting as master
+
+>> rosrun bimanual_action_planners scooping_collab_active.py
+	# Action Planner
+	# collaborative scooping, human acting as master
+
+On the laptop
+
+>> rosrun human_glove_state_estimator human_glove_state_estimator_node
+

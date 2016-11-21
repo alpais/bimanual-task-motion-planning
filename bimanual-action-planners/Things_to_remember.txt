@@ -86,3 +86,18 @@ PEEL
 - Rotation: in Quaternion [-0.297, 0.738, -0.492, 0.354]
             
 
+
+SCOOPING:
+
+Initial Reach
+from task_frame to Hand_ft
+- Translation: [-0.060, -0.113, 0.247]
+- Rotation: in Quaternion [0.275, -0.123, 0.264, 0.916]
+            in RPY (radian) [0.492, -0.381, 0.465]
+            in RPY (degree) [28.207, -21.809, 26.669]
+
+from task_frame to tool_ft
+- Translation: [-0.040, -0.382, 0.494]
+- Rotation: in Quaternion [0.639, -0.468, -0.435, -0.429]
+            in RPY (radian) [-2.635, 1.277, -0.885]
+            in RPY (degree) [-150.986, 73.184, -50.689]            
