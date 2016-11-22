@@ -116,8 +116,8 @@ void BimanualActionServer::initialize() {
 #endif
 
     std::stringstream vis_ss_bowl_pose, vis_ss_wrist_pose;
-    vis_ss_bowl_pose << "Bowl_Frame/base_link";
-    vis_ss_wrist_pose << "Human_Wrist/base_link";
+    vis_ss_bowl_pose << "Bowl_Frame/pose";
+    vis_ss_wrist_pose << "Human_Wrist/pose";
 
     VISION_BOWL_POSE_TOPIC = vis_ss_bowl_pose.str();
     VISION_WRIST_POSE_TOPIC = vis_ss_wrist_pose.str();
@@ -202,7 +202,20 @@ void BimanualActionServer::initialize() {
     } catch (tf::TransformException ex) {
         ROS_ERROR("%s",ex.what());
     }
-
+    // Getting vision object wrt the base of the right arm
+//    try {
+//        listener.waitForTransform("Bowl_Frame/base_link", "Vision_Frame/base_link", ros::Time(0), ros::Duration(10.0) );
+//        listener.lookupTransform("Bowl_Frame/base_link", "Vision_Frame/base_link", ros::Time(0), bowl_in_base_transform);
+//    } catch (tf::TransformException ex) {
+//        ROS_ERROR("%s",ex.what());
+//    }
+    try {
+        listener.waitForTransform("/world_frame", "Bowl_Frame/base_link", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("/world_frame", "Bowl_Frame/base_link",  ros::Time(0), bowl_in_base_transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+    ROS_INFO_STREAM("Bowl in base: " << bowl_in_base_transform.getOrigin().x() << " " << bowl_in_base_transform.getOrigin().y() << " " << bowl_in_base_transform.getOrigin().z());
 
     // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
     ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);

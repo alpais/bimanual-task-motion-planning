@@ -143,6 +143,7 @@ protected:
     tf::Pose bowl_frame;                // now the task frame moves with the object
     tf::Pose robot_frame_from_vision;   // now the task frame moves with the object
 
+   tf::StampedTransform bowl_in_base_transform;
     bool  h_current_action_state;       // true if the human user has completed his part of the task
     float h_current_action_err;
 

@@ -3,6 +3,7 @@
 bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold){
 
 
+    ROS_INFO_STREAM(" Starting Collaborative Execution, robot master");
     ROS_INFO_STREAM(" Model Path "                  << model_base_path);
     ROS_INFO_STREAM(" Execute Learned model: phase "<< phase);
     ROS_INFO_STREAM(" Reaching threshold "          << reachingThreshold);
@@ -18,16 +19,34 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     // =======================================================================
 
 
+    bEnableStiffModel_r_arm = false;
     if (bEnableStiffModel_r_arm){
         initialize_stiffness_model(model_base_path, phase, R_ARM_ID, R_ARM_ROLE);
     }
 
+//    rosrun tf tf_echo  /Vision_Frame/base_link /world
+//    - Translation: [0.489, 16.377, -1.011]
+//    - Rotation: in Quaternion [0.001, -0.000, -0.000, 1.000]
+//                in RPY (radian) [0.001, -0.000, -0.000]
+//                in RPY (degree) [0.072, -0.026, -0.004]
+
+
+//    tf::Pose vision_displacement;
+//    vision_displacement.setOrigin(tf::Vector3(0,0,0));
+//    vision_displacement.setRotation(tf::createQuaternionFromRPY(-1.57, 0, 0));
+//    bowl_in_base_transform.mult(vision_displacement, bowl_in_base_transform);
+
+    //bEnableVision = false;
     // Compute target
-    if (bEnableVision)
-        right_final_target.mult(bowl_frame, right_att);
+    if (bEnableVision){
+        ROS_INFO_STREAM("========= Using Frames from vision =============");
+        right_final_target.mult(bowl_in_base_transform, right_att);
+    }
     else
         right_final_target.mult(task_frame, right_att);
 
+
+    ROS_INFO_STREAM(right_final_target.getOrigin().x() << " " << right_final_target.getOrigin().y() << " " << right_final_target.getOrigin().z());
     // ======================================================================================================
     // ========= Initialize CDS model of the right arm
     // ======================================================================================================
@@ -94,6 +113,14 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
          }
 
         //  >>> Cartesian Trajectory Computation <<<
+
+        // Update attractor frame
+        if (bEnableVision){
+            right_final_target.mult(bowl_in_base_transform, right_att);
+        }
+        else
+            right_final_target.mult(task_frame, right_att);
+        right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
 
         // Compute Next Desired EE Pose for Right Arm
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
