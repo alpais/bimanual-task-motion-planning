@@ -182,7 +182,12 @@ void BimanualActionServer::sendNormalForce(double fz, int arm_id) {
 // Send desired joint stiffness command
 void BimanualActionServer::sendJStiffCmd(double des_stiff, int arm_id){
 
+    // Here we bypass the state-transformer and we update the stiffness on our own
+
+//    ROS_INFO_STREAM("Publishing Joint Stiff on topic " << R_CMD_STIFF_TOPIC);
+
     // use same stiffness for all axes
+    jstiff_msg.stiffness.resize(7);
     jstiff_msg.stiffness[0] = des_stiff;      jstiff_msg.stiffness[1] = des_stiff;      jstiff_msg.stiffness[2] = des_stiff;
     jstiff_msg.stiffness[3] = des_stiff;      jstiff_msg.stiffness[4] = des_stiff;      jstiff_msg.stiffness[5] = des_stiff;
     jstiff_msg.stiffness[6] = des_stiff;
@@ -197,6 +202,8 @@ void BimanualActionServer::sendJStiffCmd(double des_stiff, int arm_id){
 }
 
 void BimanualActionServer::sendCartStiffCmd(Eigen::Vector3d des_stiff, int arm_id){
+
+    // Here we bypass the state-transformer and we update the stiffness on our own
 
     msg_cart_stiff.linear.x = des_stiff[0];
     msg_cart_stiff.linear.y = des_stiff[0];

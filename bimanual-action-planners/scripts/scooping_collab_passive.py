@@ -230,16 +230,15 @@ def execute_scooping_planner():
 	print "Result:"		
 	print result.success
 
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
-	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-
-	# Retract with Decoupled DS
-	rA_p4_attr, lA_p4_attr = query_away_attractors()
-	action_type = 'COLLABORATIVE_PASSIVE'  
-	result = send_goal(action_type, 'phase5',  task_frame, rA_p4_attr, lA_p4_attr, 10)
-	print "Result:"
-	print result.success
+#	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+#	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
+#	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
+#	
+#	rA_p4_attr, lA_p4_attr = query_away_attractors()
+#	action_type = 'COLLABORATIVE_PASSIVE'  
+#	result = send_goal(action_type, 'phase5',  task_frame, rA_p4_attr, lA_p4_attr, 10)
+#	print "Result:"
+#	print result.success
 
 
 if __name__ == '__main__':

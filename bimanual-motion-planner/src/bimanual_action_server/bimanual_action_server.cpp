@@ -202,13 +202,8 @@ void BimanualActionServer::initialize() {
     } catch (tf::TransformException ex) {
         ROS_ERROR("%s",ex.what());
     }
-    // Getting vision object wrt the base of the right arm
-//    try {
-//        listener.waitForTransform("Bowl_Frame/base_link", "Vision_Frame/base_link", ros::Time(0), ros::Duration(10.0) );
-//        listener.lookupTransform("Bowl_Frame/base_link", "Vision_Frame/base_link", ros::Time(0), bowl_in_base_transform);
-//    } catch (tf::TransformException ex) {
-//        ROS_ERROR("%s",ex.what());
-//    }
+
+    // Getting vision objects
     try {
         listener.waitForTransform("/world_frame", "Bowl_Frame/base_link", ros::Time(0), ros::Duration(10.0) );
         listener.lookupTransform("/world_frame", "Bowl_Frame/base_link",  ros::Time(0), bowl_in_base_transform);
@@ -216,6 +211,20 @@ void BimanualActionServer::initialize() {
         ROS_ERROR("%s",ex.what());
     }
     ROS_INFO_STREAM("Bowl in base: " << bowl_in_base_transform.getOrigin().x() << " " << bowl_in_base_transform.getOrigin().y() << " " << bowl_in_base_transform.getOrigin().z());
+
+    try {
+        listener.waitForTransform("/world_frame", "Human_Wrist/base_link", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("/world_frame", "Human_Wrist/base_link", ros::Time(0), wrist_in_base_transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+    try {
+        listener.waitForTransform("Bowl_Frame/base_link", "/wrist_in_base_transform", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("Bowl_Frame/base_link", "/wrist_in_base_transform",  ros::Time(0), wrist_in_att_transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+
 
     // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
     ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);
@@ -542,6 +551,9 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_ori_gain = 1;
             l_err_gain = 1;
 
+            r_avg_jstiff = INTERACTION_STIFFNESS;
+            l_avg_jstiff = INTERACTION_STIFFNESS;
+
             r_masterType = CDSController::MODEL_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
 
@@ -592,6 +604,9 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             bActionTypeReach = true;
             bAdditionalTransforms = false;
 
+            r_avg_jstiff = INTERACTION_STIFFNESS;
+            l_avg_jstiff = INTERACTION_STIFFNESS;
+
         } else if(goal->action_name == "phase2") {
 
             phase = PHASE_SCOOP_SCOOP;
@@ -624,6 +639,9 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_ori_gain = 1.5;
             l_err_gain = 1.5;
 
+            r_avg_jstiff = TASK_STIFFNESS;
+            l_avg_jstiff = TASK_STIFFNESS;
+
             r_masterType = CDSController::MODEL_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
 
@@ -655,6 +673,9 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_pos_gain = 1;
             l_ori_gain = 1;
             l_err_gain = 1.5;
+
+            r_avg_jstiff = INTERACTION_STIFFNESS;
+            l_avg_jstiff = INTERACTION_STIFFNESS;
 
             r_masterType = CDSController::LINEAR_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
@@ -719,6 +740,9 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_pos_gain = 1;
             l_ori_gain = 1;
             l_err_gain = 1;
+
+            r_avg_jstiff = INTERACTION_STIFFNESS;
+            l_avg_jstiff = INTERACTION_STIFFNESS;
 
             r_masterType = CDSController::MODEL_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
@@ -792,7 +816,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     if(goal->action_type=="COLLABORATIVE_PASSIVE"){
         // Execute model based action in collab
         bEnableCollaborativeMode = true;
-        success = collab_passive_model_execution(phase, task_frame, right_att, DT, r_masterType, r_slaveType, reachingThreshold, orientationThreshold);
+        success = collab_passive_model_execution(phase, task_frame, right_att, DT, r_masterType, r_slaveType, reachingThreshold, orientationThreshold, left_att);
     }
 
     if(success)

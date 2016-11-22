@@ -84,6 +84,8 @@
 #define USE_JOINT_CONTROLLERS           // The state transformers package will transform cartesian commands to joint commands
 //#define USE_FRI_CART_CONTROLLERS      // Bypass the state transformers completely and use the FRI Cartesian Controllers instead
 
+#define INTERACTION_STIFFNESS               200
+#define TASK_STIFFNESS                      1200
 
 // Define active task >> In the future read this from file
 // #define CRT_TASK_SCOOPING
@@ -143,7 +145,11 @@ protected:
     tf::Pose bowl_frame;                // now the task frame moves with the object
     tf::Pose robot_frame_from_vision;   // now the task frame moves with the object
 
-   tf::StampedTransform bowl_in_base_transform;
+    tf::StampedTransform bowl_in_base_transform;
+    tf::StampedTransform wrist_in_base_transform;
+    tf::StampedTransform wrist_in_att_transform;
+
+
     bool  h_current_action_state;       // true if the human user has completed his part of the task
     float h_current_action_err;
 
@@ -235,11 +241,19 @@ protected:
     CDDynamics  *r_cdd_cart_filter;
     CDDynamics  *l_cdd_cart_filter;
 
+    // Right Arm
     double r_pos_err, r_ori_err;
     double r_pos_gain, r_ori_gain, r_err_gain;
+    double r_avg_jstiff, r_model_jstiff;
 
+    // Left Arm
     double l_pos_err, l_ori_err;
     double l_pos_gain, l_ori_gain, l_err_gain;
+    double l_avg_jstiff, l_model_jstiff;
+
+    // Human arm
+    double h_ori_err, h_pos_thr, h_ori_thr;
+    tf::Vector3 h_pos_err;
 
     void initialize_cart_filter(double dt, double r_Wn, double l_Wn);
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
@@ -308,7 +322,7 @@ protected:
     bool bEnableCollaborativeMode;          // True if a task should be performed in collaboration with a human
     bool bEnableVision;
     // Action Type 1: Robot Arm is passive
-    bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold);
+    bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold, tf::Transform left_att);
 
     // Action Type 2: Robot arm is active
     bool collab_active_model_execution(TaskPhase phase, tf::Transform wrist_frame, tf::Transform left_att, double dt, CDSController::DynamicsType s_masterType, CDSController::DynamicsType s_slaveType, double reachingThreshold, double orientationThreshold);

@@ -1,6 +1,6 @@
 #include "bimanual_action_server.h"
 
-bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold){
+bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold, tf::Transform left_att){
 
 
     ROS_INFO_STREAM(" Starting Collaborative Execution, robot master");
@@ -17,6 +17,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     // The left robot arm remains stationary
     // The human performs the role of the left arm
     // =======================================================================
+
 
 
     bEnableStiffModel_r_arm = false;
@@ -46,7 +47,13 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         right_final_target.mult(task_frame, right_att);
 
 
-    ROS_INFO_STREAM(right_final_target.getOrigin().x() << " " << right_final_target.getOrigin().y() << " " << right_final_target.getOrigin().z());
+
+    ROS_INFO_STREAM("Right Target " << right_final_target.getOrigin().x() << " " << right_final_target.getOrigin().y() << " " << right_final_target.getOrigin().z());
+    ROS_INFO_STREAM("Human ATT in obj " << left_att.getOrigin().x() << " " << left_att.getOrigin().y() << " " << left_att.getOrigin().z());
+
+    bool bHproximity = false;
+
+
     // ======================================================================================================
     // ========= Initialize CDS model of the right arm
     // ======================================================================================================
@@ -86,7 +93,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         if (initial_config == true){
             // Setting Initial conditions
             r_curr_ee_pose = r_ee_pose;
-            l_curr_ee_pose = h_wrist_pose;
+            l_curr_ee_pose = wrist_in_base_transform;
 
             // Compensating for the trajectory modifications due to the desired force
             if (bUseForce_r_arm)
@@ -95,7 +102,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         else{
             // For visualization of trajectories
             r_curr_ee_pose = r_des_ee_pose;
-            l_curr_ee_pose = h_wrist_pose;
+            l_curr_ee_pose = wrist_in_base_transform;
         }
 
         // Publish attractors if running in simulation or with fixed values
@@ -135,16 +142,72 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         if (just_visualize==true)
             initial_config=false;
 
+        // ===========================
+        // Track the human
+
+
+        // Compute transforms from the TF
+//        tf::StampedTransform human_final_target;
+//        human_final_target.mult(right_final_target, left_att);
+//        ROS_INFO_STREAM("Human final target " << human_final_target.getOrigin().x() << " " << human_final_target.getOrigin().y() << " " << human_final_target.getOrigin().z() );
+//
+//        tf::TransformListener listener;
+//        try {
+//            listener.waitForTransform("/human_final_target", "/wrist_in_base_transform", ros::Time(0), ros::Duration(10.0) );
+//            listener.lookupTransform("/human_final_target", "/wrist_in_base_transform",  ros::Time(0), wrist_in_att_transform);
+//        } catch (tf::TransformException ex) {
+//            ROS_ERROR("%s",ex.what());
+//        }
+//        ROS_INFO_STREAM("Wrist in ATT " << wrist_in_att_transform.getOrigin().x() << " " << wrist_in_att_transform.getOrigin().y() << " " << wrist_in_att_transform.getOrigin().z());
+//
+//        double h_pos_err_d;
+//        h_pos_err_d = (human_final_target.getOrigin() - wrist_in_att_transform.getOrigin()).length();
+//        h_ori_err = acos(human_final_target.getRotation().dot(wrist_in_att_transform.getRotation()));
+//        ROS_INFO_STREAM("human pos err: "  << h_pos_err_d << " human ori err: " << h_ori_err);
+
+
+        // Distance based tracking (i.e. distance of wrist frame wrt bowl frame same as att frame as the att is set relative to the bowl)
+
+        tf::Vector3 dist_wrist_bowl;
+        dist_wrist_bowl = h_wrist_pose.getOrigin() - bowl_frame.getOrigin();
+
+        h_pos_err[0] = abs(dist_wrist_bowl[0])-abs(left_att.getOrigin().x());
+        h_pos_err[1] = abs(dist_wrist_bowl[1])-abs(left_att.getOrigin().y());
+        h_pos_err[2] = abs(dist_wrist_bowl[2])-abs(left_att.getOrigin().z());
+        h_pos_err = h_pos_err.absolute();
+
+        double h_pos_thr_x = 0.10;
+        double h_pos_thr_y = 0.10;
+        double h_pos_thr_z = 0.15;
+
+        if (h_pos_err[0] <= h_pos_thr_x || h_pos_err[1] <= h_pos_thr_y || h_pos_err[2] <= h_pos_thr_z){
+            bHproximity = true;
+            ROS_INFO_STREAM("Human Converged");
+        }
+
+//        ROS_INFO_STREAM("Human Reaching Err " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+
+
+
+
         //******************************//
         //  Send the computed ee poses  //
         //******************************//
 
+
         if (just_visualize==false){
             filter_arm_motion(r_des_ee_pose, h_wrist_pose);         // Filter Commands in Cartesian space
             sendPoseRight(r_des_ee_pose);
+            if (bHproximity){
+                sendJStiffCmd(TASK_STIFFNESS, R_ARM_ID);
+            }
+            else
+                sendJStiffCmd(INTERACTION_STIFFNESS, R_ARM_ID);
+
             if (bEnableStiffModel_r_arm){
                 double des_avg_stiff;
                 mStiffModel_r_arm -> getGMROutput(&r_pos_err, &des_avg_stiff);
+                // TODO: Convert cartesian stiffness to joint stiffness properly.
                 sendJStiffCmd(des_avg_stiff, R_ARM_ID);
             }
         }
@@ -177,6 +240,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
                 ROS_INFO("RIGHT ORIENTATION DYN CONVERGED!");
                 sendPoseRight(r_curr_ee_pose); // Stop the robot by sending the current position again, which results in zero velocity
+                sendJStiffCmd(r_avg_jstiff, R_ARM_ID);
                 break;
             }
         }
