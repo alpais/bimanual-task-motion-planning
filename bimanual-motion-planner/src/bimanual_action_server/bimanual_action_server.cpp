@@ -115,6 +115,14 @@ void BimanualActionServer::initialize() {
 
 #endif
 
+    std::stringstream vis_ss_bowl_pose, vis_ss_wrist_pose;
+    vis_ss_bowl_pose << "Bowl_Frame/base_link";
+    vis_ss_wrist_pose << "Human_Wrist/base_link";
+
+    VISION_BOWL_POSE_TOPIC = vis_ss_bowl_pose.str();
+    VISION_WRIST_POSE_TOPIC = vis_ss_wrist_pose.str();
+
+
     // Right Arm
     R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
     R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
@@ -153,6 +161,12 @@ void BimanualActionServer::initialize() {
     l_sub_jstiff_ = nh_.subscribe(L_STATE_STIFF_TOPIC, 1, &BimanualActionServer::l_jstiffStateCallback, this);
     l_pub_jstiff_ = nh_.advertise<kuka_fri_bridge::JointStateImpedance>(L_CMD_STIFF_TOPIC, 1);
 
+    // ROS TOPICS for vision
+    vision_wrist_pose_sub = nh_.subscribe<geometry_msgs::PoseStamped>(VISION_BOWL_POSE_TOPIC, 1, &BimanualActionServer::h_taskFrameStateCallback, this);
+    vision_bowl_pose_sub = nh_.subscribe<geometry_msgs::PoseStamped>(VISION_WRIST_POSE_TOPIC, 1, &BimanualActionServer::h_wristStateCallback, this);
+
+    // ROS TOPICS for human state
+    h_action_state_sub_ = nh_.subscribe<std_msgs::Bool>("state_estimator/action_state", 1, &BimanualActionServer::h_currentActionStateCallback, this);
 
 #ifdef USE_FRI_CART_CONTROLLERS
     r_sub_cart_stiff_ = nh_.subscribe<geometry_msgs::TwistStamped>(R_STATE_STIFF_TOPIC, 1, &BimanualActionServer::r_cartStiffStateCallback, this);

@@ -11,7 +11,12 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
     tf::Transform  right_final_target;
 
-    // ============ Right Arm acting as passive =====
+    // =======================================================================
+    // Here we only control the Right arm acting as master
+    // The left robot arm remains stationary
+    // The human performs the role of the left arm
+    // =======================================================================
+
 
     if (bEnableStiffModel_r_arm){
         initialize_stiffness_model(model_base_path, phase, R_ARM_ID, R_ARM_ROLE);
@@ -19,12 +24,12 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
     // Compute target
     if (bEnableVision)
-        right_final_target.mult(vision_task_frame, right_att);
+        right_final_target.mult(bowl_frame, right_att);
     else
         right_final_target.mult(task_frame, right_att);
 
     // ======================================================================================================
-    // ========= Initialize CDS models
+    // ========= Initialize CDS model of the right arm
     // ======================================================================================================
 
     // Model Task Frame

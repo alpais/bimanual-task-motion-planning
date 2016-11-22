@@ -122,7 +122,9 @@ protected:
     ros::NodeHandle nh_;
 
     // Publishers + Subscribers
-    ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_, r_sub_jstiff_, l_sub_jstiff_, l_sub_cart_stiff_, r_sub_cart_stiff_;
+    ros::Subscriber r_sub_, r_sub_ft_, l_sub_, l_sub_ft_, r_sub_jstiff_, l_sub_jstiff_, l_sub_cart_stiff_, r_sub_cart_stiff_; // robot
+    ros::Subscriber vision_wrist_pose_sub, vision_robot_base_pose_sub_, vision_bowl_pose_sub; // vision
+    ros::Subscriber h_action_state_sub_; // human
     ros::Publisher  r_pub_, r_pub_ft_, r_pub_jstiff_, l_pub_, l_pub_jstiff_, l_pub_ft_, ro_pub_, vo_pub_, vo_l_pub_, vo_r_pub_, r_pub_cart_stiff_, l_pub_cart_stiff_;
     string right_robot_frame, left_robot_frame;
 
@@ -133,12 +135,15 @@ protected:
     string model_base_path;
     string R_EE_STATE_POSE_TOPIC, R_EE_STATE_FT_TOPIC, R_EE_CMD_POSE_TOPIC, R_EE_CMD_FT_TOPIC, R_STATE_STIFF_TOPIC, R_CMD_STIFF_TOPIC;
     string L_EE_STATE_POSE_TOPIC, L_EE_STATE_FT_TOPIC, L_EE_CMD_POSE_TOPIC, L_EE_CMD_FT_TOPIC, L_STATE_STIFF_TOPIC, L_CMD_STIFF_TOPIC;
+    string VISION_BOWL_POSE_TOPIC, VISION_WRIST_POSE_TOPIC;
     tf::StampedTransform right_arm_base, left_arm_base;
 
     // For collaborative Execution
-    tf::Pose h_wrist_pose;          // human wrist pose
-    tf::Pose vision_task_frame;     // now the task frame moves with the object
-    bool  h_current_action_state;   // true if the human user has completed his part of the task
+    tf::Pose h_wrist_pose;              // human wrist pose
+    tf::Pose bowl_frame;                // now the task frame moves with the object
+    tf::Pose robot_frame_from_vision;   // now the task frame moves with the object
+
+    bool  h_current_action_state;       // true if the human user has completed his part of the task
     float h_current_action_err;
 
     // Service Clients
@@ -320,17 +325,17 @@ protected:
     void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                  // Callback for the current right end effector pose
     void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);                // Callback for the current right end effector force/torque
     void r_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);    // Callback for the current right joint stiffness
-    void r_cartStiffStateCallback(const geometry_msgs::TwistConstPtr& msg);         // Callback for the current right cartesian stiffness
+    void r_cartStiffStateCallback(const geometry_msgs::TwistConstPtr& msg);                 // Callback for the current right cartesian stiffness
 
     // ---- Left Arm -----
     void l_eeStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                  // Callback for the current left end effector pose
     void l_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr& msg);                // Callback for the current left end effector force/torque
     void l_jstiffStateCallback(const kuka_fri_bridge::JointStateImpedanceConstPtr& msg);    // Callback for the current left joint stiffness
-    void l_cartStiffStateCallback(const geometry_msgs::TwistConstPtr &msg);         // Callback for the current left cartesian stiffness
+    void l_cartStiffStateCallback(const geometry_msgs::TwistConstPtr &msg);                 // Callback for the current left cartesian stiffness
 
     // ---- Human Arm - from Vision -----
     void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);               // Callback for the current wrist position of the human arm
-    void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);           // Callback for the current task frame tracked by vision
+    void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);           // Callback for the current bowl frame tracked by vision
     void h_currentActionStateCallback(const std_msgs::BoolConstPtr& msg);
     void h_currentActionErrorCallback(const std_msgs::Float64ConstPtr msg);
 

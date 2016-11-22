@@ -97,8 +97,8 @@ void BimanualActionServer::h_wristStateCallback(const geometry_msgs::PoseStamped
 
 void BimanualActionServer::h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
     const geometry_msgs::PoseStamped* data = msg.get();
-    vision_task_frame.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
-    vision_task_frame.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+    bowl_frame.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+    bowl_frame.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
     bEnableVision = true;
 }
 
