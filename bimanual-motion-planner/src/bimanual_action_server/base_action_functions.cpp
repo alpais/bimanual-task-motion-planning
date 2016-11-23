@@ -1,6 +1,20 @@
 #include "bimanual_action_server.h"
 
 
+bool BimanualActionServer::initialize_coupling_model(std::string base_path, TaskPhase phase, tf::Vector3 master_dim, tf::Vector3 slave_dim){
+
+
+    // Coupling models are only for the reaching phases, not for force control phases
+
+    char sCoupling[256];
+    sprintf(sCoupling, "%s/Phase%d/arm_cplGMM.txt", base_path.c_str(), phase);
+
+    int inp; inp = 0;
+//    master_dim.getX();
+
+
+}
+
 
 void BimanualActionServer::initialize_force_model(std::string base_path, TaskPhase phase, int arm_id, std::string role){
 

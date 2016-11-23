@@ -10,53 +10,46 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
     ROS_INFO_STREAM(" Model DT "                    << model_dt);
 
-    tf::Transform  right_final_target;
-
     // =======================================================================
     // Here we only control the Right arm acting as master
     // The left robot arm remains stationary
     // The human performs the role of the left arm
     // =======================================================================
 
+    tf::Transform  right_final_target, human_estimated_target;
+
+    // ------- computing the displacement of the vision world frame with respect to the robot base frame
+
+    tf::Pose world_frame;   world_frame.setIdentity();
+    tf::Pose virtual_world; virtual_world.setOrigin(tf::Vector3(0,0,0));                virtual_world.setRotation(tf::Quaternion(0.000, 0.000, 0.707, 0.707));
+    tf::Pose vision_world;  vision_world.setOrigin(tf::Vector3(0.482, 16.376, -1.028)); vision_world.setRotation(tf::Quaternion(0.000, 0.001, 0.000, 1.000));
+    tf::Pose vision_displacement; vision_displacement.mult(virtual_world, vision_world);
+
+    // -------- >> Compute the initial target
+    if (bEnableVision){
+        ROS_INFO_STREAM("========= Using Frames from vision =============");
+        right_final_target.mult(bowl_in_base_transform, right_att); // here using the transform computed once in the action server, updating automatically in the RT loop later
+        human_estimated_target.mult(wrist_in_base_transform, left_att);
+    }
+    else
+        right_final_target.mult(task_frame, right_att);
+
+    ROS_INFO_STREAM("Right Target " << right_final_target.getOrigin().x() << " " << right_final_target.getOrigin().y() << " " << right_final_target.getOrigin().z());
 
 
+    // ======================================================================================================
+    // ========= Initializing models
+    // ======================================================================================================
+
+    // ------- >> Stiffness
     bEnableStiffModel_r_arm = false;
     if (bEnableStiffModel_r_arm){
         initialize_stiffness_model(model_base_path, phase, R_ARM_ID, R_ARM_ROLE);
     }
 
-//    rosrun tf tf_echo  /Vision_Frame/base_link /world
-//    - Translation: [0.489, 16.377, -1.011]
-//    - Rotation: in Quaternion [0.001, -0.000, -0.000, 1.000]
-//                in RPY (radian) [0.001, -0.000, -0.000]
-//                in RPY (degree) [0.072, -0.026, -0.004]
-
-
-//    tf::Pose vision_displacement;
-//    vision_displacement.setOrigin(tf::Vector3(0,0,0));
-//    vision_displacement.setRotation(tf::createQuaternionFromRPY(-1.57, 0, 0));
-//    bowl_in_base_transform.mult(vision_displacement, bowl_in_base_transform);
-
-    //bEnableVision = false;
-    // Compute target
-    if (bEnableVision){
-        ROS_INFO_STREAM("========= Using Frames from vision =============");
-        right_final_target.mult(bowl_in_base_transform, right_att);
-    }
-    else
-        right_final_target.mult(task_frame, right_att);
-
-
-
-    ROS_INFO_STREAM("Right Target " << right_final_target.getOrigin().x() << " " << right_final_target.getOrigin().y() << " " << right_final_target.getOrigin().z());
-    ROS_INFO_STREAM("Human ATT in obj " << left_att.getOrigin().x() << " " << left_att.getOrigin().y() << " " << left_att.getOrigin().z());
-
-    bool bHproximity = false;
-
-
-    // ======================================================================================================
-    // ========= Initialize CDS model of the right arm
-    // ======================================================================================================
+    // ------- >> CDS for the master arm
+    // here the master moves relative to the bowl
+    // no arm coupling as we cannot control the slave
 
     // Model Task Frame
     tf::Transform model_task_frame;
@@ -66,7 +59,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     // (For Visualization of Trajectories)
     if (initial_config == true){
         r_curr_ee_pose = r_ee_pose;
-        l_curr_ee_pose = h_wrist_pose; // Vision tracking of the human wrist as the left arm
+        l_curr_ee_pose = wrist_in_base_transform; // >>>>>> NOT UPDATED NOW Vision tracking of the human wrist as the left arm
     }
 
     // Initialize CDS for right arm
@@ -83,6 +76,8 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     ros::Duration loop_rate(model_dt);
     tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
 
+    bool bHproximity = false;
+
     // ======================================================================================================
     // ========= Real time loop
     // ======================================================================================================
@@ -90,10 +85,19 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     ROS_INFO("Execution started");
     while(ros::ok()) {
 
+        // ------- >> Updating targets from vision for both the human and the robot
+
+        tf::Pose wrist_in_robot_base; wrist_in_robot_base.mult(vision_displacement, vision_wrist_pose);
+        human_estimated_target.mult(wrist_in_robot_base, left_att);
+
+        tf::Pose bowl_in_robot_base; bowl_in_robot_base.mult(vision_displacement, vision_bowl_frame);
+        right_final_target.mult(bowl_in_robot_base, right_att);
+
+        // ------ >> Updating state
         if (initial_config == true){
             // Setting Initial conditions
             r_curr_ee_pose = r_ee_pose;
-            l_curr_ee_pose = wrist_in_base_transform;
+            l_curr_ee_pose = wrist_in_robot_base;
 
             // Compensating for the trajectory modifications due to the desired force
             if (bUseForce_r_arm)
@@ -102,120 +106,92 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         else{
             // For visualization of trajectories
             r_curr_ee_pose = r_des_ee_pose;
-            l_curr_ee_pose = wrist_in_base_transform;
+            l_curr_ee_pose = wrist_in_robot_base;
         }
 
-        // Publish attractors if running in simulation or with fixed values
-       // publish_task_frames(r_curr_ee_pose, h_wrist_pose, right_final_target, left_final_target, task_frame);
+        // ------- >> Publishing attractors if running in simulation or with fixed values
+        publish_task_frames(r_curr_ee_pose, wrist_in_robot_base, right_final_target, human_estimated_target, task_frame);
 
-        // Current progress variable (position/orientation error).
-        r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
-
-        //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
-        r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
+        r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();         // Current progress variable (position/orientation error)
+        r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));  //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
 
         if (bDisplayDebugInfo){
             ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err);
             ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err);
-         }
-
-        //  >>> Cartesian Trajectory Computation <<<
-
-        // Update attractor frame
-        if (bEnableVision){
-            right_final_target.mult(bowl_in_base_transform, right_att);
         }
-        else
-            right_final_target.mult(task_frame, right_att);
-        right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
 
-        // Compute Next Desired EE Pose for Right Arm
+        // ------- >> Computing the cartesian trajectory
+
+         right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
         toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
         r_des_ee_pose = r_mNextRobotEEPose;
 
-        // >>> Force computation <<<
+        // ------- >> Computing the force to be applied
         if (bUseForce_r_arm)
             r_des_ee_pose = update_ee_pose_based_on_force(R_ARM_ID, force_control_axis);
 
-        // Make next pose the current pose for open-loop simulation
+        // ------- >> Make next pose the current pose for open-loop simulation
         if (just_visualize==true)
             initial_config=false;
 
-        // ===========================
-        // Track the human
-
-
-        // Compute transforms from the TF
-//        tf::StampedTransform human_final_target;
-//        human_final_target.mult(right_final_target, left_att);
-//        ROS_INFO_STREAM("Human final target " << human_final_target.getOrigin().x() << " " << human_final_target.getOrigin().y() << " " << human_final_target.getOrigin().z() );
-//
-//        tf::TransformListener listener;
-//        try {
-//            listener.waitForTransform("/human_final_target", "/wrist_in_base_transform", ros::Time(0), ros::Duration(10.0) );
-//            listener.lookupTransform("/human_final_target", "/wrist_in_base_transform",  ros::Time(0), wrist_in_att_transform);
-//        } catch (tf::TransformException ex) {
-//            ROS_ERROR("%s",ex.what());
-//        }
-//        ROS_INFO_STREAM("Wrist in ATT " << wrist_in_att_transform.getOrigin().x() << " " << wrist_in_att_transform.getOrigin().y() << " " << wrist_in_att_transform.getOrigin().z());
-//
-//        double h_pos_err_d;
-//        h_pos_err_d = (human_final_target.getOrigin() - wrist_in_att_transform.getOrigin()).length();
-//        h_ori_err = acos(human_final_target.getRotation().dot(wrist_in_att_transform.getRotation()));
-//        ROS_INFO_STREAM("human pos err: "  << h_pos_err_d << " human ori err: " << h_ori_err);
-
-
-        // Distance based tracking (i.e. distance of wrist frame wrt bowl frame same as att frame as the att is set relative to the bowl)
-
-        tf::Vector3 dist_wrist_bowl;
-        dist_wrist_bowl = h_wrist_pose.getOrigin() - bowl_frame.getOrigin();
-
-        h_pos_err[0] = abs(dist_wrist_bowl[0])-abs(left_att.getOrigin().x());
-        h_pos_err[1] = abs(dist_wrist_bowl[1])-abs(left_att.getOrigin().y());
-        h_pos_err[2] = abs(dist_wrist_bowl[2])-abs(left_att.getOrigin().z());
-        h_pos_err = h_pos_err.absolute();
+        // ------- >> Estimate human state
+        tf::Vector3 h_pos_err; double intent_modulation;
+        h_pos_err = wrist_in_robot_base.getOrigin().absolute() - human_estimated_target.getOrigin().absolute();
+        h_pos_err.absolute();
 
         double h_pos_thr_x = 0.10;
         double h_pos_thr_y = 0.10;
         double h_pos_thr_z = 0.15;
 
-        if (h_pos_err[0] <= h_pos_thr_x || h_pos_err[1] <= h_pos_thr_y || h_pos_err[2] <= h_pos_thr_z){
+        if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
             bHproximity = true;
-            ROS_INFO_STREAM("Human Converged");
+            intent_modulation = 1;
+            ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
         }
-
-//        ROS_INFO_STREAM("Human Reaching Err " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
-
-
+        else
+            bHproximity = false;
 
 
-        //******************************//
-        //  Send the computed ee poses  //
-        //******************************//
+        // ------- >> Update stiffness
+        bool bEnableInteractiveStiffness = false;   // true if the robot should update its stiffness based
+                                                    // on the estimated intention of the human to apply a force
+                                                    // Used only in reaching-type of actions
 
+        double des_avg_stiff = TASK_STIFFNESS, model_stiff_modulation;
 
-        if (just_visualize==false){
-            filter_arm_motion(r_des_ee_pose, h_wrist_pose);         // Filter Commands in Cartesian space
-            sendPoseRight(r_des_ee_pose);
-            if (bHproximity){
-                sendJStiffCmd(TASK_STIFFNESS, R_ARM_ID);
+        if (bUseForce_l_arm){ // >> the human arm is expected to apply forces in the current action
+            if (bEnableStiffModel_r_arm){
+                mStiffModel_r_arm -> getGMROutput(&r_pos_err, &model_stiff_modulation);
+                des_avg_stiff = TASK_STIFFNESS * model_stiff_modulation;
+            }
+            else des_avg_stiff = TASK_STIFFNESS;
+        }
+        else {
+            if (bEnableInteractiveStiffness){
+                des_avg_stiff = INTERACTION_STIFFNESS * intent_modulation;
             }
             else
-                sendJStiffCmd(INTERACTION_STIFFNESS, R_ARM_ID);
+                des_avg_stiff = INTERACTION_STIFFNESS;
+        }
 
-            if (bEnableStiffModel_r_arm){
-                double des_avg_stiff;
-                mStiffModel_r_arm -> getGMROutput(&r_pos_err, &des_avg_stiff);
-                // TODO: Convert cartesian stiffness to joint stiffness properly.
-                sendJStiffCmd(des_avg_stiff, R_ARM_ID);
-            }
+
+        // TODO: Convert cartesian stiffness to joint stiffness properly.
+
+        //******************************//
+        //  Send the computed ee pose  //
+        //******************************//
+
+        if (just_visualize==false){
+            filter_arm_motion(r_des_ee_pose, wrist_in_robot_base);         // Filter Commands in Cartesian space
+            sendPoseRight(r_des_ee_pose);
+            sendJStiffCmd(des_avg_stiff, R_ARM_ID);
         }
 
         as_.publishFeedback(feedback_);
 
-        // >>>> Check Convergence in Position >> and check the state of the human
-            if(r_pos_err < reachingThreshold && h_current_action_state == true ){
+        // ---- >> Check Convergence in Position and the state of the human
+        if(r_pos_err < reachingThreshold && h_current_action_state == true ){
 
             ROS_INFO("POSITION DYNAMICS CONVERGED!");
 
@@ -224,8 +200,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 break;
             }
 
-            // >>>> Check if contact should be established at the end of the action
-
+            // ----- >> Check if contact should be established at the end of the action
             if (bEndInContact_r_arm){
                 if (bWaitForForces_right_arm){
                     ROS_INFO_STREAM("In PHASE " << phase << " >> searching for contact now on arm " << R_ARM_ID);
@@ -236,7 +211,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 break;
             }
 
-            // >>>> Check Convergence in Orientation
+            // ----- >> Check Convergence in Orientation
             else if((r_ori_err < orientationThreshold) || isnan(r_ori_err)) {
                 ROS_INFO("RIGHT ORIENTATION DYN CONVERGED!");
                 sendPoseRight(r_curr_ee_pose); // Stop the robot by sending the current position again, which results in zero velocity
@@ -253,8 +228,24 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
     delete r_cdd_cart_filter;
 
-
-
 }
 
+
+// NOTE: Can put the listerner in the RT loop, but waiting for the transform makes it all too slow
+// Better to read the poses from ros topics and compute all the transformations internally
+/*
+tf::TransformListener listener;
+try {
+    listener.waitForTransform("/world_frame", "Bowl_Frame/base_link", ros::Time(0), ros::Duration(1.0) );
+    listener.lookupTransform("/world_frame", "Bowl_Frame/base_link",  ros::Time(0), bowl_in_base_transform);
+} catch (tf::TransformException ex) {
+    ROS_ERROR("%s",ex.what());
+}
+
+if (bEnableVision){
+    right_final_target.mult(bowl_in_base_transform, right_att);
+}
+else
+    right_final_target.mult(task_frame, right_att);
+ */
 

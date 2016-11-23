@@ -819,6 +819,13 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
         success = collab_passive_model_execution(phase, task_frame, right_att, DT, r_masterType, r_slaveType, reachingThreshold, orientationThreshold, left_att);
     }
 
+    //---> ACTION TYPE 6: Collaborative - Robot arm is active
+    if(goal->action_type=="COLLABORATIVE_ACTIVE"){
+        // Execute model based action in collab
+        bEnableCollaborativeMode = true;
+        success = collab_active_model_execution(phase, task_frame, left_att, DT, l_masterType, l_slaveType, reachingThreshold, orientationThreshold);
+    }
+
     if(success)
     {
         ROS_INFO("%s: Succeeded", action_name_.c_str());

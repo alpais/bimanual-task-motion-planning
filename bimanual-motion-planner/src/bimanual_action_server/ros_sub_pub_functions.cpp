@@ -90,15 +90,15 @@ void BimanualActionServer::l_cartStiffStateCallback(const geometry_msgs::TwistCo
 void BimanualActionServer::h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
 
     const geometry_msgs::PoseStamped* data = msg.get();
-    h_wrist_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
-    h_wrist_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+    vision_wrist_pose.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+    vision_wrist_pose.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
 
 }
 
 void BimanualActionServer::h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg){
     const geometry_msgs::PoseStamped* data = msg.get();
-    bowl_frame.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
-    bowl_frame.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
+    vision_bowl_frame.setOrigin(tf::Vector3(data->pose.position.x,data->pose.position.y,data->pose.position.z));
+    vision_bowl_frame.setRotation(tf::Quaternion(data->pose.orientation.x,data->pose.orientation.y,data->pose.orientation.z,data->pose.orientation.w));
     bEnableVision = true;
 }
 

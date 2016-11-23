@@ -57,6 +57,7 @@
 //-- Stiffness -- //
 #include "kuka_fri_bridge/JointStateImpedance.h"
 
+#include "glove_tekscan_ros_wrapper/LasaDataStreamWrapper.h"
 
 #define FORCE_WAIT_TOL		7
 #define R_ARM_ID            1
@@ -141,8 +142,8 @@ protected:
     tf::StampedTransform right_arm_base, left_arm_base;
 
     // For collaborative Execution
-    tf::Pose h_wrist_pose;              // human wrist pose
-    tf::Pose bowl_frame;                // now the task frame moves with the object
+    tf::Pose vision_wrist_pose;              // human wrist pose
+    tf::Pose vision_bowl_frame;                // now the task frame moves with the object
     tf::Pose robot_frame_from_vision;   // now the task frame moves with the object
 
     tf::StampedTransform bowl_in_base_transform;
@@ -226,10 +227,13 @@ protected:
     // FUNCTIONS USED FOR FORCE CONTROL
 
     void biasFtSensors();                                           // Zero the forces and torques after each reaching movement
+
     void send_and_wait_for_normal_force(double fz, int arm_id);     // Blocks until the desired force is achieved!
     bool find_object_by_contact(int arm_id, int search_dir, double search_distance, double search_speed, double thr_force); // Moves ee in the desired direction until contact is detected
+
     void initialize_force_model(std::string base_path, TaskPhase phase, int arm_id, string role);   // Initializes GMR for model based force profiles
     void initialize_stiffness_model(std::string base_path, TaskPhase phase, int arm_id, string role);   // Initializes GMR for model based stiffness profiles
+
     tf::Pose update_ee_pose_based_on_force(int arm_id, int ft_control_axis);                        // Only for actions that require continuous force
     tf::Pose remove_correction_due_to_force_from_trajectory(int arm_id, int ft_control_axis);       // When controlling with CDS
 
@@ -258,6 +262,8 @@ protected:
     void initialize_cart_filter(double dt, double r_Wn, double l_Wn);
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
     void filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose);
+
+    bool initialize_coupling_model(std::string base_path, TaskPhase phase, tf::Vector3 master_dim, tf::Vector3 slave_dim);
 
     bool bAdditionalTransforms; // True if the motion models were learned in a different RF than the actual EE frame. Than additional transforms are needed to get the correct motion
     void apply_task_specific_transformations(tf::Pose& left_final_target, tf::Pose& l_mNextRobotEEPose);
@@ -321,11 +327,11 @@ protected:
 
     bool bEnableCollaborativeMode;          // True if a task should be performed in collaboration with a human
     bool bEnableVision;
-    // Action Type 1: Robot Arm is passive
+    // Action Type 1: Robot is master
     bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold, tf::Transform left_att);
 
-    // Action Type 2: Robot arm is active
-    bool collab_active_model_execution(TaskPhase phase, tf::Transform wrist_frame, tf::Transform left_att, double dt, CDSController::DynamicsType s_masterType, CDSController::DynamicsType s_slaveType, double reachingThreshold, double orientationThreshold);
+    // Action Type 2: Human is master
+    bool collab_active_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform left_att, double dt, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType, double reachingThreshold, double orientationThreshold);
 
 
     //************************************//

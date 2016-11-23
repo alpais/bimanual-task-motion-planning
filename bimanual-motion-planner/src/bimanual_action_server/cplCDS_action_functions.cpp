@@ -87,18 +87,18 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             tf::Transform fixed_reach_to_scoop_att;
 
 
-//            double dcorr; dcorr = 0.02;
-//            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010-dcorr, -0.087, 0.286)); // from tf echo
-//            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.325, 0.862, 0.031, 0.387));
+            //            double dcorr; dcorr = 0.02;
+            //            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.010-dcorr, -0.087, 0.286)); // from tf echo
+            //            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(-0.325, 0.862, 0.031, 0.387));
 
 
-//            - Translation: [-0.001, -0.080, 0.306]
-//            - Rotation: in Quaternion [0.813, -0.458, 0.159, -0.324]
+            //            - Translation: [-0.001, -0.080, 0.306]
+            //            - Rotation: in Quaternion [0.813, -0.458, 0.159, -0.324]
 
             // More rotation
 
-//            - Translation: [0.008, -0.063, 0.307]
-  //          - Rotation: in Quaternion [0.943, -0.063, 0.239, -0.224]
+            //            - Translation: [0.008, -0.063, 0.307]
+            //          - Rotation: in Quaternion [0.943, -0.063, 0.239, -0.224]
 
             fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.001-0.02, -0.07, 0.306)); // from tf echo
             fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.813, -0.458, 0.159, -0.324));
@@ -110,14 +110,14 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
             tf::Transform fixed_scoop_att;
 
             // NEW SCOOPING ATTS
-//            - Translation: [-0.050, -0.062, 0.295]
-//            - Rotation: in Quaternion [-0.595, 0.756, 0.052, 0.266]
+            //            - Translation: [-0.050, -0.062, 0.295]
+            //            - Rotation: in Quaternion [-0.595, 0.756, 0.052, 0.266]
 
             fixed_scoop_att.setOrigin(tf::Vector3(-0.047-0.01, -0.064, 0.270));
             fixed_scoop_att.setRotation(tf::Quaternion(0.312, 0.903, 0.262, 0.138));
 
-//            fixed_scoop_att.setOrigin(tf::Vector3(-0.050, -0.062, 0.295));
-//            fixed_scoop_att.setRotation(tf::Quaternion(-0.595, 0.756, 0.052, 0.266));
+            //            fixed_scoop_att.setOrigin(tf::Vector3(-0.050, -0.062, 0.295));
+            //            fixed_scoop_att.setRotation(tf::Quaternion(-0.595, 0.756, 0.052, 0.266));
 
             left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
 
@@ -133,16 +133,16 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         } else if (phase == PHASE_SCOOP_TRASH){
 
             // NEW TRASHING ATTS
-//            - Translation: [-0.073, -0.221, 0.154]
-//            - Rotation: in Quaternion [0.949, -0.036, 0.097, -0.297]
+            //            - Translation: [-0.073, -0.221, 0.154]
+            //            - Rotation: in Quaternion [0.949, -0.036, 0.097, -0.297]
 
 
 
             tf::Transform fixed_trash_att;
-//            double dh = 0.12;
-//            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480 + dh, 0.285));
-// //            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
-//            fixed_trash_att.setRotation(tf::Quaternion(0.705, -0.625, -0.039, -0.334));
+            //            double dh = 0.12;
+            //            fixed_trash_att.setOrigin(tf::Vector3(0.175, -0.480 + dh, 0.285));
+            // //            fixed_trash_att.setRotation(tf::Quaternion(0.791, -0.536, -0.216, -0.200));
+            //            fixed_trash_att.setRotation(tf::Quaternion(0.705, -0.625, -0.039, -0.334));
 
             fixed_trash_att.setOrigin(tf::Vector3(-0.073, -0.221, 0.154));
             fixed_trash_att.setRotation(tf::Quaternion(0.949, -0.036, 0.097, -0.297));
@@ -250,7 +250,7 @@ bool BimanualActionServer::coupled_learned_model_execution(TaskPhase phase, CDSC
         if (bDisplayDebugInfo){
             ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
             ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
-         }
+        }
 
         //  >>> Cartesian Trajectory Computation <<<
 
