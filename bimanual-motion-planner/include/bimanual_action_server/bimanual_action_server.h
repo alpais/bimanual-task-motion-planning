@@ -142,7 +142,7 @@ protected:
     tf::StampedTransform right_arm_base, left_arm_base;
 
     // For collaborative Execution
-    tf::Pose vision_wrist_pose;              // human wrist pose
+    tf::Pose vision_wrist_frame;              // human wrist pose
     tf::Pose vision_bowl_frame;                // now the task frame moves with the object
     tf::Pose robot_frame_from_vision;   // now the task frame moves with the object
 
@@ -331,7 +331,7 @@ protected:
     bool collab_passive_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform right_att, double dt, CDSController::DynamicsType r_masterType, CDSController::DynamicsType r_slaveType, double reachingThreshold, double orientationThreshold, tf::Transform left_att);
 
     // Action Type 2: Human is master
-    bool collab_active_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform left_att, double dt, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType, double reachingThreshold, double orientationThreshold);
+    bool collab_active_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform left_att, double dt, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType, double reachingThreshold, double orientationThreshold, tf::Transform right_att);
 
 
     //************************************//

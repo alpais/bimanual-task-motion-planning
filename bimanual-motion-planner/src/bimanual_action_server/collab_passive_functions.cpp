@@ -87,7 +87,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         // ------- >> Updating targets from vision for both the human and the robot
 
-        tf::Pose wrist_in_robot_base; wrist_in_robot_base.mult(vision_displacement, vision_wrist_pose);
+        tf::Pose wrist_in_robot_base; wrist_in_robot_base.mult(vision_displacement, vision_wrist_frame);
         human_estimated_target.mult(wrist_in_robot_base, left_att);
 
         tf::Pose bowl_in_robot_base; bowl_in_robot_base.mult(vision_displacement, vision_bowl_frame);
@@ -136,7 +136,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
             initial_config=false;
 
         // ------- >> Estimate human state
-        tf::Vector3 h_pos_err; double intent_modulation;
+        double intent_modulation;
         h_pos_err = wrist_in_robot_base.getOrigin().absolute() - human_estimated_target.getOrigin().absolute();
         h_pos_err.absolute();
 

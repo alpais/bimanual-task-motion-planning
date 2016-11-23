@@ -823,7 +823,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     if(goal->action_type=="COLLABORATIVE_ACTIVE"){
         // Execute model based action in collab
         bEnableCollaborativeMode = true;
-        success = collab_active_model_execution(phase, task_frame, left_att, DT, l_masterType, l_slaveType, reachingThreshold, orientationThreshold);
+        success = collab_active_model_execution(phase, task_frame, left_att, DT, l_masterType, l_slaveType, reachingThreshold, orientationThreshold, right_att);
     }
 
     if(success)

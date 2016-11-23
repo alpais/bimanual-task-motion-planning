@@ -1,6 +1,6 @@
 #include "bimanual_action_server.h"
 
-bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform left_att, double dt, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType, double reachingThreshold, double orientationThreshold){
+bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Transform task_frame, tf::Transform left_att, double dt, CDSController::DynamicsType l_masterType, CDSController::DynamicsType l_slaveType, double reachingThreshold, double orientationThreshold, tf::Transform right_att){
 
     ROS_INFO_STREAM(" Starting Collaborative Execution, human master");
     ROS_INFO_STREAM(" Model Path "                  << model_base_path);
@@ -9,92 +9,52 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
     ROS_INFO_STREAM(" Orientation threshold "       << orientationThreshold);
     ROS_INFO_STREAM(" Model DT "                    << model_dt);
 
-    tf::Transform  left_final_target;
-    tf::Transform human_final_target; human_final_target.setIdentity();
-
-    // ============= Left Arm relative to the master arm ===========
-
+    // =========================================================
+    // Left Arm moves relative to the master arm
     // Get Right arm position from vision (i.e. the wrist)
-    // don't care at all about the bowl here, we assume the right arm positions wrt the bowl
+    // assume the human arm positions conveniently wrt the bowl
+    // =========================================================
 
+    tf::Transform  left_final_target, human_estimated_target; human_estimated_target.setIdentity();
+
+    // ------- computing the displacement of the vision world frame with respect to the robot base frame
+
+    tf::Pose world_frame;   world_frame.setIdentity();
+    tf::Pose virtual_world; virtual_world.setOrigin(tf::Vector3(0,0,0));                virtual_world.setRotation(tf::Quaternion(0.000, 0.000, 0.707, 0.707));
+    tf::Pose vision_world;  vision_world.setOrigin(tf::Vector3(0.482, 16.376, -1.028)); vision_world.setRotation(tf::Quaternion(0.000, 0.001, 0.000, 1.000));
+    tf::Pose vision_displacement; vision_displacement.mult(virtual_world, vision_world);
+
+
+    // -------- >> Compute the initial target
+    if (bEnableVision){
+        ROS_INFO_STREAM("========= Using Frames from vision =============");
+        left_final_target.mult(wrist_in_base_transform, left_att); // here using the transform computed once in the action server, updating automatically in the RT loop later
+        human_estimated_target.mult(bowl_in_base_transform, right_att);
+    }
+    else
+        left_final_target.mult(task_frame, left_att); // the left ATT is given the master RF
+
+    ROS_INFO_STREAM("Left Target " << left_final_target.getOrigin().x() << " " << left_final_target.getOrigin().y() << " " << left_final_target.getOrigin().z());
 
     tf::Transform wrist_in_robot_base; wrist_in_robot_base.setIdentity(); // >> UPDATE FROM VISION
 
-    tf::Transform fixed_right_arm_rf;
-    fixed_right_arm_rf.setIdentity();
-    fixed_right_arm_rf.setRotation(tf::Quaternion(0.807, 0.467, -0.145, 0.332));
-    fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
-
-    if(task_id == SCOOPING_TASK_ID && (phase == PHASE_SCOOP_REACH_TO_SCOOP || phase == PHASE_SCOOP_SCOOP) ){
-
-        tf::Transform fixed_right_arm_rf;
-        fixed_right_arm_rf.setIdentity();
-        fixed_right_arm_rf.setRotation(r_ee_pose.getRotation());
-        fixed_right_arm_rf.setOrigin(r_ee_pose.getOrigin());
-
-        // To determine ATT run  >> rosrun tf tf_echo /TOOL_ft /Hand_ft
-        if (phase == PHASE_SCOOP_REACH_TO_SCOOP){
-
-            tf::Transform fixed_reach_to_scoop_att;
-
-            fixed_reach_to_scoop_att.setOrigin(tf::Vector3(-0.001-0.02, -0.07, 0.306)); // from tf echo
-            fixed_reach_to_scoop_att.setRotation(tf::Quaternion(0.813, -0.458, 0.159, -0.324));
-
-            left_final_target.mult(fixed_right_arm_rf, fixed_reach_to_scoop_att);
-
-        } else if (phase == PHASE_SCOOP_SCOOP){
-
-            tf::Transform fixed_scoop_att;
-
-            fixed_scoop_att.setOrigin(tf::Vector3(-0.047-0.01, -0.064, 0.270));
-            fixed_scoop_att.setRotation(tf::Quaternion(0.312, 0.903, 0.262, 0.138));
-
-            left_final_target.mult(fixed_right_arm_rf, fixed_scoop_att);
-
-        } else if (phase == PHASE_SCOOP_DEPART){
-
-            tf::Transform fixed_depart_att;
-
-            fixed_depart_att.setOrigin(tf::Vector3(0.123, -0.242, 0.273));
-            fixed_depart_att.setRotation(tf::Quaternion(-0.123, 0.970, 0.190, 0.085));
-
-            left_final_target.mult(fixed_right_arm_rf, fixed_depart_att);
-
-        } else if (phase == PHASE_SCOOP_TRASH){
-
-            tf::Transform fixed_trash_att;
-            fixed_trash_att.setOrigin(tf::Vector3(-0.073, -0.221, 0.154));
-            fixed_trash_att.setRotation(tf::Quaternion(0.949, -0.036, 0.097, -0.297));
-
-            left_final_target.mult(fixed_right_arm_rf, fixed_trash_att);
-
-        } else if (phase == PHASE_SCOOP_RETRACT){
-
-            tf::Transform fixed_away_att;
-
-            fixed_away_att.setOrigin(tf::Vector3(-0.031, -0.807, 0.992));
-            fixed_away_att.setRotation(tf::Quaternion(-0.009, 0.963, 0.226, -0.147));
-
-            left_final_target.mult(fixed_right_arm_rf, fixed_away_att);
-        }
-
-    }
-    else // >> Set the target of the left arm relative to the task frame
-        left_final_target.mult(task_frame, left_att); // final target in world
-
     // ======================================================================================================
-    // ========= Initialize CDS models
+    // ========= Initialize models
     // ======================================================================================================
+
+
+    // ------- >> CDS for the master arm
+    // here the robot acts as slave and moves wrt the human arm
+    // coupling is used to adapt to the master's motion
 
     // Model Task Frame
     tf::Transform model_task_frame;
     model_task_frame.setIdentity();
 
-
     // Setting Initial conditions
     // (For Visualization of Trajectories)
     if (initial_config == true){
-        r_curr_ee_pose = vision_wrist_pose; // >>> COMPUTE IT IN ROB FRAME
+        r_curr_ee_pose = wrist_in_base_transform; // >>> COMPUTE IT IN ROB FRAME
         l_curr_ee_pose = l_ee_pose;
     }
 
@@ -107,7 +67,6 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
     left_cdsRun->setDT(model_dt);
     left_cdsRun->setMotionParameters(l_ori_gain, l_pos_gain, l_err_gain, reachingThreshold, l_masterType, l_slaveType);
     left_cdsRun->postInit();
-
 
     // Initialize coupling model
 
@@ -122,6 +81,16 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
 
     ROS_INFO("Execution started");
     while(ros::ok()) {
+
+        // ------- >> Updating targets from vision for both the human and the robot
+
+        tf::Pose bowl_in_robot_base; bowl_in_robot_base.mult(vision_displacement, vision_bowl_frame);
+        tf::Pose wrist_in_robot_base; wrist_in_robot_base.mult(vision_displacement, vision_wrist_frame);
+
+        human_estimated_target.mult(bowl_in_robot_base, right_att);
+        left_final_target.mult(wrist_in_robot_base, left_att);
+
+        // ------ >> Updating state
 
         if (initial_config == true){
             // Setting Initial conditions
@@ -138,31 +107,31 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
             l_curr_ee_pose = l_des_ee_pose;
         }
 
-        // Publish attractors if running in simulation or with fixed values
-        publish_task_frames(r_curr_ee_pose, l_curr_ee_pose, human_final_target, left_final_target, task_frame);
+        // ------- >> Publishing attractors if running in simulation or with fixed values
+        publish_task_frames(r_curr_ee_pose, l_curr_ee_pose, human_estimated_target, left_final_target, bowl_in_robot_base);
 
         // Current progress variable (position/orientation error).
-        //        r_pos_err = (right_final_target.getOrigin() - r_curr_ee_pose.getOrigin()).length();
+        double h_pos_err_d;
+        h_pos_err_d = (human_estimated_target.getOrigin() - wrist_in_robot_base.getOrigin()).length();
         l_pos_err = (left_final_target.getOrigin()  - l_curr_ee_pose.getOrigin()).length();
 
         //Real Orientation Error qdiff = acos(dot(q1_norm,q2_norm))*180/pi
-        //        r_ori_err = acos(abs(right_final_target.getRotation().dot(r_curr_ee_pose.getRotation())));
+        h_ori_err = acos(abs(human_estimated_target.getRotation().dot(wrist_in_robot_base.getRotation())));
         l_ori_err = acos(abs(left_final_target.getRotation().dot(l_ee_pose.getRotation())));
 
         if (bDisplayDebugInfo){
-            //          ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << r_pos_err << " Left Error: " << l_pos_err);
-            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << r_ori_err << " Left Error: " << l_ori_err);
+            ROS_INFO_STREAM_THROTTLE(0.5,"Position Threshold : "    << reachingThreshold    << " ... Current Right Error: " << h_pos_err_d << " Left Error: " << l_pos_err);
+            ROS_INFO_STREAM_THROTTLE(0.5,"Orientation Threshold : " << orientationThreshold << " ... Current Right Error: " << h_ori_err << " Left Error: " << l_ori_err);
         }
 
 
         // Update coupling and CDS parameters
 
 
-        //  >>> Cartesian Trajectory Computation <<<
+        // ------- >> Computing the cartesian trajectory
 
-        // Update Attractor from Vision
 
-        // Compute Next Desired EE Pose for Left Arm
+        left_cdsRun->setAttractorFrame(toMatrix4(left_final_target));
         left_cdsRun->setCurrentEEPose(toMatrix4(l_mNextRobotEEPose));
         toPose(left_cdsRun->getNextEEPose(), l_mNextRobotEEPose);
 
@@ -170,13 +139,36 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
         l_des_ee_pose.setRotation(l_curr_ee_pose.getRotation().slerp(left_final_target.getRotation(), 0.25) );
 
 
-        // >>> Force computation <<<
+        // ------- >> Computing the force to be applied
         if (bUseForce_l_arm)
             l_des_ee_pose = update_ee_pose_based_on_force(L_ARM_ID, force_control_axis);
 
-        // Make next pose the current pose for open-loop simulation
+        // ------- >> Make next pose the current pose for open-loop simulation
         if (just_visualize==true)
             initial_config=false;
+
+        // ------- >> Estimate human state
+        double intent_modulation;
+        bool bHproximity;
+        h_pos_err = wrist_in_robot_base.getOrigin().absolute() - human_estimated_target.getOrigin().absolute();
+        h_pos_err.absolute();
+
+        double h_pos_thr_x = 0.10;         double h_pos_thr_y = 0.10;         double h_pos_thr_z = 0.15;
+
+        if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
+            bHproximity = true;
+            intent_modulation = 1;
+            ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+        }
+        else
+            bHproximity = false;
+
+
+        // ------- >> Update stiffness
+
+        // decide when to switch between Task Stiffness and Interaction stiffness
+        // modulate the interaction stiffness
+
 
         //******************************//
         //  Send the computed ee poses  //
