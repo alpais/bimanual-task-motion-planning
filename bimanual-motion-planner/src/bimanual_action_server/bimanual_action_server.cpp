@@ -43,6 +43,12 @@ void BimanualActionServer::initialize() {
     _nh.getParam("task_id", task_id);
     _nh.getParam("enable_force_model_l_arm", bEnableForceModel_l_arm);
     _nh.getParam("enable_force_model_r_arm", bEnableForceModel_r_arm);
+    _nh.getParam("execution_mode", execution_mode);
+
+    if(!_nh.getParam("execution_mode", execution_mode)) {
+        ROS_INFO_STREAM("Assuming autonomous execution");
+        execution_mode = EXECUTION_MODE_AUTO;
+    }
 
     if(!_nh.getParam("wait_for_force_right", bWaitForForces_right_arm) && task_id == PEELING_TASK_ID) {
         ROS_INFO_STREAM("Set the Waiting for forces flag");
@@ -174,8 +180,9 @@ void BimanualActionServer::initialize() {
     vision_bowl_pose_sub = nh_.subscribe<geometry_msgs::PoseStamped>(VISION_WRIST_POSE_TOPIC, 1, &BimanualActionServer::h_wristStateCallback, this);
 
     // ROS TOPICS for human state
-    thumb_pressure.resize(3); index_pressure.resize(3); middle_pressure.resize(3); ring_pressure.resize(3); pinky_pressure.resize(3); palm_pressure.resize(2);
-    thumb_ja.resize(3); index_ja.resize(4); middle_ja.resize(4); ring_ja.resize(4); pinky_ja.resize(4); palm_ja.resize(3);
+    thumb_pressure.Resize(3); index_pressure.Resize(3); middle_pressure.Resize(3); ring_pressure.Resize(3); pinky_pressure.Resize(3); palm_pressure.Resize(2);
+    thumb_ja.Resize(3); index_ja.Resize(4); middle_ja.Resize(4); ring_ja.Resize(4); pinky_ja.Resize(4); palm_ja.Resize(1);
+    finger_joints_all.Resize(nFingerJoints); finger_joints_mask.Resize(nFingerJoints); finger_joints_avg.Resize(nFingerJoints); finger_joints_deltas.Resize(nFingerJoints);
 
     h_action_state_sub_ = nh_.subscribe<std_msgs::Bool>("state_estimator/action_state", 1, &BimanualActionServer::h_currentActionStateCallback, this);
     h_glove_and_tekscan_sub_ = nh_.subscribe<glove_tekscan_ros_wrapper::LasaDataStreamWrapper>(H_STATE_GLOVE_TEKSCAN, 1, &BimanualActionServer::gloveAndTekscanUpdateCallback, this);
@@ -619,6 +626,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
 
             r_avg_jstiff = INTERACTION_STIFFNESS;
             l_avg_jstiff = INTERACTION_STIFFNESS;
+
 
         } else if(goal->action_name == "phase2") {
 

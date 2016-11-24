@@ -78,6 +78,10 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
     bool bHproximity = false;
 
+
+    // ----- >> Human arm
+    read_grasp_specification(phase, model_base_path, L_ARM_ROLE, L_ARM_ID);
+
     // ======================================================================================================
     // ========= Real time loop
     // ======================================================================================================
@@ -146,7 +150,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         double h_pos_thr_y = 0.10;
         double h_pos_thr_z = 0.15;
 
-        ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+//        ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
 
         h_pub_crt_dist_err(h_pos_err);
 
@@ -156,6 +160,13 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         }
         else
             bHproximity = false;
+
+
+        if (bGloveTekscanInitialized){
+
+//            ROS_INFO_STREAM("Pressure: Thumb " << avg_thumb_pressure << " Index " << avg_index_pressure << " Palm " << avg_palm_pressure);
+//            ROS_INFO_STREAM("JA: Thumb " << thumb_ja(0) << " Index " << index_ja(0) << " "  << index_ja(1) << " "  << index_ja(2) << " ");
+        }
 
 
         // ------- >> Update stiffness
@@ -181,7 +192,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 des_avg_stiff = INTERACTION_STIFFNESS;
         }
 
-        ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
+       // ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
 
         // TODO: Convert cartesian stiffness to joint stiffness properly.
 

@@ -10,7 +10,7 @@ bool BimanualActionServer::initialize_coupling_model(std::string base_path, Task
     sprintf(sCoupling, "%s/Phase%d/arm_cplGMM.txt", base_path.c_str(), phase);
 
     int inp; inp = 0;
-//    master_dim.getX();
+    //    master_dim.getX();
 
 
 }
@@ -378,5 +378,40 @@ bool BimanualActionServer::read_action_specification(TaskPhase phase, string mod
     }
 
     return true;
+}
+
+
+void BimanualActionServer::read_grasp_specification(TaskPhase phase, string model_base_path, std::string role, int arm_id){
+
+    string arm;
+    if (arm_id == R_ARM_ID)
+        arm = "Right";
+    if (arm_id == L_ARM_ID)
+        arm = "Left";
+
+    char sGraspFile[1025];
+    sprintf(sGraspFile, "%s/Phase%d/%s/grasp_specification.txt", model_base_path.c_str(), phase, arm.c_str());
+
+    ROS_INFO_STREAM("Reading grasp specification from file: " << sGraspFile);
+
+    ROS_INFO_STREAM("Parameters: JA Mask >> JA avg >> JA deltas" );
+
+    ifstream inputFile(sGraspFile);
+
+    string line;
+    int line_number; line_number = 0;
+
+    while (getline(inputFile, line))
+    {
+        ROS_INFO_STREAM("Finger JA: " << line);
+        istringstream ss(line);
+        if (line_number < 22){
+            ss >> finger_joints_mask(line_number) >> finger_joints_avg(line_number) >> finger_joints_deltas(line_number);
+        }
+        line_number++;
+
+    }
+
+    ROS_INFO_STREAM(" ******* Grasp Read Successfully ******* ");
 
 }

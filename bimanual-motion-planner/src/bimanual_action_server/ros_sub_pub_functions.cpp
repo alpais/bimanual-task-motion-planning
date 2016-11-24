@@ -272,42 +272,61 @@ void BimanualActionServer::publish_task_frames(tf::Pose &r_curr_ee_pose, tf::Pos
 
 void BimanualActionServer::gloveAndTekscanUpdateCallback(const glove_tekscan_ros_wrapper::LasaDataStreamWrapperConstPtr& msg){
 
-//    msg.get()->thumb
-
     // Using directly the average values for each patch
-    thumb_pressure[0]  = msg.get()->thumb1_f_avg;    thumb_pressure[1]  = msg.get()->thumb2_f_avg;
-    index_pressure[0]  = msg.get()->index1_f_avg;    index_pressure[1]  = msg.get()->index2_f_avg;    index_pressure[2]  = msg.get()->index3_f_avg;
-    middle_pressure[0] = msg.get()->middle1_f_avg;   middle_pressure[1] = msg.get()->middle2_f_avg;   middle_pressure[2] = msg.get()->middle3_f_avg;
-    ring_pressure[0]   = msg.get()->ring1_f_avg;     ring_pressure[1]   = msg.get()->ring2_f_avg;     ring_pressure[2]   = msg.get()->ring3_f_avg;
-    pinky_pressure[0]  = msg.get()->pinky1_f_avg;    pinky_pressure[1]  = msg.get()->pinky2_f_avg;    pinky_pressure[2]  = msg.get()->pinky3_f_avg;
-    palm_pressure[0]   = msg.get()->palm1_f_avg;     palm_pressure[1]   = msg.get()->palm2_f_avg;
+    thumb_pressure  (0)  = msg.get()->thumb1_f_avg;    thumb_pressure   (1)  = msg.get()->thumb2_f_avg;
+    index_pressure  (0)  = msg.get()->index1_f_avg;    index_pressure   (1)  = msg.get()->index2_f_avg;    index_pressure   (2)  = msg.get()->index3_f_avg;
+    middle_pressure (0)  = msg.get()->middle1_f_avg;   middle_pressure  (1)  = msg.get()->middle2_f_avg;   middle_pressure  (2)  = msg.get()->middle3_f_avg;
+    ring_pressure   (0)  = msg.get()->ring1_f_avg;     ring_pressure    (1)  = msg.get()->ring2_f_avg;     ring_pressure    (2)  = msg.get()->ring3_f_avg;
+    pinky_pressure  (0)  = msg.get()->pinky1_f_avg;    pinky_pressure   (1)  = msg.get()->pinky2_f_avg;    pinky_pressure   (2)  = msg.get()->pinky3_f_avg;
+    palm_pressure   (0)  = msg.get()->palm1_f_avg;     palm_pressure    (1)  = msg.get()->palm2_f_avg;
+
+    avg_fingertip_pressure = (thumb_pressure(0) + index_pressure(0) + middle_pressure(0) + ring_pressure(0) + pinky_pressure(0))/5;
+
+    // Computing averages per finger
+    avg_thumb_pressure  = thumb_pressure.Sum()/thumb_pressure.Size();
+    avg_index_pressure  = index_pressure.Sum()/index_pressure.Size();
+    avg_middle_pressure = middle_pressure.Sum()/middle_pressure.Size();
+    avg_ring_pressure   = ring_pressure.Sum()/ring_pressure.Size();
+    avg_pinky_pressure  = pinky_pressure.Sum()/pinky_pressure.Size();
+    avg_palm_pressure   = palm_pressure.Sum()/palm_pressure.Size();
 
     // Joint angles -- Check the mapping in Matlab;
-    thumb_ja[0] = msg.get()->finger_pos[2]; // thumb flexion
-    thumb_ja[1] = msg.get()->finger_pos[3]; // thumb abduction
-    thumb_ja[2] = msg.get()->finger_pos[4]; // thumb roll
+    thumb_ja(0) = msg.get()->finger_pos[2]; // thumb flexion
+    thumb_ja(1) = msg.get()->finger_pos[3]; // thumb abduction
+    thumb_ja(2) = msg.get()->finger_pos[4]; // thumb roll
 
-    index_ja[0] = msg.get()->finger_pos[5]; // index flexion
-    index_ja[1] = msg.get()->finger_pos[6]; // index abduction
-    index_ja[2] = msg.get()->finger_pos[7]; // index proximal
-    index_ja[3] = msg.get()->finger_pos[8]; // index distal
+    index_ja(0) = msg.get()->finger_pos[5]; // index flexion
+    index_ja(1) = msg.get()->finger_pos[6]; // index abduction
+    index_ja(2) = msg.get()->finger_pos[7]; // index proximal
+    index_ja(3) = msg.get()->finger_pos[8]; // index distal
 
-    middle_ja[0] = msg.get()->finger_pos[9];  // middle flexion
-    middle_ja[1] = msg.get()->finger_pos[10]; // middle abduction
-    middle_ja[2] = msg.get()->finger_pos[11]; // middle proximal
-    middle_ja[3] = msg.get()->finger_pos[12]; // middle distal
+    middle_ja(0) = msg.get()->finger_pos[9];  // middle flexion
+    middle_ja(1) = msg.get()->finger_pos[10]; // middle abduction
+    middle_ja(2) = msg.get()->finger_pos[11]; // middle proximal
+    middle_ja(3) = msg.get()->finger_pos[12]; // middle distal
 
-    ring_ja[0] = msg.get()->finger_pos[13];   // ring flexion
-    ring_ja[1] = msg.get()->finger_pos[14];   // ring abduction
-    ring_ja[2] = msg.get()->finger_pos[15];   // ring proximal
-    ring_ja[3] = msg.get()->finger_pos[16];   // ring distal
+    ring_ja(0) = msg.get()->finger_pos[13];   // ring flexion
+    ring_ja(1) = msg.get()->finger_pos[14];   // ring abduction
+    ring_ja(2) = msg.get()->finger_pos[15];   // ring proximal
+    ring_ja(3) = msg.get()->finger_pos[16];   // ring distal
 
-    pinky_ja[0] = msg.get()->finger_pos[17]; // pinky flexion
-    pinky_ja[1] = msg.get()->finger_pos[18]; // pinky abduction
-    pinky_ja[2] = msg.get()->finger_pos[19]; // pinky proximal
-    pinky_ja[3] = msg.get()->finger_pos[20]; // pinky distal
+    pinky_ja(0) = msg.get()->finger_pos[17]; // pinky flexion
+    pinky_ja(1) = msg.get()->finger_pos[18]; // pinky abduction
+    pinky_ja(2) = msg.get()->finger_pos[19]; // pinky proximal
+    pinky_ja(3) = msg.get()->finger_pos[20]; // pinky distal
 
-    palm_ja[0] = msg.get()->finger_pos[21];
+    palm_ja(0) = msg.get()->finger_pos[21];
 
+
+    finger_joints_all( 0) = msg.get()->finger_pos[0];   finger_joints_all( 1) = msg.get()->finger_pos[1];   finger_joints_all( 2) = msg.get()->finger_pos[2];
+    finger_joints_all( 3) = msg.get()->finger_pos[3];   finger_joints_all( 4) = msg.get()->finger_pos[4];   finger_joints_all( 5) = msg.get()->finger_pos[5];
+    finger_joints_all( 6) = msg.get()->finger_pos[6];   finger_joints_all( 7) = msg.get()->finger_pos[7];   finger_joints_all( 8) = msg.get()->finger_pos[8];
+    finger_joints_all( 9) = msg.get()->finger_pos[9];   finger_joints_all(10) = msg.get()->finger_pos[10];  finger_joints_all(11) = msg.get()->finger_pos[11];
+    finger_joints_all(12) = msg.get()->finger_pos[12];  finger_joints_all(13) = msg.get()->finger_pos[13];  finger_joints_all(14) = msg.get()->finger_pos[14];
+    finger_joints_all(15) = msg.get()->finger_pos[15];  finger_joints_all(16) = msg.get()->finger_pos[16];  finger_joints_all(17) = msg.get()->finger_pos[17];
+    finger_joints_all(18) = msg.get()->finger_pos[18];  finger_joints_all(19) = msg.get()->finger_pos[19];  finger_joints_all(20) = msg.get()->finger_pos[20];
+    finger_joints_all(21) = msg.get()->finger_pos[21];
+
+    bGloveTekscanInitialized = true;
 
 }

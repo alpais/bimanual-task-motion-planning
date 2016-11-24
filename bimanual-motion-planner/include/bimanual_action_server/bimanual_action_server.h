@@ -47,6 +47,7 @@
 //-- Eigen Stuff --//
 #include "Eigen/Core"
 #include "Eigen/Geometry"
+#include "Eigen/Dense"
 
 //-- FT Sensors Stuff --//
 #include "netft_rdt_driver/String_cmd.h"
@@ -65,6 +66,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
+#include <mathlib/Vector.h>
 
 using namespace std;
 
@@ -90,12 +93,16 @@ using namespace std;
 #define FT_CTRL_AXIS_RZ                     5
 
 #define nDOF                    7
+#define nFingerJoints           22
 
 #define USE_JOINT_CONTROLLERS           // The state transformers package will transform cartesian commands to joint commands
 //#define USE_FRI_CART_CONTROLLERS      // Bypass the state transformers completely and use the FRI Cartesian Controllers instead
 
 #define INTERACTION_STIFFNESS               200
 #define TASK_STIFFNESS                      1200
+
+#define EXECUTION_MODE_AUTO     0
+#define EXECUTION_MODE_COLLAB   1
 
 // Define active task >> In the future read this from file
 // #define CRT_TASK_SCOOPING
@@ -302,8 +309,17 @@ protected:
     tf::Vector3 h_pos_err;
 
     // ---- >> From Glove - finger joint angles and pressure (average or per taxel)
-    Eigen::VectorXd thumb_pressure, index_pressure, middle_pressure, ring_pressure, pinky_pressure, palm_pressure;
-    Eigen::VectorXd thumb_ja, index_ja, middle_ja, ring_ja, pinky_ja, palm_ja;
+    MathLib::Vector thumb_pressure, index_pressure, middle_pressure, ring_pressure, pinky_pressure, palm_pressure; // Pressure per patch (averaged accross all taxels) for each finger
+    double avg_thumb_pressure, avg_index_pressure, avg_middle_pressure, avg_ring_pressure, avg_pinky_pressure, avg_palm_pressure, avg_fingertip_pressure; // average pressure per finger
+
+    MathLib::Vector thumb_ja, index_ja, middle_ja, ring_ja, pinky_ja, palm_ja;      // actual joint angles for each finger, updated in realtime from the ROS topic
+
+    MathLib::Vector finger_joints_all;      // updated in real time from the ROS topic
+    MathLib::Vector finger_joints_mask;     // vector of values 0 and 1. If a joint is important for the action that it is marked as one, otherwise 0
+    MathLib::Vector finger_joints_avg;      // the average values observed in the demonstrations
+    MathLib::Vector finger_joints_deltas;   // variations from the avergae values
+
+    bool bGloveTekscanInitialized;
 
 
     // =====================================================
@@ -316,6 +332,7 @@ protected:
     int tf_count;
     double reachingThreshold, orientationThreshold, model_dt, dt; //Defaults: [m],[rad],[s]
     double task_id;
+    int execution_mode;
 
     // Visualization variables for Bimanual DS Action
     visualization_msgs::Marker ro_marker;
@@ -438,5 +455,6 @@ public:
     void executeCB(const bimanual_action_planners::PLAN2CTRLGoalConstPtr &goal);
 
     bool read_action_specification(TaskPhase phase, string model_base_path);
+    void read_grasp_specification(TaskPhase phase, string model_base_path, std::string role, int arm_id);
 
 };

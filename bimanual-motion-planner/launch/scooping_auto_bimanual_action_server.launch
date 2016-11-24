@@ -30,7 +30,7 @@
 			<param name="task_id"				value="2"/>
 			<param name="enable_force_model_l_arm"  	value="true"/>			
 			<param name="enable_force_model_r_arm"  	value="true"/>
-			<param name="execution_mode"			value="1"/>			
+			<param name="execution_mode"			value="0"/>			
 		  </node>
 
 
