@@ -60,6 +60,7 @@ void BimanualActionServer::initialize() {
     std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_state_stiff;
     std::stringstream l_ss_cmd_pose, l_ss_cmd_ft, l_ss_cmd_stiff;
 
+
 #ifdef USE_JOINT_CONTROLLERS        // The state transformers package will transform cartesian commands to joint commands
 
     // Right Arm
@@ -115,6 +116,7 @@ void BimanualActionServer::initialize() {
 
 #endif
 
+    // ----- >> Vision
     std::stringstream vis_ss_bowl_pose, vis_ss_wrist_pose;
     vis_ss_bowl_pose << "Bowl_Frame/pose";
     vis_ss_wrist_pose << "Human_Wrist/pose";
@@ -122,8 +124,12 @@ void BimanualActionServer::initialize() {
     VISION_BOWL_POSE_TOPIC = vis_ss_bowl_pose.str();
     VISION_WRIST_POSE_TOPIC = vis_ss_wrist_pose.str();
 
+    // ----- >> Human
+    std::stringstream h_ss_state_dist;
+    h_ss_state_dist     << "h_estim/dist_to_att";
+    H_STATE_DIST_TOPIC    = h_ss_state_dist.str();
 
-    // Right Arm
+    // ----- >> Right Arm
     R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
     R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
     R_STATE_STIFF_TOPIC   = r_ss_state_stiff.str();
@@ -132,7 +138,7 @@ void BimanualActionServer::initialize() {
     R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
     R_CMD_STIFF_TOPIC     = r_ss_cmd_stiff.str();
 
-    // Left Arm
+    // ----- >> Left Arm
     L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
     L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
     L_STATE_STIFF_TOPIC   = l_ss_state_stiff.str();
@@ -167,6 +173,7 @@ void BimanualActionServer::initialize() {
 
     // ROS TOPICS for human state
     h_action_state_sub_ = nh_.subscribe<std_msgs::Bool>("state_estimator/action_state", 1, &BimanualActionServer::h_currentActionStateCallback, this);
+    h_dist_pub_ = nh_.advertise<geometry_msgs::Vector3>(H_STATE_DIST_TOPIC, 1);
 
 #ifdef USE_FRI_CART_CONTROLLERS
     r_sub_cart_stiff_ = nh_.subscribe<geometry_msgs::TwistStamped>(R_STATE_STIFF_TOPIC, 1, &BimanualActionServer::r_cartStiffStateCallback, this);

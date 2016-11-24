@@ -109,12 +109,25 @@ void BimanualActionServer::h_currentActionStateCallback(const std_msgs::BoolCons
 }
 
 
-void BimanualActionServer::h_currentActionErrorCallback(const std_msgs::Float64ConstPtr msg){
+void BimanualActionServer::h_currentActionErrorCallback(const std_msgs::Float64ConstPtr &msg){
 
     h_current_action_err = msg.get()->data;
 
 }
 
+
+void BimanualActionServer::h_pub_crt_dist_err(tf::Vector3 &h_dist_err){
+
+    geometry_msgs::Vector3 h_msg;
+
+    h_msg.x = h_dist_err.getX();
+    h_msg.y = h_dist_err.getY();
+    h_msg.z = h_dist_err.getZ();
+
+    h_dist_pub_.publish(h_msg);
+
+
+}
 
 // ------ Sending commands ---------------- //
 void BimanualActionServer::sendPose(const tf::Pose& r_pose_, const tf::Pose& l_pose_) {

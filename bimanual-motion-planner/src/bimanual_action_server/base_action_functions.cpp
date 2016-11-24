@@ -296,3 +296,87 @@ void BimanualActionServer::toPose(const MathLib::Matrix4& mat4, tf::Pose& pose) 
     pose.setOrigin(tf::Vector3(v1(0),v1(1),v1(2)));
 }
 
+
+
+// ======================================
+
+bool BimanualActionServer::read_action_specification(TaskPhase phase, string model_base_path){
+
+    char sActionFile[1025];
+    sprintf(sActionFile, "%s/Phase%d/action_specification.txt", model_base_path.c_str(), phase);
+
+    ROS_INFO_STREAM("Reading action specification from file: " << sActionFile);
+
+    ifstream inputFile(sActionFile);
+
+    string line;
+    int line_number = 0;
+
+    /*
+    bUseForce_l_arm = true;
+    bBypassForceModel_l_arm = true;
+
+    force_control_axis = FT_CTRL_AXIS_RZ;
+
+    force_correction = 0;
+    desired_force = 0.12;                // torque around Z
+    force_correction_max = 0.01;        // 1cm
+    force_correction_delta = 0.001;     // 1 mm
+    bUseForce_r_arm = false;
+
+    bEndInContact_l_arm = false;
+    bEndInContact_r_arm = false;
+
+    bUseForce_l_arm = true;
+    bUseForce_r_arm = false;
+
+    bEnableForceModel_l_arm = false;
+    bEnableForceModel_r_arm = false;
+
+    r_pos_gain = 1;
+    r_ori_gain = 0.5;
+    r_err_gain = 1;
+
+    l_pos_gain = 1;
+    l_ori_gain = 1.5;
+    l_err_gain = 1.5;
+
+    r_avg_jstiff = TASK_STIFFNESS;
+    l_avg_jstiff = TASK_STIFFNESS;
+
+    r_masterType = CDSController::MODEL_DYNAMICS;
+    r_slaveType = CDSController::UTHETA;
+
+    l_masterType = CDSController::MODEL_DYNAMICS;
+    l_slaveType = CDSController::UTHETA;
+
+    r_filter_gain_Wn = 25;
+    l_filter_gain_Wn = 10;
+
+    bActionTypeReach = false;
+    bAdditionalTransforms = false;
+*/
+
+    while (getline(inputFile, line))
+    {
+        line_number++;
+        switch(line_number){
+        case 1:
+            break;
+        case 2:
+            break;
+        default:
+            break;
+
+        }
+        istringstream ss(line);
+        string name;
+        int var;
+
+        ss >> name >> var;
+
+    }
+
+    return true;
+
+}

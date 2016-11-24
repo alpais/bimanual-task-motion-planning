@@ -137,6 +137,8 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         // ------- >> Estimate human state
         double intent_modulation; intent_modulation = 1;
+
+        // don't really care about the orientation
         h_pos_err = human_estimated_target.getOrigin().absolute() -  wrist_in_robot_base.getOrigin().absolute();
         h_pos_err = h_pos_err.absolute();
 
@@ -144,10 +146,13 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         double h_pos_thr_y = 0.10;
         double h_pos_thr_z = 0.15;
 
+        ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+
+        h_pub_crt_dist_err(h_pos_err);
+
         if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
             bHproximity = true;
             intent_modulation = 8;
-            ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
         }
         else
             bHproximity = false;
