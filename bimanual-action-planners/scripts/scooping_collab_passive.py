@@ -28,14 +28,24 @@ def query_reach_attractors():
 
 
 	# Phase 0 Left Arm Attractor in Task RF
+#	lA_p0_attr = geometry_msgs.msg.Transform()
+#	lA_p0_attr.translation.x = -0.090 
+#	lA_p0_attr.translation.y = -0.255  
+#	lA_p0_attr.translation.z =  0.422
+#	lA_p0_attr.rotation.x    = -0.643  
+#	lA_p0_attr.rotation.y    =  0.290
+#	lA_p0_attr.rotation.z    =  0.339
+#	lA_p0_attr.rotation.w    =  0.622
+
+	# Phase 0 Left Arm Attractor in Right Arm RF
 	lA_p0_attr = geometry_msgs.msg.Transform()
-	lA_p0_attr.translation.x = -0.090 
-	lA_p0_attr.translation.y = -0.255  
-	lA_p0_attr.translation.z =  0.422
-	lA_p0_attr.rotation.x    = -0.643  
-	lA_p0_attr.rotation.y    =  0.290
-	lA_p0_attr.rotation.z    =  0.339
-	lA_p0_attr.rotation.w    =  0.622
+	lA_p0_attr.translation.x = -0.021
+	lA_p0_attr.translation.y = -0.070   
+	lA_p0_attr.translation.z =  0.306
+	lA_p0_attr.rotation.x    =  0.813   
+	lA_p0_attr.rotation.y    = -0.458
+	lA_p0_attr.rotation.z    =  0.159
+	lA_p0_attr.rotation.w    = -0.324
 
 	return rA_p0_attr, lA_p0_attr
 
@@ -52,14 +62,24 @@ def query_scoop_attractors():
 	rA_p1_attr.rotation.w    =  0.887
 
 	# Phase 2 ==== Scoop ===
+#	lA_p1_attr = geometry_msgs.msg.Transform()
+#	lA_p1_attr.translation.x = -0.120 
+#	lA_p1_attr.translation.y = -0.245237
+#	lA_p1_attr.translation.z =  0.40396
+#	lA_p1_attr.rotation.x    = -0.233  
+#	lA_p1_attr.rotation.y    =  0.779
+#	lA_p1_attr.rotation.z    =  0.576
+#	lA_p1_attr.rotation.w    =  0.087
+
+	# Attractors in Right Arm RF
 	lA_p1_attr = geometry_msgs.msg.Transform()
-	lA_p1_attr.translation.x = -0.120 
-	lA_p1_attr.translation.y = -0.245237
-	lA_p1_attr.translation.z =  0.40396
-	lA_p1_attr.rotation.x    = -0.233  
-	lA_p1_attr.rotation.y    =  0.779
-	lA_p1_attr.rotation.z    =  0.576
-	lA_p1_attr.rotation.w    =  0.087
+	lA_p1_attr.translation.x = -0.057
+	lA_p1_attr.translation.y = -0.064
+	lA_p1_attr.translation.z =  0.270
+	lA_p1_attr.rotation.x    =  0.312 
+	lA_p1_attr.rotation.y    =  0.903
+	lA_p1_attr.rotation.z    =  0.262
+	lA_p1_attr.rotation.w    =  0.138
 
 	return rA_p1_attr,lA_p1_attr
 
@@ -76,14 +96,24 @@ def query_depart_attractors():
 	rA_p2_attr.rotation.z    =  0.210
 	rA_p2_attr.rotation.w    =  0.899
 
+#	lA_p2_attr = geometry_msgs.msg.Transform()
+#	lA_p2_attr.translation.x = -0.030
+#	lA_p2_attr.translation.y = -0.203
+#	lA_p2_attr.translation.z =  0.357
+#	lA_p2_attr.rotation.x    = -0.314 
+#	lA_p2_attr.rotation.y    =  0.766
+#	lA_p2_attr.rotation.z    =  0.512
+#	lA_p2_attr.rotation.w    = 0.229
+
+	# Attractors in Right Arm RF
 	lA_p2_attr = geometry_msgs.msg.Transform()
-	lA_p2_attr.translation.x = -0.030
-	lA_p2_attr.translation.y = -0.203
-	lA_p2_attr.translation.z =  0.357
-	lA_p2_attr.rotation.x    = -0.314 
-	lA_p2_attr.rotation.y    =  0.766
-	lA_p2_attr.rotation.z    =  0.512
-	lA_p2_attr.rotation.w    = 0.229
+	lA_p2_attr.translation.x =  0.123
+	lA_p2_attr.translation.y = -0.242
+	lA_p2_attr.translation.z =  0.273
+	lA_p2_attr.rotation.x    = -0.123 
+	lA_p2_attr.rotation.y    =  0.970
+	lA_p2_attr.rotation.z    =  0.190
+	lA_p2_attr.rotation.w    =  0.085
 
 	return rA_p2_attr,lA_p2_attr	
 
@@ -101,41 +131,27 @@ def query_trash_attractors():
 	rA_p3_attr.rotation.w    =  0.911
  
 	# Trash - Left Arm Attractor in Task RF
+#	lA_p3_attr = geometry_msgs.msg.Transform()
+#	lA_p3_attr.translation.x = -0.057 
+#	lA_p3_attr.translation.y = -0.206
+#	lA_p3_attr.translation.z =  0.28211
+#	lA_p3_attr.rotation.x    = -0.738 
+#	lA_p3_attr.rotation.y    =  0.307
+#	lA_p3_attr.rotation.z    =  0.247
+#	lA_p3_attr.rotation.w    =  0.548
+
+	# Trash - Left Arm Attractor in Right Arm RF
 	lA_p3_attr = geometry_msgs.msg.Transform()
-	lA_p3_attr.translation.x = -0.057 
-	lA_p3_attr.translation.y = -0.206
-	lA_p3_attr.translation.z =  0.28211
-	lA_p3_attr.rotation.x    = -0.738 
-	lA_p3_attr.rotation.y    =  0.307
-	lA_p3_attr.rotation.z    =  0.247
-	lA_p3_attr.rotation.w    =  0.548
+	lA_p3_attr.translation.x = -0.073
+	lA_p3_attr.translation.y = -0.221
+	lA_p3_attr.translation.z =  0.154
+	lA_p3_attr.rotation.x    =  0.949 
+	lA_p3_attr.rotation.y    = -0.036
+	lA_p3_attr.rotation.z    =  0.097
+	lA_p3_attr.rotation.w    = -0.297
 	
 	return rA_p3_attr, lA_p3_attr
 
-def query_away_attractors():
-        # Phase 4 ==== Away ===
-
-	# Away - Right Arm Attractor in Task RF
-	rA_p4_attr = geometry_msgs.msg.Transform()
-	rA_p4_attr.translation.x = -0.168
-	rA_p4_attr.translation.y =  0.4523
-	rA_p4_attr.translation.z =  0.216
-	rA_p4_attr.rotation.x    =  0.386 
-	rA_p4_attr.rotation.y    = -0.144
-	rA_p4_attr.rotation.z    =  0.054
-	rA_p4_attr.rotation.w    =  0.910
-  
-	# Away - Left Arm Attractor in Task RF
-	lA_p4_attr = geometry_msgs.msg.Transform()
-	lA_p4_attr.translation.x = -0.246 
-	lA_p4_attr.translation.y = -0.40753
-	lA_p4_attr.translation.z =  0.308
-	lA_p4_attr.rotation.x    = -0.152 
-	lA_p4_attr.rotation.y    =  0.809
-	lA_p4_attr.rotation.z    =  0.568
-	lA_p4_attr.rotation.w    = -0.005
-
-	return rA_p4_attr, lA_p4_attr
 
 def send_goal(action_type, phase, task_frame, right_attractor_frame, left_attractor_frame, timeout):
     print "Phase:", phase
@@ -166,7 +182,7 @@ def send_goal(action_type, phase, task_frame, right_attractor_frame, left_attrac
 
 def execute_scooping_planner():
 	
-	#Task Frame in world
+	#Task Frame in world >> fixed frame used only when the bowl frame is not available from vision
 	task_frame = geometry_msgs.msg.Transform()
 	task_frame.translation.x = -0.403
 	task_frame.translation.y = -0.426
@@ -175,19 +191,6 @@ def execute_scooping_planner():
 	task_frame.rotation.y = 0
 	task_frame.rotation.z = 0
 	task_frame.rotation.w = 1
-
-	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-	# raw_input('Press Enter to Run Bimanual REACH with Coordinated Reaching DS')
-	# print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-
-	# rA_p0_attr, lA_p0_attr = query_init_attractors()
-
-	# Reach with Coordinated DS
-	# action_type = 'BIMANUAL_REACH'  
-	# result = send_goal(action_type, 'phase0', task_frame, rA_p0_attr, lA_p0_attr, 10)
-	# print "Result:"		
-	# print result.success
-	
 
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
@@ -230,15 +233,6 @@ def execute_scooping_planner():
 	print "Result:"		
 	print result.success
 
-#	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-#	raw_input('Press Enter to Run Bimanual RETRACT with Coordinated Reaching DS')
-#	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
-#	
-#	rA_p4_attr, lA_p4_attr = query_away_attractors()
-#	action_type = 'COLLABORATIVE_PASSIVE'  
-#	result = send_goal(action_type, 'phase5',  task_frame, rA_p4_attr, lA_p4_attr, 10)
-#	print "Result:"
-#	print result.success
 
 
 if __name__ == '__main__':

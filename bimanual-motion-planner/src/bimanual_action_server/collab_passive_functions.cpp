@@ -29,7 +29,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     if (bEnableVision){
         ROS_INFO_STREAM("========= Using Frames from vision =============");
         right_final_target.mult(bowl_in_base_transform, right_att); // here using the transform computed once in the action server, updating automatically in the RT loop later
-        human_estimated_target.mult(wrist_in_base_transform, left_att);
+        human_estimated_target.mult(r_curr_ee_pose, left_att);
     }
     else
         right_final_target.mult(task_frame, right_att);
@@ -88,7 +88,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         // ------- >> Updating targets from vision for both the human and the robot
 
         tf::Pose wrist_in_robot_base; wrist_in_robot_base.mult(vision_displacement, vision_wrist_frame);
-        human_estimated_target.mult(wrist_in_robot_base, left_att);
+        human_estimated_target.mult(r_curr_ee_pose, left_att);
 
         tf::Pose bowl_in_robot_base; bowl_in_robot_base.mult(vision_displacement, vision_bowl_frame);
         right_final_target.mult(bowl_in_robot_base, right_att);
@@ -136,9 +136,9 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
             initial_config=false;
 
         // ------- >> Estimate human state
-        double intent_modulation;
-        h_pos_err = wrist_in_robot_base.getOrigin().absolute() - human_estimated_target.getOrigin().absolute();
-        h_pos_err.absolute();
+        double intent_modulation; intent_modulation = 1;
+        h_pos_err = human_estimated_target.getOrigin().absolute() -  wrist_in_robot_base.getOrigin().absolute();
+        h_pos_err = h_pos_err.absolute();
 
         double h_pos_thr_x = 0.10;
         double h_pos_thr_y = 0.10;
@@ -146,7 +146,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
             bHproximity = true;
-            intent_modulation = 1;
+            intent_modulation = 8;
             ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
         }
         else
@@ -154,11 +154,12 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
 
         // ------- >> Update stiffness
-        bool bEnableInteractiveStiffness = false;   // true if the robot should update its stiffness based
+        bool bEnableInteractionStiffnessModulation = true;   // true if the robot should update its stiffness based
                                                     // on the estimated intention of the human to apply a force
                                                     // Used only in reaching-type of actions
 
-        double des_avg_stiff = TASK_STIFFNESS, model_stiff_modulation;
+        double des_avg_stiff, model_stiff_modulation;
+        des_avg_stiff = INTERACTION_STIFFNESS;
 
         if (bUseForce_l_arm){ // >> the human arm is expected to apply forces in the current action
             if (bEnableStiffModel_r_arm){
@@ -168,13 +169,14 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
             else des_avg_stiff = TASK_STIFFNESS;
         }
         else {
-            if (bEnableInteractiveStiffness){
+            if (bEnableInteractionStiffnessModulation){
                 des_avg_stiff = INTERACTION_STIFFNESS * intent_modulation;
             }
             else
                 des_avg_stiff = INTERACTION_STIFFNESS;
         }
 
+        ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
 
         // TODO: Convert cartesian stiffness to joint stiffness properly.
 
