@@ -112,8 +112,6 @@ void BimanualActionServer::initialize() {
     l_ss_cmd_ft             << "/KUKA_LeftArm/des_ee_ft";
     l_ss_cmd_stiff          << "/KUKA_LeftArm/des_ee_stiff";
 
-
-
 #endif
 
     // ----- >> Vision
@@ -128,6 +126,10 @@ void BimanualActionServer::initialize() {
     std::stringstream h_ss_state_dist;
     h_ss_state_dist     << "h_estim/dist_to_att";
     H_STATE_DIST_TOPIC    = h_ss_state_dist.str();
+
+    std::stringstream   h_ss_glove_tekscan;
+    h_ss_glove_tekscan << "/LasaDataStream";
+    H_STATE_GLOVE_TEKSCAN   = h_ss_glove_tekscan.str();
 
     // ----- >> Right Arm
     R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
@@ -172,7 +174,11 @@ void BimanualActionServer::initialize() {
     vision_bowl_pose_sub = nh_.subscribe<geometry_msgs::PoseStamped>(VISION_WRIST_POSE_TOPIC, 1, &BimanualActionServer::h_wristStateCallback, this);
 
     // ROS TOPICS for human state
+    thumb_pressure.resize(3); index_pressure.resize(3); middle_pressure.resize(3); ring_pressure.resize(3); pinky_pressure.resize(3); palm_pressure.resize(2);
+    thumb_ja.resize(3); index_ja.resize(4); middle_ja.resize(4); ring_ja.resize(4); pinky_ja.resize(4); palm_ja.resize(3);
+
     h_action_state_sub_ = nh_.subscribe<std_msgs::Bool>("state_estimator/action_state", 1, &BimanualActionServer::h_currentActionStateCallback, this);
+    h_glove_and_tekscan_sub_ = nh_.subscribe<glove_tekscan_ros_wrapper::LasaDataStreamWrapper>(H_STATE_GLOVE_TEKSCAN, 1, &BimanualActionServer::gloveAndTekscanUpdateCallback, this);
     h_dist_pub_ = nh_.advertise<geometry_msgs::Vector3>(H_STATE_DIST_TOPIC, 1);
 
 #ifdef USE_FRI_CART_CONTROLLERS

@@ -131,6 +131,11 @@ protected:
 
     TaskPhase phase;
 
+
+    // =====================================================
+    //          ROS Stuff
+    // =====================================================
+
     ros::NodeHandle nh_;
 
     // ----- >> Publishers + Subscribers
@@ -143,7 +148,7 @@ protected:
     ros::Subscriber vision_wrist_pose_sub, vision_robot_base_pose_sub_, vision_bowl_pose_sub; // vision
 
     // Human state
-    ros::Subscriber h_action_state_sub_;
+    ros::Subscriber h_action_state_sub_, h_glove_and_tekscan_sub_;
     ros::Publisher h_dist_pub_;
 
     string right_robot_frame, left_robot_frame;
@@ -164,7 +169,7 @@ protected:
     tf::StampedTransform right_arm_base, left_arm_base;
 
     // ----- >> For collaborative Execution
-    string H_STATE_DIST_TOPIC;
+    string H_STATE_DIST_TOPIC, H_STATE_GLOVE_TEKSCAN;
 
     tf::Pose vision_wrist_frame;                // human wrist pose
     tf::Pose vision_bowl_frame;                 // now the task frame moves with the object
@@ -201,7 +206,7 @@ protected:
     geometry_msgs::Twist msg_cart_stiff;
 
     bool bWaitForForces_left_arm;
-    bool bWaitForForces_right_arm; 
+    bool bWaitForForces_right_arm;
 
 
     // >>>>  LEFT ARM <<<<
@@ -278,10 +283,6 @@ protected:
     double l_pos_gain, l_ori_gain, l_err_gain;
     double l_avg_jstiff, l_model_jstiff;
 
-    // Human arm
-    double h_ori_err, h_pos_thr, h_ori_thr;
-    tf::Vector3 h_pos_err;
-
     void initialize_cart_filter(double dt, double r_Wn, double l_Wn);
     void sync_cart_filter(const tf::Pose& r_ee_pose, const tf::Pose& l_ee_pose);
     void filter_arm_motion(tf::Pose& r_des_ee_pose, tf::Pose& l_des_ee_pose);
@@ -290,6 +291,20 @@ protected:
 
     bool bAdditionalTransforms; // True if the motion models were learned in a different RF than the actual EE frame. Than additional transforms are needed to get the correct motion
     void apply_task_specific_transformations(tf::Pose& left_final_target, tf::Pose& l_mNextRobotEEPose);
+
+
+    // =====================================================
+    //          Human Arm Estimator
+    // =====================================================
+
+    // ---- >> Pose from vision and distance to the estimated attractor
+    double h_ori_err, h_pos_thr, h_ori_thr;
+    tf::Vector3 h_pos_err;
+
+    // ---- >> From Glove - finger joint angles and pressure (average or per taxel)
+    Eigen::VectorXd thumb_pressure, index_pressure, middle_pressure, ring_pressure, pinky_pressure, palm_pressure;
+    Eigen::VectorXd thumb_ja, index_ja, middle_ja, ring_ja, pinky_ja, palm_ja;
+
 
     // =====================================================
     //          SIMULATION AND VISUALIZATION
@@ -365,6 +380,10 @@ protected:
     MathLib::Matrix4 toMatrix4(const tf::Pose& pose);
     void toPose(const MathLib::Matrix4& mat4, tf::Pose& pose);
 
+    //************************************//
+    // Callbacks and Publishers           //
+    //************************************//
+
     // ---- Right Arm -----
     void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr&    msg);                   // Callback for the current right end effector pose
     void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr&  msg);                   // Callback for the current right end effector force/torque
@@ -380,6 +399,11 @@ protected:
     // ---- Human Arm - from Vision -----
     void h_wristStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);                   // Callback for the current wrist position of the human arm
     void h_taskFrameStateCallback(const geometry_msgs::PoseStampedConstPtr& msg);               // Callback for the current bowl frame tracked by vision
+
+    // ---- Human Arm - from Glove -----
+    void gloveAndTekscanUpdateCallback(const glove_tekscan_ros_wrapper::LasaDataStreamWrapperConstPtr &msg);
+
+
     void h_currentActionStateCallback(const std_msgs::BoolConstPtr&     msg);
     void h_currentActionErrorCallback(const std_msgs::Float64ConstPtr&  msg);
     void h_pub_crt_dist_err(tf::Vector3& h_dist_err);                   // Publishing the distance to the estimated attractor
