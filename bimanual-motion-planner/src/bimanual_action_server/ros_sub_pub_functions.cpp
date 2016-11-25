@@ -330,3 +330,207 @@ void BimanualActionServer::gloveAndTekscanUpdateCallback(const glove_tekscan_ros
     bGloveTekscanInitialized = true;
 
 }
+
+void BimanualActionServer::initialize_ros_publishers_and_subscribers(){
+
+    std::stringstream r_ss_state_pose, r_ss_state_ft, r_ss_state_stiff;
+    std::stringstream r_ss_cmd_pose, r_ss_cmd_ft, r_ss_cmd_stiff;
+
+    std::stringstream l_ss_state_pose, l_ss_state_ft, l_ss_state_stiff;
+    std::stringstream l_ss_cmd_pose, l_ss_cmd_ft, l_ss_cmd_stiff;
+
+
+#ifdef USE_JOINT_CONTROLLERS        // The state transformers package will transform cartesian commands to joint commands
+
+    // Right Arm
+    r_ss_state_pose << "/" << r_topic_ns << "/joint_to_cart/est_ee_pose";
+    r_ss_state_ft   << "/hand/ft_sensor/netft_data";
+    r_ss_state_stiff<< "/KUKA_RightArm/joint_imp_states";           // Read directly from the robot_mirror
+
+    r_ss_cmd_pose   << "/" << r_topic_ns << "/cart_to_joint/des_ee_pose";
+    r_ss_cmd_ft     << "/" << r_topic_ns << "/cart_to_joint/des_ee_ft";
+    r_ss_cmd_stiff  << "/KUKA_RightArm/joint_imp_cmd";
+//    r_ss_cmd_stiff  << "/" << r_topic_ns << "/cart_to_joint/des_ee_stiff";
+
+    // Left Arm
+    l_ss_state_pose << "/" << l_topic_ns << "/joint_to_cart/est_ee_pose";
+    l_ss_state_ft   << "/tool/ft_sensor/netft_data";
+    l_ss_state_stiff<< "/KUKA_LeftArm/joint_imp_states";            // Read directly from the robot_mirror
+
+    l_ss_cmd_pose   << "/" << l_topic_ns << "/cart_to_joint/des_ee_pose";
+    l_ss_cmd_ft     << "/" << l_topic_ns << "/cart_to_joint/des_ee_ft";
+    l_ss_cmd_stiff  << "/KUKA_LeftArm/joint_imp_cmd";
+//    l_ss_cmd_stiff  << "/" << l_topic_ns << "/cart_to_joint/des_ee_stiff";
+
+/*   -------------------------------------------------------------------------------
+ *   Note that the stiffness command needs to be sent directly to the robot_mirror.
+ *   In the current implementation of the state_transformers, sending the command
+ *   to /left_arm/cart_to_joint/des_ee_stiff will not update the stiffness.
+ *   -------------------------------------------------------------------------------
+ */
+
+#endif
+
+#ifdef USE_FRI_CART_CONTROLLERS         // Bypass the state transformers completely
+
+    // Right Arm
+    r_ss_state_pose         << "/KUKA_RightArm/Pose";
+    r_ss_state_ft           << "/hand/ft_sensor/netft_data";
+    r_ss_state_stiff        << "/KUKA_RightArm/Stiff"
+
+    r_ss_cmd_pose           << "/KUKA_RightArm/des_ee_pose";
+    r_ss_cmd_ft             << "/KUKA_RightArm/des_ee_ft";
+    r_ss_cmd_stiff          << "/KUKA_RightArm/des_ee_stiff";
+
+    // Left Arm
+    l_ss_state_pose         << "/KUKA_LeftArm/Pose";
+    l_ss_state_ft           << "/tool/ft_sensor/netft_data";    // or alternatively take the estimate from the robot >> /KUKA_LeftArm/FT
+    l_ss_state_stiff        << "/KUKA_LeftArm/Stiff";
+
+    l_ss_cmd_pose           << "/KUKA_LeftArm/des_ee_pose";
+    l_ss_cmd_ft             << "/KUKA_LeftArm/des_ee_ft";
+    l_ss_cmd_stiff          << "/KUKA_LeftArm/des_ee_stiff";
+
+#endif
+
+    // ----- >> Vision
+    std::stringstream vis_ss_bowl_pose, vis_ss_wrist_pose;
+    vis_ss_bowl_pose << "Bowl_Frame/pose";
+    vis_ss_wrist_pose << "Human_Wrist/pose";
+
+    VISION_BOWL_POSE_TOPIC = vis_ss_bowl_pose.str();
+    VISION_WRIST_POSE_TOPIC = vis_ss_wrist_pose.str();
+
+    // ----- >> Human
+    std::stringstream h_ss_state_dist;
+    h_ss_state_dist     << "h_estim/dist_to_att";
+    H_STATE_DIST_TOPIC    = h_ss_state_dist.str();
+
+    std::stringstream   h_ss_glove_tekscan;
+    h_ss_glove_tekscan << "/LasaDataStream";
+    H_STATE_GLOVE_TEKSCAN   = h_ss_glove_tekscan.str();
+
+    // ----- >> Right Arm
+    R_EE_STATE_POSE_TOPIC = r_ss_state_pose.str();
+    R_EE_STATE_FT_TOPIC	  = r_ss_state_ft.str();
+    R_STATE_STIFF_TOPIC   = r_ss_state_stiff.str();
+
+    R_EE_CMD_POSE_TOPIC	  = r_ss_cmd_pose.str();
+    R_EE_CMD_FT_TOPIC	  = r_ss_cmd_ft.str();
+    R_CMD_STIFF_TOPIC     = r_ss_cmd_stiff.str();
+
+    // ----- >> Left Arm
+    L_EE_STATE_POSE_TOPIC = l_ss_state_pose.str();
+    L_EE_STATE_FT_TOPIC	  = l_ss_state_ft.str();
+    L_STATE_STIFF_TOPIC   = l_ss_state_stiff.str();
+
+    L_EE_CMD_POSE_TOPIC	  = l_ss_cmd_pose.str();
+    L_EE_CMD_FT_TOPIC	  = l_ss_cmd_ft.str();
+    L_CMD_STIFF_TOPIC     = l_ss_cmd_stiff.str();
+
+    // ROS TOPICS for right arm controllers
+    r_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(R_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::r_eeStateCallback, this);
+    r_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(R_EE_CMD_POSE_TOPIC, 1);
+
+    r_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(R_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::r_ftStateCallback, this);
+    r_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(R_EE_CMD_FT_TOPIC, 1);
+
+    r_sub_jstiff_ = nh_.subscribe(R_STATE_STIFF_TOPIC, 1, &BimanualActionServer::r_jstiffStateCallback, this);
+    r_pub_jstiff_ = nh_.advertise<kuka_fri_bridge::JointStateImpedance>(R_CMD_STIFF_TOPIC, 1);
+
+    // ROS TOPICS for left arm controllers
+    l_sub_    = nh_.subscribe<geometry_msgs::PoseStamped>(L_EE_STATE_POSE_TOPIC, 1, &BimanualActionServer::l_eeStateCallback, this);
+    l_sub_ft_ = nh_.subscribe<geometry_msgs::WrenchStamped>(L_EE_STATE_FT_TOPIC, 1, &BimanualActionServer::l_ftStateCallback, this);
+
+    l_pub_    = nh_.advertise<geometry_msgs::PoseStamped>(L_EE_CMD_POSE_TOPIC, 1);
+    l_pub_ft_ = nh_.advertise<geometry_msgs::WrenchStamped>(L_EE_CMD_FT_TOPIC, 1);
+
+    l_sub_jstiff_ = nh_.subscribe(L_STATE_STIFF_TOPIC, 1, &BimanualActionServer::l_jstiffStateCallback, this);
+    l_pub_jstiff_ = nh_.advertise<kuka_fri_bridge::JointStateImpedance>(L_CMD_STIFF_TOPIC, 1);
+
+    // ROS TOPICS for vision
+    vision_wrist_pose_sub = nh_.subscribe<geometry_msgs::PoseStamped>(VISION_BOWL_POSE_TOPIC, 1, &BimanualActionServer::h_taskFrameStateCallback, this);
+    vision_bowl_pose_sub = nh_.subscribe<geometry_msgs::PoseStamped>(VISION_WRIST_POSE_TOPIC, 1, &BimanualActionServer::h_wristStateCallback, this);
+
+    // ROS TOPICS for human state
+    thumb_pressure.Resize(3); index_pressure.Resize(3); middle_pressure.Resize(3); ring_pressure.Resize(3); pinky_pressure.Resize(3); palm_pressure.Resize(2);
+    thumb_ja.Resize(3); index_ja.Resize(4); middle_ja.Resize(4); ring_ja.Resize(4); pinky_ja.Resize(4); palm_ja.Resize(1);
+    finger_joints_all.Resize(nFingerJoints); finger_joints_mask.Resize(nFingerJoints); finger_joints_avg.Resize(nFingerJoints); finger_joints_deltas.Resize(nFingerJoints);
+
+    h_action_state_sub_ = nh_.subscribe<std_msgs::Bool>("state_estimator/action_state", 1, &BimanualActionServer::h_currentActionStateCallback, this);
+    h_glove_and_tekscan_sub_ = nh_.subscribe<glove_tekscan_ros_wrapper::LasaDataStreamWrapper>(H_STATE_GLOVE_TEKSCAN, 1, &BimanualActionServer::gloveAndTekscanUpdateCallback, this);
+    h_dist_pub_ = nh_.advertise<geometry_msgs::Vector3>(H_STATE_DIST_TOPIC, 1);
+
+#ifdef USE_FRI_CART_CONTROLLERS
+    r_sub_cart_stiff_ = nh_.subscribe<geometry_msgs::TwistStamped>(R_STATE_STIFF_TOPIC, 1, &BimanualActionServer::r_cartStiffStateCallback, this);
+    r_pub_cart_stiff_ = nh_.advertise<geometry_msgs::TwistStamped>(R_CMD_STIFF_TOPIC,1);
+
+    l_sub_cart_stiff_ = nh_.subscribe<geometry_msgs::TwistStamped>(L_STATE_STIFF_TOPIC, 1, &BimanualActionServer::l_cartStiffStateCallback, this);
+    l_pub_cart_stiff_ = nh_.advertise<geometry_msgs::TwistStamped>(L_CMD_STIFF_TOPIC,1);
+#endif
+
+    r_curr_ee_ft.resize(6); r_curr_jstiff.resize(nDOF);  r_curr_cart_stiff.resize(3);
+    l_curr_ee_ft.resize(6); l_curr_jstiff.resize(nDOF);  l_curr_cart_stiff.resize(3);
+
+    ROS_INFO_STREAM("Right - Passive - FT Sensor: " << R_EE_STATE_FT_TOPIC);
+    ROS_INFO_STREAM("Left - Active Tool -  FT Sensor: " << L_EE_STATE_FT_TOPIC);
+
+    // ROS PUBLISHERS FOR VIRTUAL AND REAL OBJECT SHAPES
+    ro_pub_   = nh_.advertise<visualization_msgs::Marker>("real_object", 1);
+    vo_pub_   = nh_.advertise<visualization_msgs::Marker>("virtual_object", 1);
+    vo_l_pub_ = nh_.advertise<visualization_msgs::Marker>("left_vo", 1);
+    vo_r_pub_ = nh_.advertise<visualization_msgs::Marker>("right_vo", 1);
+
+
+    // Real object marker settings
+    ro_marker.header.frame_id = right_robot_frame;
+    ro_marker.action = visualization_msgs::Marker::ADD;
+    ro_marker.ns = "basic_shapes";
+    ro_marker.id = 0;
+    ro_marker.type = visualization_msgs::Marker::CUBE;
+
+    ro_marker.color.r = 0.0f;
+    ro_marker.color.g = 0.0f;
+    ro_marker.color.b = 1.0f;
+    ro_marker.color.a = 0.6f;
+
+    // Virtual object marker settings
+    vo_marker.header.frame_id = right_robot_frame;
+    vo_marker.action = visualization_msgs::Marker::ADD;
+    vo_marker.ns = "basic_shapes";
+    vo_marker.id = 1;
+    vo_marker.type = visualization_msgs::Marker::CUBE;
+    vo_marker.color.r = 0.0f;
+    vo_marker.color.g = 1.0f;
+    vo_marker.color.b = 0.0f;
+    vo_marker.color.a = 0.6f;
+
+    vo_arrow_left.header.frame_id = right_robot_frame;
+    vo_arrow_left.action = visualization_msgs::Marker::ADD;
+    vo_arrow_left.ns = "basic_shapes";
+    vo_arrow_left.id = 2;
+    vo_arrow_left.type = visualization_msgs::Marker::ARROW;
+    vo_arrow_left.color.r = 1.0f;
+    vo_arrow_left.color.g = 0.0f;
+    vo_arrow_left.color.b = 0.0f;
+    vo_arrow_left.color.a = 0.6f;
+    vo_arrow_left.scale.x = 0.005;
+    vo_arrow_left.scale.y = 0.01;
+    vo_arrow_left.scale.z = 0.01;
+
+    vo_arrow_right.header.frame_id = right_robot_frame;
+    vo_arrow_right.action = visualization_msgs::Marker::ADD;
+    vo_arrow_right.ns = "basic_shapes";
+    vo_arrow_right.id = 3;
+    vo_arrow_right.type = visualization_msgs::Marker::ARROW;
+    vo_arrow_right.color.r = 1.0f;
+    vo_arrow_right.color.g = 0.0f;
+    vo_arrow_right.color.b = 0.0f;
+    vo_arrow_right.color.a = 0.6f;
+    vo_arrow_right.scale.x = 0.005;
+    vo_arrow_right.scale.y = 0.01;
+    vo_arrow_right.scale.z = 0.01;
+
+
+
+}

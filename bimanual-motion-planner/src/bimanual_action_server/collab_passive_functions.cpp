@@ -191,8 +191,8 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         // Check finger joint configuration
         for (int i=0; i<total_active_joints; i++){ // for each joint
-            if ((finger_joints_all(active_joints_idx(i)) < finger_joints_avg(active_joints_idx(i)) + finger_joints_deltas(active_joints_idx(i))) &&
-                    (finger_joints_all(active_joints_idx(i)) > finger_joints_avg(active_joints_idx(i)) - finger_joints_deltas(active_joints_idx(i))))
+            if ((finger_joints_all(active_joints_idx(i)) < finger_joints_avg(active_joints_idx(i)) + 2*finger_joints_deltas(active_joints_idx(i))) &&
+                    (finger_joints_all(active_joints_idx(i)) > finger_joints_avg(active_joints_idx(i)) - 2*finger_joints_deltas(active_joints_idx(i))))
                 // check that the values are withing the avergae +/- deltas
                 ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " good Configuration " << finger_joints_all(i));
             else

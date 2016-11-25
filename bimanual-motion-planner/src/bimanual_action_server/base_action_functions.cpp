@@ -420,3 +420,46 @@ void BimanualActionServer::read_grasp_specification(TaskPhase phase, string mode
     }
 
 }
+
+
+void BimanualActionServer::get_initial_transforms(){
+
+    // Getting left and right robot base frame
+    tf::TransformListener listener;
+    try {
+        listener.waitForTransform(right_robot_frame, "/world_frame", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform(right_robot_frame, "/world_frame", ros::Time(0), right_arm_base);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+    try {
+        listener.waitForTransform(left_robot_frame, right_robot_frame, ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform(left_robot_frame, right_robot_frame, ros::Time(0), left_arm_base);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+
+    // Getting vision objects
+    try {
+        listener.waitForTransform("/world_frame", "Bowl_Frame/base_link", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("/world_frame", "Bowl_Frame/base_link",  ros::Time(0), bowl_in_base_transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+    ROS_INFO_STREAM("Bowl in base: " << bowl_in_base_transform.getOrigin().x() << " " << bowl_in_base_transform.getOrigin().y() << " " << bowl_in_base_transform.getOrigin().z());
+
+    try {
+        listener.waitForTransform("/world_frame", "Human_Wrist/base_link", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("/world_frame", "Human_Wrist/base_link", ros::Time(0), wrist_in_base_transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+    try {
+        listener.waitForTransform("Bowl_Frame/base_link", "/wrist_in_base_transform", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("Bowl_Frame/base_link", "/wrist_in_base_transform",  ros::Time(0), wrist_in_att_transform);
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("%s",ex.what());
+    }
+
+    ROS_INFO_STREAM("Transforms Read Successfully");
+}

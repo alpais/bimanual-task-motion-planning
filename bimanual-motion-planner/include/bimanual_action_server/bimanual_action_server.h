@@ -402,6 +402,9 @@ protected:
     // Callbacks and Publishers           //
     //************************************//
 
+    void get_initial_transforms();                                                              // Reading the initial transforms for the robot base and the vision frames
+    void initialize_ros_publishers_and_subscribers();
+
     // ---- Right Arm -----
     void r_eeStateCallback(const geometry_msgs::PoseStampedConstPtr&    msg);                   // Callback for the current right end effector pose
     void r_ftStateCallback(const geometry_msgs::WrenchStampedConstPtr&  msg);                   // Callback for the current right end effector force/torque

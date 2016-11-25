@@ -89,11 +89,14 @@ On the laptop
 >> check that the ROS_MASTER is set properly
 >> check that YARP is configured properly and can read data from Lasa PC 41
 
->> rosrun glove_tekscan_ros_wrapper
+>> rosrun glove_tekscan_ros_wrapper IntTacMain
 	# reads data from Yarp ports and streams it on ROS topics
 	# check that it works >> rostopic echo /LasaDataStream
 
-
+### For consistency - always check that the glove mapping corresponds accross these: 
+	# in Matlab when learning the models 
+	# the mapping streamed by glove_tekscan_ros_wrapper 
+	# the mapping assumed by this package bimanual-task-motion-planning
 
 // ============================ //
 // === Step 2. Run the demo === //
