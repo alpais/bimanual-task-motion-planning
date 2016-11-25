@@ -185,6 +185,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
             bHproximity = true;
             intent_modulation = 2;
+            ROS_INFO_STREAM("Stiffness increase due to proximity");
         }
         else
             bHproximity = false;
@@ -202,15 +203,18 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " bad configuration");
         }
 
+        ROS_INFO_STREAM("Joints in good config " << joints_in_good_config << " out of " << active_joints_idx.Size());
         if (bGloveTekscanInitialized){
 
-            ROS_INFO_STREAM("Pressure: Thumb " << avg_thumb_pressure << " Index " << avg_index_pressure << " Palm " << avg_palm_pressure);
-            ROS_INFO_STREAM("JA: Thumb " << thumb_ja(0) << " Index " << index_ja(0) << " "  << index_ja(1) << " "  << index_ja(2) << " ");
+            ROS_INFO_STREAM("Pressure: Fingertips: Thumb " << thumb_pressure(0) << " Index " << index_pressure(0) << " Middle " << middle_pressure(0) << " Ring " << ring_pressure(0) << " Pinky " << pinky_pressure(0));
+//            ROS_INFO_STREAM("JA: Thumb " << thumb_ja(0) << " Index " << index_ja(0) << " "  << index_ja(1) << " "  << index_ja(2) << " ");
         }
 
 
-        if (bHproximity && joints_in_good_config > active_joints_idx.Size()/2)
+        if (joints_in_good_config >= floor(active_joints_idx.Size()/2)){
             intent_modulation = 8;
+            ROS_INFO_STREAM("Stiffness increase due to the detected hand shape");
+        }
 
         // ------- >> Update stiffness
         bool bEnableInteractionStiffnessModulation = true;   // true if the robot should update its stiffness based
@@ -235,7 +239,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 des_avg_stiff = INTERACTION_STIFFNESS;
         }
 
-        // ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
+        ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
 
         // TODO: Convert cartesian stiffness to joint stiffness properly.
 
@@ -251,14 +255,17 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         as_.publishFeedback(feedback_);
 
-        // ---- >> Check Convergence in Position and the state of the human
-        if(r_pos_err < reachingThreshold && h_current_action_state == true ){
+        // ---- >> Check Convergence in Position
+        if(r_pos_err < reachingThreshold){
 
-            ROS_INFO("POSITION DYNAMICS CONVERGED!");
+            ROS_INFO("RIGHT POSITION DYNAMICS CONVERGED!");
 
             if (bIgnoreOri){
                 sendPoseRight(r_curr_ee_pose); // Stop the robot after the position has converged
-                break;
+                if (bHproximity){
+                    ROS_INFO_STREAM("Human Converged to Estimated Target");
+                    break;
+                }
             }
 
             // ----- >> Check if contact should be established at the end of the action
@@ -277,7 +284,11 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 ROS_INFO("RIGHT ORIENTATION DYN CONVERGED!");
                 sendPoseRight(r_curr_ee_pose); // Stop the robot by sending the current position again, which results in zero velocity
                 sendJStiffCmd(r_avg_jstiff, R_ARM_ID);
-                break;
+//                break;
+                if (bHproximity){
+                    ROS_INFO_STREAM("Human Converged to Estimated Target");
+                    break;
+                }
             }
         }
 

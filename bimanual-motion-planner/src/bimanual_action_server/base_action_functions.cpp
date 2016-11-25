@@ -11,7 +11,6 @@ bool BimanualActionServer::initialize_coupling_model(std::string base_path, Task
     int inp; inp = 0;
     //    master_dim.getX();
 
-
 }
 
 
