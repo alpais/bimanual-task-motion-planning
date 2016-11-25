@@ -184,17 +184,20 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
             bHproximity = true;
-            intent_modulation = 8;
+            intent_modulation = 2;
         }
         else
             bHproximity = false;
 
         // Check finger joint configuration
+        int joints_in_good_config = 0;
         for (int i=0; i<total_active_joints; i++){ // for each joint
             if ((finger_joints_all(active_joints_idx(i)) < finger_joints_avg(active_joints_idx(i)) + 2*finger_joints_deltas(active_joints_idx(i))) &&
-                    (finger_joints_all(active_joints_idx(i)) > finger_joints_avg(active_joints_idx(i)) - 2*finger_joints_deltas(active_joints_idx(i))))
+                    (finger_joints_all(active_joints_idx(i)) > finger_joints_avg(active_joints_idx(i)) - 2*finger_joints_deltas(active_joints_idx(i)))){
                 // check that the values are withing the avergae +/- deltas
-                ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " good Configuration " << finger_joints_all(i));
+                ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " good configuration " << finger_joints_all(i));
+                joints_in_good_config++;
+            }
             else
                 ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " bad configuration");
         }
@@ -205,6 +208,9 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
             ROS_INFO_STREAM("JA: Thumb " << thumb_ja(0) << " Index " << index_ja(0) << " "  << index_ja(1) << " "  << index_ja(2) << " ");
         }
 
+
+        if (bHproximity && joints_in_good_config > active_joints_idx.Size()/2)
+            intent_modulation = 8;
 
         // ------- >> Update stiffness
         bool bEnableInteractionStiffnessModulation = true;   // true if the robot should update its stiffness based

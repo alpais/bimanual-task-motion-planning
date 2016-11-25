@@ -3,7 +3,6 @@
 
 bool BimanualActionServer::initialize_coupling_model(std::string base_path, TaskPhase phase, tf::Vector3 master_dim, tf::Vector3 slave_dim){
 
-
     // Coupling models are only for the reaching phases, not for force control phases
 
     char sCoupling[256];
