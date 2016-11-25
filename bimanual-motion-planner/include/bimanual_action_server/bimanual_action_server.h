@@ -402,6 +402,7 @@ protected:
     // Callbacks and Publishers           //
     //************************************//
 
+    void get_parameters();
     void get_initial_transforms();                                                              // Reading the initial transforms for the robot base and the vision frames
     void initialize_ros_publishers_and_subscribers();
 

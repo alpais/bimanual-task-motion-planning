@@ -463,3 +463,42 @@ void BimanualActionServer::get_initial_transforms(){
 
     ROS_INFO_STREAM("Transforms Read Successfully");
 }
+
+void BimanualActionServer::get_parameters(){
+
+    ros::NodeHandle _nh("~");
+
+    // Read Parameters from Launch File
+    _nh.getParam("right_robot_frame",           right_robot_frame);
+    _nh.getParam("left_robot_frame",            left_robot_frame);
+    _nh.getParam("model_base_path",             model_base_path);
+    _nh.getParam("simulation",                  simulation);
+    _nh.getParam("just_visualize",              just_visualize);
+    _nh.getParam("model_dt",                    model_dt);
+    _nh.getParam("reachingThreshold",           reachingThreshold);
+    _nh.getParam("orientationThreshold",        orientationThreshold);
+    _nh.getParam("r_topic_ns",                  r_topic_ns);
+    _nh.getParam("l_topic_ns",                  l_topic_ns);
+    _nh.getParam("wait_for_force_right",        bWaitForForces_right_arm);
+    _nh.getParam("wait_for_force_left",         bWaitForForces_left_arm);
+    _nh.getParam("task_id",                     task_id);
+    _nh.getParam("enable_force_model_l_arm",    bEnableForceModel_l_arm);
+    _nh.getParam("enable_force_model_r_arm",    bEnableForceModel_r_arm);
+    _nh.getParam("execution_mode",              execution_mode);
+
+    if(!_nh.getParam("execution_mode", execution_mode)) {
+        ROS_INFO_STREAM("Assuming autonomous execution");
+        execution_mode = EXECUTION_MODE_AUTO;
+    }
+
+    if(!_nh.getParam("wait_for_force_right", bWaitForForces_right_arm) && task_id == PEELING_TASK_ID) {
+        ROS_INFO_STREAM("Set the Waiting for forces flag");
+        bWaitForForces_right_arm = true;
+    }
+
+    if(!_nh.getParam("wait_for_force_left", bWaitForForces_left_arm)) {
+        ROS_INFO_STREAM("Set the Waiting for forces flag");
+        bWaitForForces_left_arm = true;
+    }
+
+}
