@@ -242,6 +242,7 @@ protected:
     bool bStiffModelInitialized_r_arm;  // True if GMR was initialized successfully
     bool bBypassForceModel_r_arm;       // True if a constant force should be used regardless of the model estimate
     bool bEndInContact_r_arm;           // True if after a reaching movement the end effector should be in contact with the environment
+    bool bActionTypeReach;              // True if no force should be applied in that action
 
     double max_task_force_r_arm;        // in [N]
     double max_search_distance_r_arm;   // in cm

@@ -99,7 +99,7 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
     CDSController::DynamicsType l_masterType = CDSController::MODEL_DYNAMICS;
     CDSController::DynamicsType l_slaveType = CDSController::UTHETA;
 
-    bool bActionTypeReach = false;
+    bActionTypeReach = false;
     bAdditionalTransforms = false;
 
     // TODO: the Action-specific parameters should be read from yaml files

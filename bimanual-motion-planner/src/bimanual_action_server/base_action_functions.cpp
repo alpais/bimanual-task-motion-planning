@@ -393,7 +393,7 @@ void BimanualActionServer::read_grasp_specification(TaskPhase phase, string mode
     ifstream inputFile(sGraspFile);
 
     if(!inputFile.is_open()){
-        ROS_ERROR_STREAM("File does not exist, NOT using the glove");
+        ROS_ERROR_STREAM("Grasp Specification file does not exist, NOT using the glove");
         finger_joints_mask.Zero(); // not using any joint
     }
     else {
