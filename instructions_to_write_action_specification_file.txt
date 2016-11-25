@@ -1,0 +1,64 @@
+The actions Specification file contains parameters for running the left and right arm
+
+>> one per line
+>> in this particular order:
+
+----- >> Right Arm
+
+# Motion parameters:
+	r_pos_gain 			>> multiplier for the CDS master dynamics (i.e. the dynamical system controlling the position of the arm)
+	r_ori_gain 			>> multiplier for the CDS slave dynamics
+	r_err_gain 			>> speed multiplier for CDS (see detailed escription in the CDSExecution package)
+
+	r_filter_gain_Wn 		>> gain for the CDDynamics filtering the arm motion
+
+	r_masterType 			>> specifying the master type for CDS. 
+					Possible values. 
+						1 - MODEL_DYNAMICS
+						2 - LINEAR_DYNAMICS
+						3 - NO_DYNAMICS
+					Default value: 1 - MODEL_DYNAMICS
+
+	r_slaveType 			>> slave type for CDS 
+					Possible values 
+						1 - MODEL_DYNAMICS
+						2 - LINEAR_DYNAMICS
+						3 - NO_DYNAMICS
+						4 - UTHETA
+					Default value: 4 - UTHETA
+
+	r_avg_jstiff 			>> specify average stiffness if not running model based stiffness
+					otherwise acts as bounding value for the model estimated stiffness
+
+# Force parameters
+	bUseForce_r_arm 		>> 1 if arm should apply a force
+	bEnableForceModel_r_arm 	>> 1 if force comes from model
+
+	bEndInContact_r_arm 		>> 1 if arm in contact at the end of the action 
+					(e.g. a reaching action can end in contact, but a manipulation action can require force but end in contact 
+					if a second force action follows, or not)
+
+	search_axis_r_arm 		>> direction to search for contact
+
+	max_task_force_r_arm    	>> acts as default value if a model is not specified, 
+					otherwise acts as bounding value for the model estimated force
+
+	max_search_distance_r_arm  	>> safety parameter, arm goes down on the specified axis, looking for a contact. 
+					If no contact found within search distance, it stops
+
+	max_vertical_speed_r_arm   	>> safety parameter, arm goes down with specified speed. 	
+					Use low values if contact should be done with rather soft objects 
+					(i.e. zuchinni ends in contact with the table)
+
+	max_contact_force_r_arm    	>> safety parameter, arm stops when this contact force is established. Typically this comes from demonstration. 
+
+----- >> Left Arm
+
+### same as above
+
+---- >> General parameters
+
+bActionTypeReach 			>> 1 if it is a pure reaching action, no contacts whatsoever
+					used to bias the FT sensors, at the begining of each reaching action
+
+bAdditionalTransforms 			>> 1 if the RF in which the models were learned was different than the RF in which the robot is moving

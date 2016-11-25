@@ -1,0 +1,36 @@
+r_pos_gain 			0.5
+r_ori_gain 			1.5
+r_err_gain 			1
+r_filter_gain_Wn 		25
+r_masterType  			2
+r_slaveType  			4
+r_avg_jstiff 			200
+bUseForce_r_arm 		0
+bEnableForceModel_r_arm 	0
+bEndInContact_r_arm 		0
+search_axis_r_arm 		0	
+max_task_force_r_arm    	0
+max_search_distance_r_arm 	0
+max_vertical_speed_r_arm    	0
+max_contact_force_r_arm     	0
+
+l_pos_gain 			1
+l_ori_gain 			1
+l_err_gain 			1
+l_filter_gain_Wn 		10
+l_masterType 			2
+l_slaveType 			3
+l_avg_jstiff 			300
+bUseForce_l_arm 		0
+bEnableForceModel_l_arm 	0
+bEndInContact_l_arm 		0
+search_axis_l_arm 		3	
+max_task_force_l_arm    	5
+max_search_distance_l_arm 	0.08
+max_vertical_speed_l_arm    	0.01
+max_contact_force_l_arm     	12
+
+bActionTypeReach 		1
+bAdditionalTransforms		0
+
+
