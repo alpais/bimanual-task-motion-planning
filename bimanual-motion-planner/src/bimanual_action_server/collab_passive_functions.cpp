@@ -38,7 +38,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
 
     // ======================================================================================================
-    // ========= Initializing models
+    // ========= Initializing models and stuff
     // ======================================================================================================
 
     // ------- >> Stiffness
@@ -80,7 +80,35 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
 
     // ----- >> Human arm
+
     read_grasp_specification(phase, model_base_path, L_ARM_ROLE, L_ARM_ID);
+
+    // get total active joints in this action
+    int total_active_joints = 0;
+    MathLib::Vector active_joints_idx;
+    for (int i = 0; i < nFingerJoints; i ++){
+        if (finger_joints_mask(i) == 1)
+            total_active_joints ++;
+    }
+
+    // get indexes of active joints
+    active_joints_idx.Resize(total_active_joints);
+    int j = 0;
+    for (int i = 0; i < nFingerJoints; i ++){
+        if (finger_joints_mask(i) == 1){
+            active_joints_idx(j) = i;
+            j++;
+        }
+    }
+
+    // printing values
+    for (int i = 0; i<total_active_joints; i++)
+        ROS_INFO_STREAM("Using Joint : " << active_joints_idx(i)+1  << " avg " << finger_joints_avg(active_joints_idx(i)) << " delta " << finger_joints_deltas(active_joints_idx(i)));
+
+    // initialize grasp_shape -> GQ model
+
+    // initialize GQ -> expected force model
+
 
     // ======================================================================================================
     // ========= Real time loop
@@ -126,7 +154,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         // ------- >> Computing the cartesian trajectory
 
-         right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
+        right_cdsRun->setAttractorFrame(toMatrix4(right_final_target));
         right_cdsRun->setCurrentEEPose(toMatrix4(r_mNextRobotEEPose));
         toPose(right_cdsRun->getNextEEPose(), r_mNextRobotEEPose);
         r_des_ee_pose = r_mNextRobotEEPose;
@@ -150,7 +178,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         double h_pos_thr_y = 0.10;
         double h_pos_thr_z = 0.15;
 
-//        ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+        //        ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
 
         h_pub_crt_dist_err(h_pos_err);
 
@@ -161,18 +189,27 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
         else
             bHproximity = false;
 
+        // Check finger joint configuration
+        for (int i=0; i<total_active_joints; i++){ // for each joint
+            if ((finger_joints_all(active_joints_idx(i)) < finger_joints_avg(active_joints_idx(i)) + finger_joints_deltas(active_joints_idx(i))) &&
+                    (finger_joints_all(active_joints_idx(i)) > finger_joints_avg(active_joints_idx(i)) - finger_joints_deltas(active_joints_idx(i))))
+                // check that the values are withing the avergae +/- deltas
+                ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " good Configuration " << finger_joints_all(i));
+            else
+                ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " bad configuration");
+        }
 
         if (bGloveTekscanInitialized){
 
-//            ROS_INFO_STREAM("Pressure: Thumb " << avg_thumb_pressure << " Index " << avg_index_pressure << " Palm " << avg_palm_pressure);
-//            ROS_INFO_STREAM("JA: Thumb " << thumb_ja(0) << " Index " << index_ja(0) << " "  << index_ja(1) << " "  << index_ja(2) << " ");
+            ROS_INFO_STREAM("Pressure: Thumb " << avg_thumb_pressure << " Index " << avg_index_pressure << " Palm " << avg_palm_pressure);
+            ROS_INFO_STREAM("JA: Thumb " << thumb_ja(0) << " Index " << index_ja(0) << " "  << index_ja(1) << " "  << index_ja(2) << " ");
         }
 
 
         // ------- >> Update stiffness
         bool bEnableInteractionStiffnessModulation = true;   // true if the robot should update its stiffness based
-                                                    // on the estimated intention of the human to apply a force
-                                                    // Used only in reaching-type of actions
+        // on the estimated intention of the human to apply a force
+        // Used only in reaching-type of actions
 
         double des_avg_stiff, model_stiff_modulation;
         des_avg_stiff = INTERACTION_STIFFNESS;
@@ -192,7 +229,7 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                 des_avg_stiff = INTERACTION_STIFFNESS;
         }
 
-       // ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
+        // ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
 
         // TODO: Convert cartesian stiffness to joint stiffness properly.
 

@@ -392,26 +392,31 @@ void BimanualActionServer::read_grasp_specification(TaskPhase phase, string mode
     char sGraspFile[1025];
     sprintf(sGraspFile, "%s/Phase%d/%s/grasp_specification.txt", model_base_path.c_str(), phase, arm.c_str());
 
-    ROS_INFO_STREAM("Reading grasp specification from file: " << sGraspFile);
-
-    ROS_INFO_STREAM("Parameters: JA Mask >> JA avg >> JA deltas" );
-
     ifstream inputFile(sGraspFile);
 
-    string line;
-    int line_number; line_number = 0;
-
-    while (getline(inputFile, line))
-    {
-        ROS_INFO_STREAM("Finger JA: " << line);
-        istringstream ss(line);
-        if (line_number < 22){
-            ss >> finger_joints_mask(line_number) >> finger_joints_avg(line_number) >> finger_joints_deltas(line_number);
-        }
-        line_number++;
-
+    if(!inputFile.is_open()){
+        ROS_ERROR_STREAM("File does not exist, NOT using the glove");
+        finger_joints_mask.Zero(); // not using any joint
     }
+    else {
+        string line;
+        int line_number; line_number = 0;
 
-    ROS_INFO_STREAM(" ******* Grasp Read Successfully ******* ");
+        ROS_INFO_STREAM("Reading grasp specification from file: " << sGraspFile);
+        ROS_INFO_STREAM("Parameters: JA Mask  |  JA avg  |  JA deltas" );
+
+        while (getline(inputFile, line))
+        {
+            ROS_INFO_STREAM("Finger JA: " << line);
+            istringstream ss(line);
+            if (line_number < 22){
+                ss >> finger_joints_mask(line_number) >> finger_joints_avg(line_number) >> finger_joints_deltas(line_number);
+            }
+            line_number++;
+
+        }
+        bGraspSpecInitialized = true;
+        ROS_INFO_STREAM(" ******* Grasp Read Successfully ******* ");
+    }
 
 }

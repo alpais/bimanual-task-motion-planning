@@ -320,6 +320,7 @@ protected:
     MathLib::Vector finger_joints_deltas;   // variations from the avergae values
 
     bool bGloveTekscanInitialized;
+    bool bGraspSpecInitialized;
 
 
     // =====================================================
