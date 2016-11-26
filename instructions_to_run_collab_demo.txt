@@ -125,6 +125,9 @@ On the Beast
 	# Action Planner
 	# collaborative scooping, human acting as master
 
+>> rosrun sound_play soundplay_node.py
+	# for audio feedback in collaborative execution
+
 On the laptop
 
 >> rosrun human_glove_state_estimator human_glove_state_estimator_node
