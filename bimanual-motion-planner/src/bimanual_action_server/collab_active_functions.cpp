@@ -75,6 +75,9 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
     tf::Pose l_mNextRobotEEPose = l_curr_ee_pose;
 
 
+    bool bHproximity = false;
+
+
     // ======================================================================================================
     // ========= Real time loop
     // ======================================================================================================
@@ -88,7 +91,16 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
         tf::Pose wrist_in_robot_base; wrist_in_robot_base.mult(vision_displacement, vision_wrist_frame);
 
         human_estimated_target.mult(bowl_in_robot_base, right_att);
-        left_final_target.mult(wrist_in_robot_base, left_att);
+
+        if (bHproximity){
+            tf::Transform fixed_right_arm_rf;
+            fixed_right_arm_rf.setIdentity();
+            fixed_right_arm_rf.setRotation(tf::Quaternion(wrist_in_robot_base.getRotation()));
+            fixed_right_arm_rf.setOrigin(wrist_in_robot_base.getOrigin());
+            left_final_target.mult(fixed_right_arm_rf, left_att);
+        }
+        else
+            left_final_target.mult(wrist_in_robot_base, left_att);
 
         // ------ >> Updating state
 
@@ -147,28 +159,71 @@ bool BimanualActionServer::collab_active_model_execution(TaskPhase phase, tf::Tr
         if (just_visualize==true)
             initial_config=false;
 
-        // ------- >> Estimate human state
-        double intent_modulation;
-        bool bHproximity;
-        h_pos_err = wrist_in_robot_base.getOrigin().absolute() - human_estimated_target.getOrigin().absolute();
-        h_pos_err.absolute();
+        if (bActionTypeReach){
 
-        double h_pos_thr_x = 0.10;         double h_pos_thr_y = 0.10;         double h_pos_thr_z = 0.15;
+            double intent_modulation; intent_modulation = 1;
 
-        if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
-            bHproximity = true;
-            intent_modulation = 1;
-            ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+            // distance to estimated attractor
+            h_pos_err = human_estimated_target.getOrigin().absolute() -  wrist_in_robot_base.getOrigin().absolute();
+            h_pos_err = h_pos_err.absolute();
+
+
+            if (bDisplayDebugInfo)
+                ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
+
+            h_pub_crt_dist_err(h_pos_err);
+
+            if (h_pos_err[0] <= h_pos_thr_x && h_pos_err[1] <= h_pos_thr_y && h_pos_err[2] <= h_pos_thr_z){
+                bHproximity = true;
+                intent_modulation = 4;
+                ROS_INFO_STREAM("Stiffness increase due to proximity");
+            }
+            else
+                bHproximity = false;
+
+//            if (bGloveTekscanInitialized){
+
+//                // Check the hand shape
+
+//                int joints_in_good_config = 0;
+
+//                for (int i=0; i<total_active_joints; i++){ // for each joint
+//                    if ((finger_joints_all(active_joints_idx(i)) < finger_joints_avg(active_joints_idx(i)) + 2*finger_joints_deltas(active_joints_idx(i))) &&
+//                            (finger_joints_all(active_joints_idx(i)) > finger_joints_avg(active_joints_idx(i)) - 2*finger_joints_deltas(active_joints_idx(i)))){
+//                        // check that the values are withing the avergae +/- deltas
+//                        ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " good configuration " << finger_joints_all(i));
+//                        joints_in_good_config++;
+//                    }
+//                    else
+//                        ROS_INFO_STREAM("Joint " << active_joints_idx(i)+1 << " bad configuration" << "     (Ideal " << finger_joints_avg(active_joints_idx(i)) << " Current " << finger_joints_all(active_joints_idx(i)) << ")");
+//                }
+
+//                ROS_INFO_STREAM("Joints in good config " << joints_in_good_config << " out of " << active_joints_idx.Size());
+
+//                ROS_INFO_STREAM("Pressure: Fingertips: Thumb " << thumb_pressure(0) << " Index " << index_pressure(0) << " Middle " << middle_pressure(0) << " Ring " << ring_pressure(0) << " Pinky " << pinky_pressure(0));
+
+
+//                if (joints_in_good_config >= floor(active_joints_idx.Size()/2)){
+//                    intent_modulation = 8;
+//                    ROS_INFO_STREAM("Stiffness increase due to the detected hand shape");
+//                }
+
+//                // ------- >> Update stiffness
+//                bool bEnableInteractionStiffnessModulation = true;      // true if the robot should update its stiffness based
+//                // on the estimated intention of the human to apply a force
+//                // Used only in reaching-type of actions
+
+//                des_avg_stiff = INTERACTION_STIFFNESS;
+
+//                if (bEnableInteractionStiffnessModulation){
+//                    des_avg_stiff = INTERACTION_STIFFNESS * intent_modulation;
+//                }
+//                else
+//                    des_avg_stiff = INTERACTION_STIFFNESS;
+
+//                ROS_INFO_STREAM("Current Stiffness " << des_avg_stiff);
+//            }
         }
-        else
-            bHproximity = false;
-
-
-        // ------- >> Update stiffness
-
-        // decide when to switch between Task Stiffness and Interaction stiffness
-        // modulate the interaction stiffness
-
 
         //******************************//
         //  Send the computed ee poses  //

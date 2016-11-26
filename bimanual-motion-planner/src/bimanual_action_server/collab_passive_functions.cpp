@@ -82,7 +82,6 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     ros::Duration loop_rate(model_dt);
     tf::Pose r_mNextRobotEEPose = r_curr_ee_pose;
 
-    bool bHproximity = false;
 
 
     // ----- >> Human arm
@@ -110,6 +109,10 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
     // printing values
     for (int i = 0; i<total_active_joints; i++)
         ROS_INFO_STREAM("Using Joint : " << active_joints_idx(i)+1  << " avg " << finger_joints_avg(active_joints_idx(i)) << " delta " << finger_joints_deltas(active_joints_idx(i)));
+
+    bool bHproximity    = false;
+    bool bForceApplied  = false;
+    bool bForceReleased = false;
 
     // initialize grasp_shape -> GQ model
 
@@ -203,9 +206,6 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
             h_pos_err = human_estimated_target.getOrigin().absolute() -  wrist_in_robot_base.getOrigin().absolute();
             h_pos_err = h_pos_err.absolute();
 
-            double h_pos_thr_x = 0.10;
-            double h_pos_thr_y = 0.10;
-            double h_pos_thr_z = 0.15;
 
             if (bDisplayDebugInfo)
                 ROS_INFO_STREAM("h proximity " << " X: " << h_pos_err[0] << " Y: " << h_pos_err[1]  << " Z: " <<  h_pos_err[2]);
@@ -269,22 +269,22 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
         // --------- >> In manipulation actions check for the forces applied by the slave arm
 
-        double h_ft_err; MathLib::Vector tmp_ee_ft; tmp_ee_ft.Resize(3); tmp_ee_ft(0) = l_curr_ee_ft[0]; tmp_ee_ft(1) = l_curr_ee_ft[1]; tmp_ee_ft(2) = l_curr_ee_ft[2];
-        h_ft_err = tmp_ee_ft.Abs().Norm() - h_tool_init_ft.Abs().Norm();
+//        double h_ft_err; MathLib::Vector tmp_ee_ft; tmp_ee_ft.Resize(3); tmp_ee_ft(0) = l_curr_ee_ft[0]; tmp_ee_ft(1) = l_curr_ee_ft[1]; tmp_ee_ft(2) = l_curr_ee_ft[2];
+//        h_ft_err = tmp_ee_ft.Abs().Norm() - h_tool_init_ft.Abs().Norm();
 
-        bool bForceApplied = false;
 //        if (h_ft_err >= max_contact_force_l_arm){
-        if (abs(tmp_ee_ft[2]) > 8){
+        if (!bForceApplied && abs(l_curr_ee_ft[2]) > 8){
             bForceApplied = true;
-            ROS_INFO_STREAM("Human applied expected force!");
+            ROS_INFO_STREAM_THROTTLE(1, "Human applied expected force!");
         }
 
-        bool bForceReleased;
-        if (bForceApplied && abs(tmp_ee_ft[2]) <= 1){
-            ROS_INFO_STREAM("Force Releases");
+        if (bForceApplied && abs(l_curr_ee_ft[2]) <= 2){
+            bForceReleased = true;
+            ROS_INFO_STREAM_THROTTLE(1, "Force Released");
         }
-        // ROS_INFO_STREAM("Current human FT error " << h_ft_err);
+        ROS_INFO_STREAM_THROTTLE(1, "Current FT Z" << l_curr_ee_ft[2] );
 
+        ROS_INFO_STREAM_THROTTLE(1, "My bools: " << bForceApplied << " "  << bForceReleased << " ");
         //******************************//
         //  Send the computed ee pose  //
         //******************************//
@@ -302,6 +302,11 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
 
       //      ROS_INFO("RIGHT POSITION DYNAMICS CONVERGED!");
 
+            if (simulation){
+                ROS_INFO_STREAM("Human Converged to Estimated Target");
+                break;
+            }
+
             if (bIgnoreOri){
                 sendPoseRight(r_curr_ee_pose); // Stop the robot after the position has converged
                 if (bActionTypeReach && bHproximity){
@@ -309,10 +314,14 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                     break;
                 }
                 else
-                    if (!simulation && !bActionTypeReach && bForceApplied && bForceReleased){
+                    if (bForceApplied && bForceReleased){
                         ROS_INFO_STREAM("Human Finished Manipulation");
                         break;
                     }
+//                    else if (simulation && bHproximity){
+//                        ROS_INFO_STREAM("Human Converged to Estimated Target");
+//                        break;
+//                    }
             }
 
             // ----- >> Check if contact should be established at the end of the action
@@ -337,10 +346,14 @@ bool BimanualActionServer::collab_passive_model_execution(TaskPhase phase, tf::T
                     break;
                 }
                 else
-                    if (!simulation && !bActionTypeReach && bForceApplied && bForceReleased){
+                    if (bForceApplied && bForceReleased){
                         ROS_INFO_STREAM("Human Finished Manipulation");
                         break;
                     }
+//                    else if (simulation && bHproximity){
+//                        ROS_INFO_STREAM("Human Converged to Estimated Target");
+//                        break;
+//                    }
             }
         }
 

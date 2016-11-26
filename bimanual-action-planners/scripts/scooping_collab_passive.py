@@ -198,52 +198,60 @@ def execute_scooping_planner():
 
 
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter to Run Reach-To-Scoop with Coupled CDS')
+	raw_input('Press Enter to Start the Task')
 	print "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = ="
 
 	soundhandle.say("Reaching", voice)
+	rospy.sleep(1)
 	rA_p0_attr,lA_p0_attr = query_reach_attractors()
 	action_type = 'COLLABORATIVE_PASSIVE'  
 	result = send_goal(action_type, 'phase1', task_frame, rA_p0_attr, lA_p0_attr, 10)
 	print "Result:"		
 	print result.success
 	soundhandle.say("Done!", voice)
+	rospy.sleep(1)
 
 	print "\n\n= = = = = = = = = = = = = = = = = = ="
-	raw_input('Press Enter To Scoop with Coupled CDS')
+	#raw_input('Press Enter To Scoop with Coupled CDS')
 	print "\n\n= = = = = = = = = = = = = = = = = = ="
 
 	soundhandle.say("Scooping", voice)
+	rospy.sleep(1)
 	rA_p1_attr,lA_p1_attr = query_scoop_attractors()
 	action_type = 'COLLABORATIVE_PASSIVE'  
 	result = send_goal(action_type, 'phase2', task_frame, rA_p1_attr, lA_p1_attr, 10)
 	print "Result:"		
 	print result.success
 	soundhandle.say("Done!", voice)
+        rospy.sleep(1)
 
 	print "\n\n= = = = = = = = = = = = = = = = = = ="
 	#raw_input('Press Enter To Depart with Coupled CDS')
 	print "\n\n= = = = = = = = = = = = = = = = = = ="
 
 	soundhandle.say("Departing", voice)
+	rospy.sleep(1)
 	rA_p2_attr,lA_p2_attr = query_depart_attractors()
 	action_type = 'COLLABORATIVE_PASSIVE'  
 	result = send_goal(action_type, 'phase3', task_frame, rA_p2_attr, lA_p2_attr, 10)
 	print "Result:"		
 	print result.success
 	soundhandle.say("Done!", voice)
+	rospy.sleep(1)
 
 	print "\n\n= = = = = = = = = = = = = = = = = = ="
 	#raw_input('Press Enter To Trash with Coupled CDS')
 	print "\n\n= = = = = = = = = = = = = = = = = = ="
 
 	soundhandle.say("Trashing", voice)
+	rospy.sleep(1)
 	rA_p3_attr,lA_p3_attr = query_trash_attractors()
 	action_type = 'COLLABORATIVE_PASSIVE'  
 	result = send_goal(action_type, 'phase4', task_frame, rA_p3_attr, lA_p3_attr, 10)
 	print "Result:"		
 	print result.success
-	soundhandle.say("Task finalized!", voice)
+	soundhandle.say("Task completed!", voice)
+	rospy.sleep(1)
 
 
 
@@ -256,7 +264,7 @@ if __name__ == '__main__':
         # Creates the SimpleActionClient, passing the type of action to the constructor.
         client = actionlib.SimpleActionClient('bimanual_plan2ctrl', bimanual_action_planners.msg.PLAN2CTRLAction)
 
-	# Create the sound client
+	# Creates the sound client and specifies the voice to be used
 	soundhandle = SoundClient()
 	voice = 'voice_kal_diphone'
 

@@ -189,6 +189,10 @@ protected:
     bool  h_current_action_state;               // true if the human user has completed his part of the task
     float h_current_action_err;
 
+    double h_pos_thr_x;                         // thresholds for the human reaching the vecinity of the estimated attractor
+    double h_pos_thr_y;
+    double h_pos_thr_z;
+
     // ----- >> Service Clients
     ros::ServiceClient hand_ft_client;
     ros::ServiceClient tool_ft_client;

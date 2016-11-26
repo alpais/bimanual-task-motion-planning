@@ -360,6 +360,11 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             r_avg_jstiff = INTERACTION_STIFFNESS;
             l_avg_jstiff = INTERACTION_STIFFNESS;
 
+            h_pos_thr_x = 0.20;
+            h_pos_thr_y = 0.20;
+            h_pos_thr_z = 0.25;
+
+
 
         } else if(goal->action_name == "phase2") {
 
@@ -396,6 +401,11 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             r_avg_jstiff = TASK_STIFFNESS;
             l_avg_jstiff = TASK_STIFFNESS;
 
+            h_pos_thr_x = 0.20;
+            h_pos_thr_y = 0.20;
+            h_pos_thr_z = 0.25;
+
+
             r_masterType = CDSController::MODEL_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
 
@@ -431,6 +441,10 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             r_avg_jstiff = INTERACTION_STIFFNESS;
             l_avg_jstiff = INTERACTION_STIFFNESS;
 
+            h_pos_thr_x = 0.20;
+            h_pos_thr_y = 0.20;
+            h_pos_thr_z = 0.25;
+
             r_masterType = CDSController::LINEAR_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
 
@@ -462,6 +476,13 @@ void BimanualActionServer::executeCB(const bimanual_action_planners::PLAN2CTRLGo
             l_pos_gain = 1;
             l_ori_gain = 1.5;
             l_err_gain = 2;
+
+            h_pos_thr_x = 0.20;
+            h_pos_thr_y = 0.20;
+            h_pos_thr_z = 0.25;
+
+            r_avg_jstiff = INTERACTION_STIFFNESS;
+            l_avg_jstiff = INTERACTION_STIFFNESS;
 
             r_masterType = CDSController::LINEAR_DYNAMICS;
             r_slaveType = CDSController::UTHETA;
