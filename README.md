@@ -20,7 +20,7 @@ ROS compatibility: Indigo
 
 ---
 
-###Modular Architecture Description:
+### Modular Architecture Description:
 ![alt tag](https://github.com/epfl-lasa/bimanual-task-motion-planning/blob/master/img/lasa-bimanual-architecture.png)
 
 ---
@@ -34,17 +34,17 @@ $ rosrun kuka_fri_bridge run_lwr.sh left
 ```
 follow instructions on [kuka_bridge](https://github.com/nbfigueroa/kuka_interface_packages) to set control mode for each robot. (joint impedance control, control = 1)
 
-#####Visualization and sensor bringup (ft sensors)
+##### Visualization and sensor bringup (ft sensors)
 ```
 $ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true
 ```
-#####Low-level Controllers
+##### Low-level Controllers
 Cartesian-to-Joint/Joint-to-Cart Estimation
 ```
 $ roslaunch state_transformers bimanual_joint_ctrls_real.launch 
 ```
 
-#####Cartesian Trajectory Generator
+##### Cartesian Trajectory Generator
 A bimanual action server, containing different types of control methods for bimanual actions, currently: 
 - Coupled CDS for each arm. The models can be found in bimanual-task-models and they are task and action specific.
 - Virtual Object Dynamical System (spatial and temporal coupling)
@@ -74,19 +74,19 @@ You will need the whole *Perception Module* for detecting the Zucchini and compu
 - Follow the instructions in [kinect-process-scene](https://github.com/nbfigueroa/kinect-process-scene)
 
 ---
-###*Simulation* of a Bi-manual reaching motions:
-#####Simulation and Visualization
+### *Simulation* of a Bi-manual reaching motions:
+##### Simulation and Visualization
 ```
 $ roslaunch kuka_lwr_bringup bimanual2_simulation.launch
 ```
 
-#####Low-level Controllers
+##### Low-level Controllers
 Cartesian-to-Joint/Joint-to-Cart Estimation
 ```
 $ roslaunch state_transformers bimanual_joint_ctrls_sim.launch 
 ```
 
-#####Cartesian Trajectory Generator
+##### Cartesian Trajectory Generator
 Bimanual Action Server with same action types as real-time.
 ```
 $ roslaunch bimanual_motion_planner bimanual_action_server.launch simulation:=true
@@ -96,7 +96,7 @@ $ roslaunch bimanual_motion_planner bimanual_action_server.launch simulation:=tr
 - same as realtime
 
 ---
-###Demonstration Recording for Bimanual Tasks:
+### Demonstration Recording for Bimanual Tasks:
 
 To record/replay demonstrations you must install these packages:
 
@@ -104,7 +104,7 @@ To record/replay demonstrations you must install these packages:
 | ------------- |
 | [record_ros](https://github.com/epfl-lasa/record_ros) |
 
-#####Stream Robot data (joint states, Pose, FT, Stiff)
+##### Stream Robot data (joint states, Pose, FT, Stiff)
 ```
 $ rosrun kuka_fri_bridge run_lwr.sh right
 ```
@@ -112,7 +112,7 @@ $ rosrun kuka_fri_bridge run_lwr.sh right
 $ rosrun kuka_fri_bridge run_lwr.sh left
 ```
 
-#####Visualization and sensor bringup (ft sensors, vision)
+##### Visualization and sensor bringup (ft sensors, vision)
 ```
 $ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true vision:=true 
 ```
@@ -127,17 +127,17 @@ $ roslaunch bimanual_action_planners record_bimanual_demos.launch
 $ rosservice call /record/cmd "cmd: 'record/stop'"
 ```
 ---
-###Replaying a recorded demonstration of a Bimanual Task:
-#####Visualization and sensor bringup (ft sensors, vision)
+### Replaying a recorded demonstration of a Bimanual Task:
+##### Visualization and sensor bringup (ft sensors, vision)
 ```
 $ roslaunch kuka_lwr_bringup bimanual2_realtime.launch ft_sensors:=true not_bag:=false 
 ```
-#####Play bag
+##### Play bag
 ```
 $ rosbag play *.bag
 ```
 
-#####Extract topics to Mat file
+##### Extract topics to Mat file
 Use  [my-matlab-rosbag](https://github.com/nbfigueroa/my_matlab_rosbag)
 
 ---
